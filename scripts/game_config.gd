@@ -226,16 +226,16 @@ const ATTACK_FULLBODY_SPEED := 1.2      # sous cette vitesse (m/s), l'attaque jo
 # Coups d'en haut et estoc : la main est dirigée par cinématique inverse (positions de la main, en mètres,
 # dans le repère du personnage : +X = sa droite, +Y = haut, -Z = devant).
 const IK_REST        := Vector3(0.35, 1.05, -0.30)   # main au repos
-const IK_UP_RAISED   := Vector3(0.20, 1.78, 0.05)    # coup d'en haut : main levée au-dessus de la tête (bras encore plié, pas tendu à fond)
+const IK_UP_RAISED   := Vector3(0.28, 1.80, 0.22)    # coup d'en haut : main levée un peu en arrière de la tête, coude plié
 const IK_UP_CONTACT  := Vector3(0.12, 1.00, -0.85)   # ... et abattue devant, à hauteur de poitrine
 const IK_UP_FOLLOW   := Vector3(0.12, 0.80, -0.90)   # ... fin du geste
-const IK_STAB_COCKED := Vector3(0.30, 1.25, 0.10)    # estoc : main ramenée en arrière
-const IK_STAB_CONTACT:= Vector3(0.10, 1.32, -1.00)   # ... bras tendu droit devant
-const IK_STAB_FOLLOW := Vector3(0.10, 1.32, -1.05)
-const IK_POLE        := Vector3(0.90, 1.30, 0.60)    # direction du coude (vers l'extérieur et l'arrière)
+const IK_STAB_COCKED := Vector3(0.45, 1.20, 0.05)    # estoc : main ramenée en arrière, à l'extérieur du corps (sinon le bras traverse le torse)
+const IK_STAB_CONTACT:= Vector3(0.42, 1.30, -1.00)   # ... bras tendu devant, sur le côté du corps
+const IK_STAB_FOLLOW := Vector3(0.42, 1.30, -1.05)
+const IK_POLE        := Vector3(1.10, 1.20, 0.50)    # direction du coude (vers l'extérieur et un peu l'arrière)
 const IK_RAISE_SHARE := 0.72                         # part de la préparation passée à lever / armer ; le reste = le geste rapide
 # Direction de la lame (repère du personnage, -Z = devant) pendant ces deux attaques
-const IK_BLADE_UP_RAISED  := Vector3(0.0, 1.0, 0.30)    # lame vers le haut, un peu en arrière
+const IK_BLADE_UP_RAISED  := Vector3(0.0, 0.60, 0.80)    # lame inclinée vers l'arrière, au-dessus de l'épaule
 const IK_BLADE_UP_CONTACT := Vector3(0.0, -0.55, -1.0)  # lame abattue vers l'avant et le bas
 const IK_BLADE_STAB       := Vector3(0.0, 0.05, -1.0)   # estoc : lame droit devant
 const IK_REST_BLADE := Vector3(0.0, 0.8, -0.6)       # direction de la lame au repos (vers le haut et l'avant)
