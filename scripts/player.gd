@@ -168,10 +168,8 @@ func _physics_process(delta: float) -> void:
 	_dodge_cooldown = maxf(0.0, _dodge_cooldown - delta)
 	_update_aim(delta)
 
-	# Garde / feinte (clic droit)
+	# Garde (clic droit maintenu)
 	var alive := not combatant.dead
-	if alive and Input.is_action_just_pressed(&"guard") and combatant.state == Combatant.State.WINDUP:
-		combatant.request_feint()
 	combatant.set_guard(alive and Input.is_action_pressed(&"guard"), aim_dir)
 	combatant.invulnerable = invulnerable
 	if not combatant.is_attacking():

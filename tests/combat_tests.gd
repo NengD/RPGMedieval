@@ -77,22 +77,6 @@ func _run() -> void:
 	_check(is_equal_approx(health0 - b.health, GameConfig.ATTACK_DAMAGE[D.RIGHT]), "dégâts = ceux de la config")
 	await _cleanup(p)
 
-	print("[Feinte]")
-	p = _pair()
-	a = p[0]
-	b = p[1]
-	await physics_frame
-	a.request_attack(D.UP)
-	await _seconds(0.1)
-	_check(a.request_feint(), "feinte possible pendant la préparation")
-	_check(a.state == S.RECOVERY and a.feinted_attack, "passe en récupération (feinte)")
-	await _seconds(1.0)
-	_check(is_equal_approx(b.health, b.max_health), "une attaque feintée ne touche pas")
-	a.request_attack(D.UP)
-	await _seconds(0.7)
-	_check(not a.request_feint(), "pas de feinte une fois le coup parti")
-	await _cleanup(p)
-
 	print("[Portée et orientation]")
 	var far := _make(0, Vector3.ZERO, 0.0)
 	var far_b := _make(1, Vector3(0, 0, -6.0), PI)

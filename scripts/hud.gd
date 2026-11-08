@@ -21,7 +21,7 @@ func _ready() -> void:
 	_help.text = "ÉTAPE 3 — Combat contre un ennemi\n" \
 		+ "ZQSD : bouger   Maj : courir   Espace : sauter   C : pas de côté   V : changer de vue\n" \
 		+ "Bouge la souris (ou stick droit) pour choisir haut/bas/gauche/droite, puis :\n" \
-		+ "Clic gauche : attaquer   Clic droit (maintenu) : parer   Clic droit pendant l'élan : feinte\n" \
+		+ "Clic gauche : attaquer   Clic droit (maintenu) : parer\n" \
 		+ "F1 / F2 / F3 : difficulté facile / normal / difficile   R : recommencer le combat\n" \
 		+ "T : mannequin agressif (coin du fond)   Échap : libérer la souris"
 	add_child(_help)
@@ -54,7 +54,6 @@ func _ready() -> void:
 	var c := player.combatant
 	c.hit_resolved.connect(_on_player_hit_resolved)
 	c.strike_result.connect(_on_player_strike_result)
-	c.feinted.connect(func(): show_message("Feinte", Color(0.8, 0.8, 0.8)))
 	c.died.connect(func(): show_message("VOUS ÊTES MORT", Color(1, 0.3, 0.3), 2.0))
 	enemy.combatant.died.connect(func(): show_message("ENNEMI VAINCU !", Color(0.5, 1.0, 0.5), 2.0))
 

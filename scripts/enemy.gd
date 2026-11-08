@@ -24,8 +24,6 @@ var _circle_timer := 2.0
 var _attack_cd := 1.5
 var _last_dirs: Array = []
 var _retreating := false
-var _will_feint := false
-var _feint_at := 0.55
 var _seen_threat := false
 var _threat_time := 0.0
 var _plan_parry := false
@@ -104,7 +102,6 @@ func reset_to(pos: Vector3) -> void:
 	_retreating = false
 	_seen_threat = false
 	_guard_wanted = false
-	_will_feint = false
 	_last_dirs.clear()
 	_attack_cd = 1.5
 	if target:
@@ -238,7 +235,6 @@ func _decide(delta: float, dist: float, dir_to: Vector3) -> Vector3:
 		mode = Mode.ATTACK
 		if dist > 1.8:
 			desired = dir_to * GameConfig.ENEMY_WALK_SPEED
-		_maybe_feint()
 	elif _guard_wanted:
 		mode = Mode.DEFEND
 		desired = side * _circle_sign * 0.8
@@ -264,10 +260,7 @@ func _start_attack(dist: float) -> void:
 	var dir := _choose_dir(dist)
 	if not combatant.request_attack(dir):
 		return
-	var feint_chance: float = GameConfig.AI_FEINT_CHANCE[difficulty]
 	var interval: float = GameConfig.AI_ATTACK_INTERVAL[difficulty]
-	_will_feint = randf() < feint_chance
-	_feint_at = randf_range(0.4, 0.75)
 	_attack_cd = interval * randf_range(0.8, 1.3)
 	_last_dirs.append(dir)
 	if _last_dirs.size() > 2:
@@ -296,15 +289,6 @@ func _choose_dir(dist: float) -> int:
 		if roll <= 0.0:
 			return d
 	return Combatant.Dir.UP
-
-
-func _maybe_feint() -> void:
-	var c := combatant
-	if _will_feint and c.state == Combatant.State.WINDUP \
-			and c.state_time / maxf(c.state_duration, 0.001) >= _feint_at:
-		_will_feint = false
-		c.request_feint()
-		_attack_cd = 0.3   # il enchaîne vite avec une autre direction
 
 
 # ---------------------------------------------------------------- réactions

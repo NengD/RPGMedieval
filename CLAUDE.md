@@ -26,11 +26,11 @@ savoir si le combat est amusant. Toutes les valeurs de réglage sont dans `scrip
 - Couches physiques : 1 monde, 2 joueur, 3 ennemis.
 
 ## Contrôles
-F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le combat · ZQSD/stick G déplacer · souris/stick D regarder + choisir la direction · Maj courir · Espace sauter · C pas de côté · V changer de vue · clic gauche (RB) attaquer · clic droit (LB) parer / feinter · T mannequin agressif · R reset · Échap libère la souris.
+F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le combat · ZQSD/stick G déplacer · souris/stick D regarder + choisir la direction · Maj courir · Espace sauter · C pas de côté · V changer de vue · clic gauche (RB) attaquer · clic droit (LB) parer · T mannequin agressif · R reset · Échap libère la souris.
 
 ## Avancement
 - [x] Étape 1 — Base : arène, héros, caméra 3e/1re personne, mannequin
-- [x] Étape 2 — Corps à corps 4 directions, feinte, parade directionnelle + parfaite, endurance (animations = poses codées)
+- [x] Étape 2 — Corps à corps 4 directions, parade directionnelle + parfaite, endurance (animations = poses codées)
 - [x] Étape 3 — Ennemi IA (approche, tourne autour, attaque variée, parade imparfaite, recule épuisé, 3 difficultés)
 - [ ] Étape 4 — Arc / arbalète
 - [ ] Étape 5 — Animations Mixamo, vrais modèles
@@ -38,19 +38,19 @@ F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le com
 
 ## Règles du combat
 - 4 directions : 0 haut, 1 droite, 2 estoc (ex-« bas »), 3 gauche. L'estoc = coup pointé droit devant : plus de portée, cône plus étroit (ATTACK_REACH / ATTACK_ARC_DEG). Direction choisie par le mouvement de souris / stick droit récent ; elle reste affichée (chevrons autour du centre). Attaquer / parer utilisent la direction courante.
-- Attaque = préparation (feintable) → coup (touche une fois, cône devant, portée MELEE_RANGE) → récupération. Un clic pendant la récupération est mémorisé.
-- Feinte : clic droit pendant la préparation (coûte un peu d'endurance).
+- Attaque = préparation → coup (touche une fois, cône devant, portée MELEE_RANGE) → récupération. Un clic pendant la récupération est mémorisé.
+- Pas de feinte (retirée à la demande du propriétaire).
 - Parade : maintenir clic droit, du côté d'où vient le coup *à l'écran* (gauche/droite inversés par rapport à la direction d'attaque : `Combatant.mirror`). Haut/bas identiques.
 - Parade parfaite : garde levée (ou direction changée) depuis ≤ PERFECT_PARRY_WINDOW à l'impact → pas de dégâts, attaquant déséquilibré PARRY_STAGGER s (+50 % de dégâts sur lui).
 - Parade normale : coûte endurance = dégâts. Pas assez d'endurance → garde brisée (déséquilibre + 40 % des dégâts).
-- Endurance : attaque, feinte, pas de côté, parade en consomment ; à 0 on est ÉPUISÉ jusqu'à EXHAUSTED_RECOVER (ni attaque, ni garde, ni esquive).
+- Endurance : attaque, pas de côté, parade en consomment ; à 0 on est ÉPUISÉ jusqu'à EXHAUSTED_RECOVER (ni attaque, ni garde, ni esquive).
 - Pas de côté (C) : invulnérable une courte fenêtre, peut interrompre une récupération.
 - Tout est réglable dans game_config.gd (section COMBAT).
 
 ## IA de l'ennemi (étape 3)
 - Modes : s'approche (> 3,4 m) → tourne autour (rayon ~2,6 m, change de sens au hasard, anti-blocage) → attaque (cooldown AI_ATTACK_INTERVAL, endurance ≥ 30) ; recule quand épuisé ou endurance < 20 jusqu'à 65.
 - Direction d'attaque pondérée : évite de répéter les 2 dernières, évite parfois la direction que le joueur garde (AI_SMART_CHANCE), seul l'estoc si trop loin pour une taille.
-- Parade imparfaite : à chaque coup du joueur il tire au sort s'il pare (AI_PARRY_CHANCE), met AI_REACTION_TIME à réagir, peut garder du mauvais côté (AI_WRONG_SIDE_CHANCE), peut viser la parade parfaite (lève la garde juste avant l'impact). Les feintes du joueur le piègent s'il a levé la garde tôt.
-- Il peut feinter ses propres attaques (AI_FEINT_CHANCE) puis enchaîner.
+- Parade imparfaite : à chaque coup du joueur il tire au sort s'il pare (AI_PARRY_CHANCE), met AI_REACTION_TIME à réagir, peut garder du mauvais côté (AI_WRONG_SIDE_CHANCE), peut viser la parade parfaite (lève la garde juste avant l'impact).
+- Parade volontairement faible (réglée après retour du propriétaire) : AI_PARRY_CHANCE, AI_REACTION_TIME, AI_WRONG_SIDE_CHANCE.
 - Vaincu → "ENNEMI VAINCU" puis combat relancé ; changer de difficulté relance le combat.
 - Pas encore : se protéger des flèches / se mettre à couvert (étape 4).

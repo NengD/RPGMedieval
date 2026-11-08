@@ -167,12 +167,6 @@ func _run() -> void:
 	_check(player.try_attack(), "le héros lance une attaque")
 	await _frames(240)
 	_check(dummy.total_damage > 0.0, "l'attaque touche le mannequin (%d dégâts)" % int(dummy.total_damage))
-	var before := dummy.total_damage
-	player.try_attack()
-	await _frames(20)
-	_check(player.combatant.request_feint(), "feinte pendant l'élan")
-	await _frames(240)
-	_check(is_equal_approx(dummy.total_damage, before), "une attaque feintée ne touche pas")
 
 	print("[Mannequin agressif]")
 	_teleport(main.DUMMY_POS + Vector3(0, 0.05, 2.5), 0.0)
@@ -256,8 +250,8 @@ func _run() -> void:
 		await _frames(120 * 2)
 	var guarded: int = results.get(Combatant.Result.BLOCKED, 0) + results.get(Combatant.Result.PARRIED, 0) + results.get(Combatant.Result.GUARD_BROKEN, 0)
 	var passed: int = results.get(Combatant.Result.HIT, 0)
-	_check(guarded >= 2, "il pare une partie des coups (%d parés)" % guarded)
-	_check(passed >= 2, "mais pas tous : la parade est imparfaite (%d coups passent)" % passed)
+	_check(guarded >= 1, "il pare quelques coups (rarement) (%d parés)" % guarded)
+	_check(passed >= guarded * 2, "mais la plupart passent : la parade est imparfaite (%d coups passent)" % passed)
 
 	# difficulté et réinitialisation
 	enemy.set_difficulty(0)

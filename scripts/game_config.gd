@@ -69,7 +69,7 @@ const DUMMY_HEIGHT := 1.8
 # ============================================================
 const DIR_NAMES := ["haut", "droite", "estoc", "gauche"]   # "bas" = l'estoc (coup pointé droit devant)
 
-# Une attaque = préparation (on peut feinter) -> coup (touche) -> récupération.
+# Une attaque = préparation -> coup (touche) -> récupération.
 const ATTACK_WINDUP   := [0.50, 0.34, 0.40, 0.34]   # préparation (s)
 const ATTACK_STRIKE   := [0.14, 0.12, 0.10, 0.12]   # durée où le coup peut toucher (s)
 const ATTACK_RECOVERY := [0.45, 0.35, 0.40, 0.35]   # récupération (s)
@@ -78,8 +78,6 @@ const ATTACK_STAMINA  := [22.0, 16.0, 18.0, 16.0]   # endurance consommée en la
 const ATTACK_REACH    := [0.0, 0.0, 0.7, 0.0]        # portée en plus (l'estoc porte plus loin)
 const ATTACK_ARC_DEG  := [110.0, 110.0, 45.0, 110.0] # largeur du cône (l'estoc est étroit : il faut viser)
 const ATTACK_BUFFER := 0.20          # un clic pendant la récupération est mémorisé (s)
-const FEINT_RECOVERY := 0.18         # temps de récupération après une feinte
-const FEINT_STAMINA := 6.0
 const MELEE_RANGE := 2.3             # portée de l'épée (m, depuis le centre du corps)
 const AIM_ASSIST_RANGE := 4.0        # (3e personne) le héros se tourne vers un ennemi proche
 const AIM_ASSIST_ANGLE_DEG := 40.0
@@ -126,12 +124,11 @@ const PRACTICE_DAMAGE_SCALE := 0.6   # le mannequin frappe moins fort
 # ============================================================
 const DIFFICULTY_NAMES := ["Facile", "Normal", "Difficile"]
 const DEFAULT_DIFFICULTY := 1
-const AI_REACTION_TIME := [0.50, 0.30, 0.15]          # délai avant de réagir à ton coup (s)
-const AI_PARRY_CHANCE := [0.30, 0.55, 0.80]           # chance de tenter une parade
-const AI_PERFECT_PARRY_CHANCE := [0.03, 0.12, 0.30]   # parmi les parades : tentative de parade parfaite
-const AI_WRONG_SIDE_CHANCE := [0.35, 0.18, 0.06]      # chance de garder du mauvais côté
+const AI_REACTION_TIME := [0.40, 0.28, 0.18]          # délai avant de réagir à ton coup (s) : plus c'est long, moins il pare
+const AI_PARRY_CHANCE := [0.15, 0.30, 0.50]           # chance de tenter une parade
+const AI_PERFECT_PARRY_CHANCE := [0.0, 0.04, 0.12]    # parmi les parades : tentative de parade parfaite
+const AI_WRONG_SIDE_CHANCE := [0.50, 0.35, 0.20]      # chance de garder du mauvais côté
 const AI_ATTACK_INTERVAL := [2.4, 1.6, 0.9]           # pause moyenne entre deux attaques (s)
-const AI_FEINT_CHANCE := [0.05, 0.15, 0.30]           # chance de feinter une attaque
 const AI_SMART_CHANCE := [0.15, 0.45, 0.75]           # chance d'éviter la direction que tu gardes
 const AI_SPEED_SCALE := [0.75, 0.90, 1.05]            # vitesse de ses attaques (1 = comme toi)
 const AI_DAMAGE_SCALE := [0.6, 0.8, 1.0]              # force de ses coups

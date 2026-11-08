@@ -1,11 +1,10 @@
 class_name Combatant
 extends Node
 ## Cerveau du combat corps à corps, partagé par le héros, le mannequin et (étape 3) l'ennemi.
-## Gère : attaque en 3 temps (préparation / coup / récupération), feinte, parade directionnelle,
+## Gère : attaque en 3 temps (préparation / coup / récupération), parade directionnelle,
 ## parade parfaite, endurance, déséquilibre, vie. Aucune dépendance à l'affichage.
 
 signal attack_started(dir: int)
-signal feinted
 signal staggered(perfect: bool)
 signal damaged(amount: float, attacker: Combatant)
 ## Côté victime : un coup vient d'être résolu (result = Result.*).
@@ -33,8 +32,6 @@ var state: int = State.IDLE
 var state_time := 0.0
 var state_duration := 0.0
 var attack_dir: int = Dir.UP
-var feinted_attack := false      # la récupération en cours vient d'une feinte
-var feint_progress := 0.0        # avancement de la préparation au moment de la feinte
 var stagger_perfect := false     # déséquilibre causé par une parade parfaite
 
 var guard_held := false
@@ -72,7 +69,6 @@ func reset() -> void:
 	state_time = 0.0
 	guard_held = false
 	guard_time = 0.0
-	feinted_attack = false
 	invulnerable = false
 	_regen_timer = 0.0
 	_queued_dir = -1
@@ -117,24 +113,10 @@ func request_attack(dir: int) -> bool:
 		return false
 	attack_dir = dir
 	_strike_done = false
-	feinted_attack = false
 	spend_stamina(GameConfig.ATTACK_STAMINA[dir])
 	var windup: float = GameConfig.ATTACK_WINDUP[dir]
 	_enter(State.WINDUP, windup / speed_scale)
 	attack_started.emit(dir)
-	return true
-
-
-## Feinte : annule l'attaque pendant la préparation.
-func request_feint() -> bool:
-	if state != State.WINDUP or dead:
-		return false
-	feint_progress = clampf(state_time / maxf(state_duration, 0.001), 0.0, 1.0)
-	spend_stamina(GameConfig.FEINT_STAMINA)
-	feinted_attack = true
-	_queued_dir = -1
-	_enter(State.RECOVERY, GameConfig.FEINT_RECOVERY)
-	feinted.emit()
 	return true
 
 

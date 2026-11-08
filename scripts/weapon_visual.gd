@@ -59,7 +59,6 @@ func _ready() -> void:
 func bind(c: Combatant) -> void:
 	combatant = c
 	c.attack_started.connect(func(_d: int): _from = _displayed)
-	c.feinted.connect(func(): _from = _displayed)
 
 
 func _add_part(size: Vector3, pos: Vector3, color: Color, metallic: float, roughness: float) -> void:
@@ -87,8 +86,7 @@ func _process(delta: float) -> void:
 		Combatant.State.STRIKE:
 			_displayed = windup_pose(c.attack_dir).interpolate_with(strike_pose(c.attack_dir), ease(t, 2.0))
 		Combatant.State.RECOVERY:
-			var start := _from if c.feinted_attack else strike_pose(c.attack_dir)
-			_displayed = start.interpolate_with(rest_pose(), ease(t, 0.5))
+			_displayed = strike_pose(c.attack_dir).interpolate_with(rest_pose(), ease(t, 0.5))
 		Combatant.State.STAGGER:
 			_displayed = _displayed.interpolate_with(stagger_pose(), 1.0 - exp(-14.0 * delta))
 		_:
