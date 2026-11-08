@@ -130,7 +130,10 @@ func _run() -> void:
 	_check(player._body_pivot.visible, "le corps est visible en 3e personne")
 
 	print("[Regard à la souris]")
-	for fp in [true, false]:
+	var can_capture := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	if not can_capture:
+		print("  (ignoré : la souris ne peut pas être capturée en mode headless ; vérifié à la main via tests/shot.gd)")
+	for fp in ([true, false] if can_capture else []):
 		if player.rig.first_person != fp:
 			player.toggle_view()
 		await _frames(40)
