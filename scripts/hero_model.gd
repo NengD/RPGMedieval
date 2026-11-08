@@ -362,7 +362,7 @@ func _attack_time(c: Combatant) -> float:
 	var p := clampf(c.state_time / maxf(c.state_duration, 0.001), 0.0, 1.0)
 	match c.state:
 		Combatant.State.WINDUP:
-			return lerpf(start, contact, p)
+			return lerpf(start, contact, pow(p, GameConfig.ANIM_WINDUP_CURVE))
 		Combatant.State.STRIKE:
 			return lerpf(contact, follow, p)
 		_:

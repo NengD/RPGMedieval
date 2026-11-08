@@ -19,6 +19,8 @@ var is_dodging := false
 ## Direction choisie pour attaquer / parer : 0 haut, 1 droite, 2 estoc, 3 gauche
 var aim_dir: int = Combatant.Dir.UP
 var aim_accum := Vector2.ZERO
+## Pour les tests automatiques : accepte les événements souris même sans capture (la vraie souris n'est alors pas utilisée).
+var accept_input_without_capture := false
 
 var weapon_kind: int = Weapon.SWORD
 var drawing := false              # arc : corde en cours de tension
@@ -137,7 +139,7 @@ func reset_to(pos: Vector3, yaw: float) -> void:
 # ---------------------------------------------------------------- entrées
 
 func _unhandled_input(event: InputEvent) -> void:
-	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED or accept_input_without_capture
 	if event.is_action_pressed(&"toggle_view"):
 		toggle_view()
 	elif event.is_action_pressed(&"weapon_next"):
@@ -360,9 +362,12 @@ func _update_aim(delta: float) -> void:
 	aim_accum += look * GameConfig.STICK_AIM_GAIN * delta
 	aim_accum *= exp(-GameConfig.AIM_DECAY * delta)
 	if aim_accum.length() > GameConfig.AIM_THRESHOLD:
-		if absf(aim_accum.x) > absf(aim_accum.y):
+		var ax := absf(aim_accum.x)
+		var ay := absf(aim_accum.y)
+		# On ne change de direction que si le geste est franchement horizontal ou vertical
+		if ax > ay * GameConfig.AIM_DOMINANCE:
 			aim_dir = Combatant.Dir.RIGHT if aim_accum.x > 0.0 else Combatant.Dir.LEFT
-		else:
+		elif ay > ax * GameConfig.AIM_DOMINANCE:
 			aim_dir = Combatant.Dir.DOWN if aim_accum.y > 0.0 else Combatant.Dir.UP
 
 

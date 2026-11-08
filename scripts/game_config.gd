@@ -84,8 +84,9 @@ const AIM_ASSIST_ANGLE_DEG := 40.0
 const COMBAT_TURN_SPEED := 30.0      # vitesse à laquelle le corps se tourne vers la caméra en combat
 
 # Choix de la direction à la souris / au stick droit
-const AIM_THRESHOLD := 25.0          # mouvement (pixels) nécessaire pour changer de direction
-const AIM_DECAY := 5.0               # oubli du mouvement de souris (plus haut = plus court)
+const AIM_THRESHOLD := 70.0          # mouvement de souris (pixels) nécessaire pour changer de direction : plus haut = moins sensible
+const AIM_DOMINANCE := 1.4           # l'axe dominant doit dépasser l'autre d'au moins ce facteur, sinon la direction ne change pas
+const AIM_DECAY := 4.0               # oubli du mouvement de souris (plus haut = il faut bouger plus vite)
 const STICK_AIM_GAIN := 700.0        # équivalent pixels/seconde du stick droit à fond
 
 # Parade
@@ -218,5 +219,6 @@ const AIM_SHOW_DROP_MARKER := false     # true = affiche le repère orange (où 
 # ANIMATIONS (étape 5)
 # ============================================================
 const ANIM_CONTACT_OFFSET := 0.05       # l'épée touche un peu après la vitesse maximale de la main (s d'animation)
+const ANIM_WINDUP_CURVE := 1.8          # > 1 : la préparation est lente puis le geste accélère juste avant le coup (plus lisible)
 const ANIM_FOLLOW_THROUGH := 0.25       # durée (s d'animation) du geste qui suit le contact
 const ATTACK_FULLBODY_SPEED := 1.2      # sous cette vitesse (m/s), l'attaque joue sur tout le corps (plus naturel) ; au-dessus, seul le haut du corps attaque

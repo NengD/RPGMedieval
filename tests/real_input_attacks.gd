@@ -24,10 +24,15 @@ func _click(pressed: bool) -> void:
 	root.push_input(ev)
 func _run() -> void:
 	load("res://scripts/input_setup.gd").register_actions()
+	# Isolation : aucune commande réelle (stick, souris, clavier) ne doit perturber le test
+	for action in [&"look_left", &"look_right", &"look_up", &"look_down", &"move_forward", &"move_back", &"move_left", &"move_right", &"guard", &"dodge", &"jump", &"sprint"]:
+		InputMap.action_erase_events(action)
 	var main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await physics_frame
 	p = main.player
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE   # on ne capture PAS la vraie souris : elle ne doit pas perturber le test
+	p.accept_input_without_capture = true
 	e = main.enemy
 	e.ai_enabled = false
 	p.combatant.invincible = true
@@ -41,10 +46,10 @@ func _run() -> void:
 		await _frames(60)
 		# choisir la direction avec la souris
 		match d[0]:
-			"haut": _mouse(0, -90)
-			"estoc": _mouse(0, 90)
-			"droite": _mouse(90, 0)
-			"gauche": _mouse(-90, 0)
+			"haut": _mouse(0, -120)
+			"estoc": _mouse(0, 120)
+			"droite": _mouse(120, 0)
+			"gauche": _mouse(-120, 0)
 		await _frames(3)
 		p.rig.yaw = 0.0
 		p.rig.pitch = -0.15
