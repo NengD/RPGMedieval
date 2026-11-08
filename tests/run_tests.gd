@@ -332,17 +332,17 @@ func _run() -> void:
 	for child in dummy.get_children():
 		planted = planted or child is Arrow
 	_check(planted, "la flèche reste plantée dans le mannequin")
-	# annuler avec le clic droit
+	# annuler avec X
 	var arrows_before := get_nodes_in_group(&"arrows").size()
 	Input.action_press(&"attack")
 	player.start_draw()
 	await _frames(40)
-	Input.action_press(&"guard")
+	Input.action_press(&"cancel_draw")
 	await _frames(3)
-	Input.action_release(&"guard")
+	Input.action_release(&"cancel_draw")
 	Input.action_release(&"attack")
 	await _frames(10)
-	_check(not player.drawing and get_nodes_in_group(&"arrows").size() == arrows_before, "clic droit : on annule sans tirer")
+	_check(not player.drawing and get_nodes_in_group(&"arrows").size() == arrows_before, "X : on annule sans tirer")
 
 	print("[Cibles]")
 	var target: ArcheryTarget = main.targets[1]
