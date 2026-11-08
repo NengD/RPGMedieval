@@ -266,6 +266,22 @@ func _run() -> void:
 	_check(not enemy.combatant.dead and is_equal_approx(enemy.combatant.health, enemy.combatant.max_health), "R remet l'ennemi à neuf")
 	_check(player.combatant.health == player.combatant.max_health, "R remet le héros à neuf")
 
+	print("[IA désactivable]")
+	enemy.process_mode = Node.PROCESS_MODE_INHERIT
+	enemy.set_physics_process(true)
+	enemy.aggressive = true
+	enemy.ai_enabled = false
+	enemy.set_difficulty(2)
+	_teleport(Vector3(0, 0.05, 2), PI)
+	enemy.reset_to(Vector3(0, 0, -1))
+	player.combatant.reset()
+	await _frames(120 * 4)
+	_check(enemy.global_position.distance_to(Vector3(0, 0, -1)) < 0.2, "IA coupée : l'ennemi ne bouge pas (%s)" % enemy.global_position)
+	_check(player.combatant.health == player.combatant.max_health and enemy.combatant.state == Combatant.State.IDLE, "IA coupée : il n'attaque pas")
+	enemy.ai_enabled = true
+	await _frames(120 * 4)
+	_check(enemy.global_position.distance_to(Vector3(0, 0, -1)) > 0.5 or enemy.combatant.state != Combatant.State.IDLE, "IA remise : il se remet à bouger")
+
 	print("[Changement d'arme]")
 	main.reset_combat()
 	player.combatant.invincible = true

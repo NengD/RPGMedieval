@@ -15,6 +15,7 @@ var weapon: WeaponVisual
 var target: Player
 var difficulty := GameConfig.DEFAULT_DIFFICULTY
 var mode: int = Mode.APPROACH
+var ai_enabled := GameConfig.ENEMY_AI_ENABLED_AT_START   # false = immobile, ne frappe pas, ne pare pas (comme un mannequin)
 var aggressive := true           # false = il ne lance jamais d'attaque (pour s'entraîner / tests)
 
 var _pivot: Node3D
@@ -137,6 +138,14 @@ func _physics_process(delta: float) -> void:
 		mode = Mode.DEAD
 		velocity.x = move_toward(velocity.x, 0.0, 30.0 * delta)
 		velocity.z = move_toward(velocity.z, 0.0, 30.0 * delta)
+		move_and_slide()
+		return
+
+	if not ai_enabled:
+		combatant.set_guard(false, 0)
+		velocity.x = move_toward(velocity.x, 0.0, 30.0 * delta)
+		velocity.z = move_toward(velocity.z, 0.0, 30.0 * delta)
+		_cover_active = false
 		move_and_slide()
 		return
 

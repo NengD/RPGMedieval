@@ -63,3 +63,4 @@ F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le com
 - Se protéger avec l'épée : la garde de face arrête les tirs (coût en endurance réduit) ; garde levée au dernier moment = tir renvoyé ; dos tourné ou garde brisée = touché.
 - Ennemi face à un archer (> ~4 m) : il voit les flèches (selon AI_REACTION_TIME), lève la garde (AI_ARROW_GUARD_CHANCE), et soit se met à couvert derrière un pilier/une caisse (AI_COVER_CHANCE, max ENEMY_COVER_MAX_TIME), soit charge en zigzag.
 - Cibles : 4 dans l'arène (une mobile). Score affiché dans le HUD.
+- F4 (D-pad bas) coupe / remet l'IA de l'ennemi (`Enemy.ai_enabled`, valeur de départ : `ENEMY_AI_ENABLED_AT_START` dans game_config.gd). IA coupée = il reste immobile, ne frappe pas, ne pare pas.

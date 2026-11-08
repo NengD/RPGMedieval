@@ -24,7 +24,7 @@ func _ready() -> void:
 		+ "Tab / molette : changer d'arme (épée, arc, arbalète)\n" \
 		+ "ÉPÉE : bouge la souris pour choisir haut/estoc/gauche/droite, clic gauche attaque, clic droit (maintenu) pare\n" \
 		+ "ARC : maintiens le clic gauche pour bander, relâche pour tirer (clic droit = annuler)   ARBALÈTE : clic gauche, recharge lente\n" \
-		+ "F1 / F2 / F3 : difficulté   R : recommencer   Retour arrière : retirer les flèches   T : mannequin agressif   Échap : souris\n"
+		+ "F1 / F2 / F3 : difficulté   F4 : couper / remettre l'IA ennemie   R : recommencer   Retour arrière : retirer les flèches   T : mannequin agressif   Échap : souris\n"
 	add_child(_help)
 
 	_status = _make_label()
@@ -112,7 +112,7 @@ func _process(_delta: float) -> void:
 		"   PAS DE CÔTÉ" if player.is_dodging else "",
 		"OUI" if dummy.practice else "non",
 		GameConfig.DIFFICULTY_NAMES[enemy.difficulty],
-		Enemy.MODE_NAMES[enemy.mode],
+		Enemy.MODE_NAMES[enemy.mode] if enemy.ai_enabled else "IA DÉSACTIVÉE (F4)",
 		GameConfig.WEAPON_NAMES[player.weapon_kind],
 		target_score,
 	]

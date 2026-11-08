@@ -124,6 +124,7 @@ const PRACTICE_DAMAGE_SCALE := 0.6   # le mannequin frappe moins fort
 # ============================================================
 const DIFFICULTY_NAMES := ["Facile", "Normal", "Difficile"]
 const DEFAULT_DIFFICULTY := 1
+const ENEMY_AI_ENABLED_AT_START := true   # false = l'ennemi reste immobile et inoffensif au départ (touche F4 en jeu)
 const AI_REACTION_TIME := [0.40, 0.28, 0.18]          # délai avant de réagir à ton coup (s) : plus c'est long, moins il pare
 const AI_PARRY_CHANCE := [0.15, 0.30, 0.50]           # chance de tenter une parade
 const AI_PERFECT_PARRY_CHANCE := [0.0, 0.04, 0.12]    # parmi les parades : tentative de parade parfaite

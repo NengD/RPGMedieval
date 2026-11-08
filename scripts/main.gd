@@ -8,6 +8,7 @@ var hud: Hud
 var arena: Arena
 var targets: Array = []
 var target_score := 0
+var _reset_gen := 0   # évite qu'un ancien minuteur relance un combat déjà recommencé
 
 const PLAYER_START := Vector3(0, 0.05, 9)
 const DUMMY_POS := Vector3(-8, 0, -9)
@@ -54,6 +55,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event.is_action_pressed(&"reset_combat"):
 		reset_combat()
+	elif event.is_action_pressed(&"toggle_ai"):
+		enemy.ai_enabled = not enemy.ai_enabled
+		hud.show_message("IA de l'ennemi : %s" % ("activée" if enemy.ai_enabled else "DÉSACTIVÉE (il reste immobile)"), Color(1, 0.9, 0.5), 1.5)
 	elif event.is_action_pressed(&"clear_arrows"):
 		Arrow.clear_all(get_tree())
 	elif event.is_action_pressed(&"toggle_practice"):
@@ -89,11 +93,11 @@ func _build_targets() -> void:
 
 
 func _on_player_died() -> void:
-	get_tree().create_timer(GameConfig.RESPAWN_DELAY).timeout.connect(reset_combat)
+	_reset_later(GameConfig.RESPAWN_DELAY)
 
 
 func _on_enemy_died() -> void:
-	get_tree().create_timer(GameConfig.RESPAWN_DELAY + 0.5).timeout.connect(reset_combat)
+	_reset_later(GameConfig.RESPAWN_DELAY + 0.5)
 
 
 ## Change la difficulté de l'ennemi et relance le combat.
@@ -103,7 +107,13 @@ func set_difficulty(level: int) -> void:
 	hud.show_message("Difficulté : %s" % GameConfig.DIFFICULTY_NAMES[level], Color(1, 0.9, 0.5), 1.5)
 
 
+func _reset_later(delay: float) -> void:
+	var gen := _reset_gen
+	get_tree().create_timer(delay).timeout.connect(func(): if gen == _reset_gen: reset_combat())
+
+
 func reset_combat() -> void:
+	_reset_gen += 1
 	player.reset_to(PLAYER_START, 0.0)
 	dummy.reset_stats()
 	enemy.reset_to(ENEMY_START)
