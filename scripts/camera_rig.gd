@@ -41,6 +41,15 @@ func snap_to_target() -> void:
 	global_position = _follow_pos
 
 
+## 0..1 : le héros est-il en train de viser ?
+func _aim() -> float:
+	return smoothstep(0.0, 1.0, (target as Player).aim_blend) if target is Player else 0.0
+
+
+func _sens() -> float:
+	return lerpf(1.0, GameConfig.AIM_SENSITIVITY_FACTOR, _aim())
+
+
 func toggle_view() -> void:
 	first_person = not first_person
 
@@ -48,8 +57,8 @@ func toggle_view() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var rel: Vector2 = event.screen_relative
-		yaw -= rel.x * GameConfig.MOUSE_SENSITIVITY
-		var dy := rel.y * GameConfig.MOUSE_SENSITIVITY
+		yaw -= rel.x * GameConfig.MOUSE_SENSITIVITY * _sens()
+		var dy := rel.y * GameConfig.MOUSE_SENSITIVITY * _sens()
 		pitch += dy if GameConfig.INVERT_Y else -dy
 
 
@@ -57,7 +66,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(_delta: float) -> void:
 	var eye := target.global_position + Vector3(0.0, GameConfig.EYE_HEIGHT, 0.0)
 	var right := Vector3(cos(yaw), 0.0, -sin(yaw))
-	var want := GameConfig.TPS_SHOULDER
+	var want := GameConfig.TPS_SHOULDER * lerpf(1.0, 1.45, _aim())   # en visée, la caméra passe plus par-dessus l'épaule
 	var query := PhysicsRayQueryParameters3D.create(eye, eye + right * (want + GameConfig.CAMERA_WALL_MARGIN + 0.1), GameConfig.LAYER_WORLD)
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if hit:
@@ -69,8 +78,8 @@ func _process(delta: float) -> void:
 	# Stick droit (avec courbe pour viser finement près du centre)
 	var look := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	look *= look.length()
-	yaw -= look.x * GameConfig.STICK_SENSITIVITY * delta
-	var dy := look.y * GameConfig.STICK_SENSITIVITY * delta
+	yaw -= look.x * GameConfig.STICK_SENSITIVITY * _sens() * delta
+	var dy := look.y * GameConfig.STICK_SENSITIVITY * _sens() * delta
 	pitch += dy if GameConfig.INVERT_Y else -dy
 	yaw = wrapf(yaw, -PI, PI)
 
@@ -92,5 +101,9 @@ func _process(delta: float) -> void:
 	_shoulder = lerpf(_shoulder, _shoulder_goal * k, 1.0 - exp(-14.0 * delta))
 	_pivot.position = Vector3(_shoulder, GameConfig.EYE_HEIGHT, 0.0)
 	_pivot.rotation.x = pitch
-	_arm.spring_length = GameConfig.TPS_DISTANCE * k
-	camera.fov = lerpf(GameConfig.FOV_FPS, GameConfig.FOV_TPS, k)
+	var aim := _aim()
+	_arm.spring_length = lerpf(GameConfig.TPS_DISTANCE, GameConfig.TPS_AIM_DISTANCE, aim) * k
+	var zoom := 1.0
+	if target is Player:
+		zoom = lerpf(1.0, (target as Player).aim_fov_factor(), aim)
+	camera.fov = lerpf(GameConfig.FOV_FPS, GameConfig.FOV_TPS, k) * zoom

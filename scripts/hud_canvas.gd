@@ -11,6 +11,9 @@ var exhausted := false
 var weapon_kind := 0         # 0 épée, 1 arc, 2 arbalète
 var reticle_radius := 20.0
 var drawing := false
+var aiming := false
+var aim_distance := -1.0
+var drop_offset := 0.0       # décalage vertical (pixels) du repère de chute
 var tension := 0.0
 var reload_ratio := 1.0      # arbalète : 0 = vient de tirer, 1 = prête
 var enemy_visible := false
@@ -75,6 +78,12 @@ func _draw_reticle(center: Vector2) -> void:
 	var w := 120.0
 	var p := center + Vector2(-w * 0.5, reticle_radius + 26.0)
 	var font := ThemeDB.fallback_font
+	if aiming:
+		if drop_offset > 0.0:
+			var m := center + Vector2(0.0, reticle_radius + drop_offset)
+			draw_colored_polygon(PackedVector2Array([m + Vector2(0, -5), m + Vector2(5, 0), m + Vector2(0, 5), m + Vector2(-5, 0)]), Color(1.0, 0.55, 0.1, 0.95))
+		if aim_distance > 0.0:
+			draw_string(font, center + Vector2(reticle_radius + 16.0, 5.0), "%d m" % int(round(aim_distance)), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 1, 1, 0.9))
 	if weapon_kind == 1 and drawing:
 		_bar(p, Vector2(w, 8), tension, Color(1.0, 0.85, 0.2) if tension >= 1.0 else Color(0.9, 0.9, 0.9))
 	elif weapon_kind == 2:

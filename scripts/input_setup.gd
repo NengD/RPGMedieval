@@ -25,6 +25,7 @@ static func register_actions() -> void:
 	# Divers
 	_add(&"attack", [_mouse(MOUSE_BUTTON_LEFT), _btn(JOY_BUTTON_RIGHT_SHOULDER)])
 	_add(&"guard", [_mouse(MOUSE_BUTTON_RIGHT), _btn(JOY_BUTTON_LEFT_SHOULDER)])
+	_add(&"cancel_draw", [_key(KEY_X), _btn(JOY_BUTTON_X)])
 	_add(&"toggle_practice", [_key(KEY_T), _btn(JOY_BUTTON_Y)])
 	_add(&"toggle_ai", [_key(KEY_F4), _btn(JOY_BUTTON_DPAD_DOWN)])
 	_add(&"difficulty_easy", [_key(KEY_F1)])

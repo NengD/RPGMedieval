@@ -23,8 +23,8 @@ func _ready() -> void:
 		+ "ZQSD : bouger   Maj : courir   Espace : sauter   C : pas de côté   V : changer de vue\n" \
 		+ "Tab / molette : changer d'arme (épée, arc, arbalète)\n" \
 		+ "ÉPÉE : bouge la souris pour choisir haut/estoc/gauche/droite, clic gauche attaque, clic droit (maintenu) pare\n" \
-		+ "ARC : maintiens le clic gauche pour bander, relâche pour tirer (clic droit = annuler)   ARBALÈTE : clic gauche, recharge lente\n" \
-		+ "F1 / F2 / F3 : difficulté   F4 : couper / remettre l'IA ennemie   R : recommencer   Retour arrière : retirer les flèches   T : mannequin agressif   Échap : souris\n"
+		+ "ARC / ARBALÈTE : clic droit (maintenu) = VISER (zoom, plus précis)   clic gauche : bander puis relâcher / tirer   X : annuler la corde\n" \
+		+ "F1 / F2 / F3 : difficulté   F4 : IA ennemie   R : recommencer   Retour arrière : retirer les flèches   T : mannequin agressif   Échap : souris\n"
 	add_child(_help)
 
 	_status = _make_label()
@@ -128,7 +128,11 @@ func _process(_delta: float) -> void:
 	else:
 		spread = GameConfig.CROSSBOW_SPREAD_DEG
 	var focal := _canvas.size.y * 0.5 / tan(deg_to_rad(player.rig.camera.fov * 0.5))
+	spread *= player.spread_factor()
 	_canvas.reticle_radius = 8.0 + focal * tan(deg_to_rad(spread))
+	_canvas.aiming = player.is_aiming
+	_canvas.aim_distance = player.aim_distance
+	_canvas.drop_offset = focal * tan(player.impact_drop_angle()) if GameConfig.AIM_SHOW_DROP_MARKER else 0.0
 	_canvas.guarding = c.guard_held
 	_canvas.health_ratio = c.health / c.max_health
 	_canvas.stamina_ratio = c.stamina / GameConfig.STAMINA_MAX

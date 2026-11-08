@@ -23,6 +23,9 @@ var weapon_kind: int = Weapon.SWORD
 var drawing := false              # arc : corde en cours de tension
 var bow_tension := 0.0            # 0..1
 var crossbow_reload := 0.0        # secondes avant que l'arbalète soit rechargée (0 = prête)
+var is_aiming := false            # clic droit maintenu avec arc / arbalète
+var aim_blend := 0.0              # 0..1 : avancement de la visée (zoom, caméra rapprochée)
+var aim_distance := -1.0          # distance au point visé (m), -1 si rien
 
 var _body_pivot: Node3D
 var _ranged_pivot: Node3D
@@ -115,6 +118,8 @@ func reset_to(pos: Vector3, yaw: float) -> void:
 	drawing = false
 	bow_tension = 0.0
 	crossbow_reload = 0.0
+	aim_blend = 0.0
+	is_aiming = false
 	_body_pivot.rotation = Vector3.ZERO
 	combatant.reset()
 	rig.snap_to_target()
@@ -245,8 +250,42 @@ func _shoot(speed: float, gravity: float, dmg: float, spread_deg: float, bolt: b
 	var dir := (aim_point - muzzle).normalized()
 	if aim_point.distance_to(muzzle) < 2.0:
 		dir = fwd
-	dir = _with_spread(dir, spread_deg)
+	dir = _with_spread(dir, spread_deg * spread_factor())
 	return Arrow.spawn(get_parent(), muzzle, dir * speed, gravity, dmg, combatant, bolt)
+
+
+func spread_factor() -> float:
+	return lerpf(GameConfig.HIPFIRE_SPREAD_FACTOR, GameConfig.AIM_SPREAD_FACTOR, aim_blend)
+
+
+func aim_fov_factor() -> float:
+	return GameConfig.AIM_FOV_FACTOR_CROSSBOW if weapon_kind == Weapon.CROSSBOW else GameConfig.AIM_FOV_FACTOR_BOW
+
+
+## Angle (radians) dont le tir passe sous le point visé à cause de la gravité, à la distance visée.
+func impact_drop_angle() -> float:
+	if aim_distance <= 0.0 or weapon_kind == Weapon.SWORD:
+		return 0.0
+	var speed := GameConfig.CROSSBOW_SPEED
+	var gravity := GameConfig.CROSSBOW_GRAVITY
+	if weapon_kind == Weapon.BOW:
+		speed = lerpf(GameConfig.BOW_SPEED_MIN, GameConfig.BOW_SPEED_MAX, bow_tension if drawing else 1.0)
+		gravity = GameConfig.ARROW_GRAVITY
+	var flight_time := aim_distance / speed
+	return atan2(0.5 * gravity * flight_time * flight_time, aim_distance)
+
+
+func _update_aim_state(delta: float) -> void:
+	is_aiming = weapon_kind != Weapon.SWORD and not combatant.dead and not is_dodging and Input.is_action_pressed(&"guard")
+	aim_blend = move_toward(aim_blend, 1.0 if is_aiming else 0.0, delta / GameConfig.AIM_BLEND_TIME)
+	aim_distance = -1.0
+	if weapon_kind != Weapon.SWORD:
+		var cam := rig.camera
+		var from := cam.global_position
+		var query := PhysicsRayQueryParameters3D.create(from, from - cam.global_transform.basis.z * 150.0, GameConfig.LAYER_WORLD | GameConfig.LAYER_ENEMY)
+		var hit := get_world_3d().direct_space_state.intersect_ray(query)
+		if hit:
+			aim_distance = _muzzle_position().distance_to(hit.position)
 
 
 func _muzzle_position() -> Vector3:
@@ -272,8 +311,8 @@ func _update_ranged(delta: float) -> void:
 	crossbow_reload = maxf(0.0, crossbow_reload - delta)
 	if not drawing:
 		return
-	if combatant.dead or combatant.state == Combatant.State.STAGGER or is_dodging or Input.is_action_just_pressed(&"guard"):
-		cancel_draw()   # touché, esquive ou clic droit : on relâche sans tirer
+	if combatant.dead or combatant.state == Combatant.State.STAGGER or is_dodging or Input.is_action_just_pressed(&"cancel_draw"):
+		cancel_draw()   # touché, esquive ou touche X : on relâche sans tirer
 		return
 	bow_tension = minf(1.0, bow_tension + delta / GameConfig.BOW_DRAW_TIME)
 	if bow_tension >= 1.0:
@@ -320,13 +359,16 @@ func _move_factor() -> float:
 			return 0.2
 		Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY:
 			return GameConfig.ATTACK_MOVE_FACTOR
+	var factor := 1.0
 	if drawing:
-		return GameConfig.BOW_MOVE_FACTOR
+		factor = minf(factor, GameConfig.BOW_MOVE_FACTOR)
 	if weapon_kind == Weapon.CROSSBOW:
-		return GameConfig.CROSSBOW_MOVE_FACTOR
+		factor = minf(factor, GameConfig.CROSSBOW_MOVE_FACTOR)
+	if is_aiming:
+		factor = minf(factor, GameConfig.AIM_MOVE_FACTOR)
 	if combatant.guard_held:
-		return GameConfig.GUARD_MOVE_FACTOR
-	return 1.0
+		factor = minf(factor, GameConfig.GUARD_MOVE_FACTOR)
+	return factor
 
 
 # ---------------------------------------------------------------- physique
@@ -334,6 +376,7 @@ func _move_factor() -> float:
 func _physics_process(delta: float) -> void:
 	_dodge_cooldown = maxf(0.0, _dodge_cooldown - delta)
 	_update_aim(delta)
+	_update_aim_state(delta)
 	_update_ranged(delta)
 
 	# Garde (clic droit maintenu, épée seulement)

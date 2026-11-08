@@ -57,10 +57,11 @@ F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le com
 
 ## Combat à distance (étape 4)
 - Arme : Tab / molette (D-pad gauche/droite). Avec arc ou arbalète le héros fait toujours face à la caméra (posture de visée), pas de garde.
-- Arc : maintenir clic gauche → tension 0→1 en BOW_DRAW_TIME ; relâcher tire (clic droit annule ; touché / pas de côté annule aussi). Vitesse, dégâts et précision dépendent de la tension. Tenir la corde à fond fatigue.
+- Arc : maintenir clic gauche → tension 0→1 en BOW_DRAW_TIME ; relâcher tire (X annule ; touché / pas de côté annule aussi). Vitesse, dégâts et précision dépendent de la tension. Tenir la corde à fond fatigue.
 - Arbalète : clic gauche tire tout de suite (presque droit, puissant), puis CROSSBOW_RELOAD_TIME de rechargement.
 - Visée : le tir part de la main vers le point visé par le centre de l'écran (réticule) ; la gravité courbe la trajectoire (ARROW_GRAVITY). Tir à la tête (> HEAD_HEIGHT) = x1,5.
 - Se protéger avec l'épée : la garde de face arrête les tirs (coût en endurance réduit) ; garde levée au dernier moment = tir renvoyé ; dos tourné ou garde brisée = touché.
 - Ennemi face à un archer (> ~4 m) : il voit les flèches (selon AI_REACTION_TIME), lève la garde (AI_ARROW_GUARD_CHANCE), et soit se met à couvert derrière un pilier/une caisse (AI_COVER_CHANCE, max ENEMY_COVER_MAX_TIME), soit charge en zigzag.
 - Cibles : 4 dans l'arène (une mobile). Score affiché dans le HUD.
 - F4 (D-pad bas) coupe / remet l'IA de l'ennemi (`Enemy.ai_enabled`, valeur de départ : `ENEMY_AI_ENABLED_AT_START` dans game_config.gd). IA coupée = il reste immobile, ne frappe pas, ne pare pas.
+- Visée (clic droit maintenu, arc/arbalète) : zoom (AIM_FOV_FACTOR_*), caméra 3e personne rapprochée (TPS_AIM_DISTANCE), souris moins sensible, déplacement lent, tir plus précis (AIM_SPREAD_FACTOR ; sans viser x HIPFIRE_SPREAD_FACTOR), distance affichée et repère orange = point où le tir tombe vraiment (gravité). Avec l'épée le clic droit reste la parade.

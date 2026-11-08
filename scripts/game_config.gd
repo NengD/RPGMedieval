@@ -200,3 +200,16 @@ const AI_COVER_CHANCE := [0.35, 0.55, 0.75]        # chance de se mettre à couv
 const ENEMY_COVER_MAX_TIME := 4.0                  # temps passé à couvert avant de ressortir (s)
 const ENEMY_CHARGE_SPEED_FACTOR := 1.5             # vitesse de sa charge en zigzag
 const ENEMY_ZIGZAG_SPEED := 3.0                    # amplitude latérale du zigzag
+
+# ============================================================
+# VISÉE (clic droit maintenu avec l'arc ou l'arbalète)
+# ============================================================
+const AIM_BLEND_TIME := 0.2             # durée de la transition vers la visée (s)
+const AIM_FOV_FACTOR_BOW := 0.70        # zoom de l'arc : plus petit = plus de zoom
+const AIM_FOV_FACTOR_CROSSBOW := 0.55   # zoom de l'arbalète
+const TPS_AIM_DISTANCE := 2.0           # distance de la caméra en visée (3e personne)
+const AIM_SENSITIVITY_FACTOR := 0.5     # la souris / le stick sont moins sensibles en visée
+const AIM_MOVE_FACTOR := 0.4            # vitesse de déplacement en visée
+const AIM_SPREAD_FACTOR := 0.3          # imprécision multipliée par ça en visée (plus précis)
+const HIPFIRE_SPREAD_FACTOR := 1.6      # imprécision multipliée par ça quand on tire sans viser
+const AIM_SHOW_DROP_MARKER := true      # repère orange : où la flèche va réellement tomber
