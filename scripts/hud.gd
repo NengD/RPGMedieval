@@ -25,6 +25,7 @@ func _ready() -> void:
 
 	_crosshair = ColorRect.new()
 	_crosshair.color = Color(1, 1, 1, 0.8)
+	_crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE   # sinon il avale les mouvements de souris !
 	_crosshair.size = Vector2(4, 4)
 	_crosshair.set_anchors_preset(Control.PRESET_CENTER)
 	_crosshair.position -= Vector2(2, 2)
@@ -45,6 +46,7 @@ func _process(_delta: float) -> void:
 
 func _make_label() -> Label:
 	var l := Label.new()
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.add_theme_color_override("font_outline_color", Color.BLACK)
 	l.add_theme_constant_override("outline_size", 6)
 	l.add_theme_font_size_override("font_size", 16)

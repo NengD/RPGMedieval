@@ -12,6 +12,7 @@ savoir si le combat est amusant. Toutes les valeurs de réglage sont dans `scrip
 - Godot console : `E:\_jeu perso\godot\Godot_v4.7.2-stable_win64_console.exe`
 - Import : `godot --headless --path . --import`
 - Tests : `godot --headless --path . --fixed-fps 120 -s tests/run_tests.gd` (code de sortie 1 si échec)
+- Test du regard souris en fenêtre réelle : `godot --path . --resolution 960x540 -s tests/shot.gd` (affiche RESULTAT OK)
 - Lancer le jeu : ouvrir le projet dans l'éditeur Godot puis F5.
 
 ## Architecture (scripts/)

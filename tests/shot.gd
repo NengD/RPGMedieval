@@ -1,9 +1,7 @@
 extends SceneTree
+# Test en fenêtre réelle (pas --headless) : le regard à la souris en 1re personne
 func _initialize() -> void:
 	_run()
-func _snap(p, name):
-	for i in 30: await process_frame
-	root.get_texture().get_image().save_png("C:/Users/bende/AppData/Local/Temp/claude/1737c38915366fd2/a0d4bad4-af99-45bc-bf90-d212f860c18b/scratchpad/shot_%s.png" % name)
 func _run() -> void:
 	load("res://scripts/input_setup.gd").register_actions()
 	var main = load("res://scenes/main.tscn").instantiate()
@@ -12,13 +10,12 @@ func _run() -> void:
 	var p: Player = main.player
 	p.toggle_view()
 	for i in 60: await physics_frame
-	await _snap(p, "fps_a")
-	# simule des mouvements de souris réels
+	var center := Vector2(root.size) / 2.0
 	var ev := InputEventMouseMotion.new()
-	ev.relative = Vector2(300, -100); ev.screen_relative = Vector2(300, -100)
-	print("mode souris: ", Input.mouse_mode, " yaw avant: ", p.rig.yaw)
-	Input.parse_input_event(ev)
-	for i in 10: await process_frame
-	print("yaw apres: ", p.rig.yaw, " pitch: ", p.rig.pitch)
-	await _snap(p, "fps_b")
+	ev.position = center; ev.global_position = center
+	ev.relative = Vector2(100, -40); ev.screen_relative = Vector2(100, -40)
+	var yaw0 := p.rig.yaw
+	root.push_input(ev)   # passe par l'interface (comme une vraie souris)
+	for i in 5: await process_frame
+	print("RESULTAT regard 1re personne: ", "OK" if not is_equal_approx(p.rig.yaw, yaw0) else "BLOQUÉ")
 	quit()
