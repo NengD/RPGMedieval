@@ -80,25 +80,25 @@ func _run() -> void:
 	_check(absf(max_y - expected) < 0.15, "hauteur de saut %.2f m (attendu %.2f)" % [max_y, expected])
 	_check(player.is_on_floor(), "il retombe au sol")
 
-	print("[Roulade]")
+	print("[Pas de côté]")
 	_teleport(Vector3(-10, 0.05, 9), 0.0)
 	await _frames(30)
 	_hold([&"move_right"])
 	Input.action_press(&"dodge")
 	await _frames(3)
 	Input.action_release(&"dodge")
-	_check(player.is_dodging, "la roulade démarre")
+	_check(player.is_dodging, "le pas de côté démarre")
 	var max_speed := 0.0
 	var saw_iframes := false
 	for i in 20:
 		await physics_frame
 		max_speed = maxf(max_speed, Vector2(player.velocity.x, player.velocity.z).length())
 		saw_iframes = saw_iframes or player.invulnerable
-	_check(max_speed > GameConfig.DODGE_SPEED * 0.8, "vitesse de roulade %.2f" % max_speed)
-	_check(saw_iframes, "invulnérable pendant la roulade")
+	_check(max_speed > GameConfig.DODGE_SPEED * 0.8, "vitesse du pas de côté %.2f" % max_speed)
+	_check(saw_iframes, "invulnérable pendant le pas de côté")
 	_release_all()
 	await _frames(int(GameConfig.DODGE_DURATION * 120) + 30)
-	_check(not player.is_dodging, "la roulade se termine")
+	_check(not player.is_dodging, "le pas de côté se termine")
 
 	print("[Murs]")
 	_teleport(Vector3(0, 0.05, 12), 0.0)
@@ -129,6 +129,22 @@ func _run() -> void:
 	await _frames(60)
 	_check(player._body_pivot.visible, "le corps est visible en 3e personne")
 
+	print("[Regard à la souris]")
+	for fp in [true, false]:
+		if player.rig.first_person != fp:
+			player.toggle_view()
+		await _frames(40)
+		var yaw0 := player.rig.yaw
+		var pitch0 := player.rig.pitch
+		var ev := InputEventMouseMotion.new()
+		ev.relative = Vector2(100, -40)
+		ev.screen_relative = Vector2(100, -40)
+		Input.parse_input_event(ev)
+		await _frames(5)
+		_check(not is_equal_approx(player.rig.yaw, yaw0) and not is_equal_approx(player.rig.pitch, pitch0), "la souris tourne la caméra (%s)" % ("1re personne" if fp else "3e personne"))
+	if player.rig.first_person:
+		player.toggle_view()
+
 	print("[Rampe]")
 	_teleport(Vector3(9, 0.05, -4), 0.0)
 	await _frames(30)
@@ -146,7 +162,7 @@ func _run() -> void:
 	dummy.reset_stats()
 	await _frames(10)
 	player._debug_hit()
-	_check(dummy.hit_count == 1, "le coup de test (F) touche le mannequin")
+	_check(dummy.hit_count == 1, "le coup de test (clic) touche le mannequin")
 
 	print("")
 	print("RÉSULTAT : %s (%d échec(s))" % ["SUCCÈS" if failures == 0 else "ÉCHEC", failures])

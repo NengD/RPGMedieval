@@ -15,8 +15,8 @@ func _ready() -> void:
 	_help.position = Vector2(16, 12)
 	_help.text = "ÉTAPE 1 — Base\n" \
 		+ "ZQSD / stick gauche : bouger   Souris / stick droit : regarder\n" \
-		+ "Maj : courir   Espace : sauter   C : roulade   V : changer de vue\n" \
-		+ "F : coup de test sur le mannequin   R : remettre à zéro   Échap : libérer la souris"
+		+ "Maj : courir   Espace : sauter   C : pas de côté   V : changer de vue\n" \
+		+ "Clic gauche : coup de test sur le mannequin   R : remettre à zéro   Échap : libérer la souris"
 	add_child(_help)
 
 	_status = _make_label()
@@ -39,7 +39,7 @@ func _process(_delta: float) -> void:
 		"première personne" if fps_view else "troisième personne",
 		speed,
 		"AU SOL" if player.is_on_floor() else "EN L'AIR",
-		"   ROULADE (invulnérable)" if player.invulnerable else ("   roulade" if player.is_dodging else ""),
+		"   PAS DE CÔTÉ (invulnérable)" if player.invulnerable else ("   pas de côté" if player.is_dodging else ""),
 	]
 
 

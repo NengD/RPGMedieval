@@ -18,12 +18,12 @@ savoir si le combat est amusant. Toutes les valeurs de réglage sont dans `scrip
 - `game_config.gd` — TOUS les réglages (const). `input_setup.gd` — autoload, actions clavier/manette (touches physiques → ZQSD ok en AZERTY).
 - `main.gd` — assemble arène, héros, mannequin, HUD ; R = réinitialiser.
 - `arena.gd` — sol, murs, piliers, plateforme+rampe, lumière (tout en code, shader damier).
-- `player.gd` — CharacterBody3D : marche/course/saut/roulade. `camera_rig.gd` — 3e/1re personne (SpringArm3D), touche V.
+- `player.gd` — CharacterBody3D : marche/course/saut/pas de côté. `camera_rig.gd` — 3e/1re personne (SpringArm3D), touche V.
 - `training_dummy.gd` — mannequin, affiche les dégâts. `hud.gd` — aide + état.
 - Couches physiques : 1 monde, 2 joueur, 3 ennemis.
 
 ## Contrôles
-ZQSD/stick G déplacer · souris/stick D regarder · Maj courir · Espace sauter · C roulade · V changer de vue · F coup de test · R reset · Échap libère la souris.
+ZQSD/stick G déplacer · souris/stick D regarder · Maj courir · Espace sauter · C pas de côté · V changer de vue · clic gauche coup de test · R reset · Échap libère la souris.
 
 ## Avancement
 - [x] Étape 1 — Base : arène, héros, caméra 3e/1re personne, mannequin

@@ -23,7 +23,7 @@ static func register_actions() -> void:
 	_add(&"look_down", [_axis(JOY_AXIS_RIGHT_Y, 1.0)])
 	_add(&"toggle_view", [_key(KEY_V), _btn(JOY_BUTTON_RIGHT_STICK)])
 	# Divers
-	_add(&"debug_hit", [_key(KEY_F), _btn(JOY_BUTTON_X)])
+	_add(&"debug_hit", [_mouse(MOUSE_BUTTON_LEFT), _btn(JOY_BUTTON_X)])
 	_add(&"reset_combat", [_key(KEY_R), _btn(JOY_BUTTON_START)])
 
 
@@ -38,6 +38,12 @@ static func _add(action: StringName, events: Array) -> void:
 static func _key(code: Key) -> InputEventKey:
 	var e := InputEventKey.new()
 	e.physical_keycode = code
+	return e
+
+
+static func _mouse(button: MouseButton) -> InputEventMouseButton:
+	var e := InputEventMouseButton.new()
+	e.button_index = button
 	return e
 
 

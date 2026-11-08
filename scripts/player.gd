@@ -1,6 +1,6 @@
 class_name Player
 extends CharacterBody3D
-## Héros (capsule) : marche, course, saut, roulade. Caméra gérée par CameraRig.
+## Héros (capsule) : marche, course, saut, pas de côté (esquive). Caméra gérée par CameraRig.
 
 var spawn_yaw := 0.0
 var rig: CameraRig
@@ -14,7 +14,6 @@ var _jump_buffer := 0.0
 var _dodge_elapsed := 0.0
 var _dodge_cooldown := 0.0
 var _dodge_dir := Vector3.ZERO
-var _dodge_backward := false
 
 
 func _ready() -> void:
@@ -125,7 +124,7 @@ func _update_facing(wish: Vector3, delta: float) -> void:
 	if rig.first_person:
 		facing_yaw = rig.yaw
 	elif is_dodging:
-		pass   # orientation fixée au début de la roulade
+		pass   # orientation fixée au début du pas de côté
 	elif wish.length() > 0.1:
 		var target_yaw := atan2(-wish.x, -wish.z)
 		facing_yaw = lerp_angle(facing_yaw, target_yaw, 1.0 - exp(-GameConfig.TURN_SPEED * delta))
@@ -137,12 +136,8 @@ func _start_dodge(wish: Vector3) -> void:
 	_dodge_elapsed = 0.0
 	if wish.length() > 0.1:
 		_dodge_dir = wish.normalized()
-		_dodge_backward = false
-		if not rig.first_person:
-			facing_yaw = atan2(-_dodge_dir.x, -_dodge_dir.z)
 	else:
-		_dodge_dir = -facing_vector()   # sans direction : roulade en arrière
-		_dodge_backward = true
+		_dodge_dir = -facing_vector()   # sans direction : pas en arrière
 
 
 func _update_dodge(delta: float) -> void:
@@ -152,19 +147,17 @@ func _update_dodge(delta: float) -> void:
 	velocity.x = _dodge_dir.x * speed
 	velocity.z = _dodge_dir.z * speed
 	invulnerable = _dodge_elapsed >= GameConfig.DODGE_IFRAME_START and _dodge_elapsed <= GameConfig.DODGE_IFRAME_END
-	# Animation simple : le corps fait un tour sur lui-même, un peu écrasé
-	var angle := t * TAU
-	_body_pivot.rotation.x = angle if _dodge_backward else -angle
-	_body_pivot.scale.y = 0.75
+	# Animation simple : le corps s'incline dans le sens du pas puis se redresse
+	var right := Vector3(cos(facing_yaw), 0.0, -sin(facing_yaw))
+	_body_pivot.rotation.z = -_dodge_dir.dot(right) * GameConfig.DODGE_LEAN * sin(t * PI)
 	if t >= 1.0:
 		is_dodging = false
 		invulnerable = false
 		_dodge_cooldown = GameConfig.DODGE_COOLDOWN
-		_body_pivot.rotation.x = 0.0
-		_body_pivot.scale.y = 1.0
+		_body_pivot.rotation.z = 0.0
 
 
-## Coup de test (touche F) : touche le mannequin devant le héros.
+## Coup de test (clic gauche) : touche le mannequin devant le héros.
 func _debug_hit() -> void:
 	var from := global_position + Vector3.UP * 1.0
 	var dir := facing_vector()

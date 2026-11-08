@@ -33,19 +33,19 @@ const JUMP_VELOCITY := 6.5           # force du saut
 const COYOTE_TIME := 0.10            # saut encore possible juste après avoir quitté le bord
 const JUMP_BUFFER := 0.12            # saut mémorisé si pressé juste avant l'atterrissage
 
-# --- Héros : esquive / roulade ---
-const DODGE_SPEED := 9.0             # vitesse de départ de la roulade
-const DODGE_DURATION := 0.55
-const DODGE_COOLDOWN := 0.25         # pause avant de pouvoir rouler à nouveau
-const DODGE_IFRAME_START := 0.05     # début de l'invulnérabilité (s depuis le début)
-const DODGE_IFRAME_END := 0.40       # fin de l'invulnérabilité
+# --- Héros : esquive (pas de côté rapide, touche C) ---
+const DODGE_SPEED := 7.0             # vitesse de départ du pas (m/s)
+const DODGE_DURATION := 0.32         # durée du pas (distance ~ 1,5 m)
+const DODGE_COOLDOWN := 0.20         # pause avant de pouvoir esquiver à nouveau
+const DODGE_IFRAME_START := 0.03     # début de l'invulnérabilité (s depuis le début)
+const DODGE_IFRAME_END := 0.22       # fin de l'invulnérabilité
+const DODGE_LEAN := 0.35             # inclinaison du corps pendant le pas (radians)
 
 # --- Caméra ---
 const MOUSE_SENSITIVITY := 0.0025    # radians par pixel de souris
 const STICK_SENSITIVITY := 3.2       # radians par seconde, stick à fond
 const INVERT_Y := false
 const TPS_DISTANCE := 3.6            # distance caméra - héros (3e personne)
-const TPS_SHOULDER := 0.45           # décalage d'épaule (3e personne)
 const TPS_PITCH_MIN_DEG := -60.0
 const TPS_PITCH_MAX_DEG := 35.0
 const FPS_PITCH_LIMIT_DEG := 85.0

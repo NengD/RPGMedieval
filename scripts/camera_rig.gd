@@ -78,5 +78,4 @@ func _process(delta: float) -> void:
 	_pivot.position.y = GameConfig.EYE_HEIGHT
 	_pivot.rotation.x = pitch
 	_arm.spring_length = GameConfig.TPS_DISTANCE * k
-	camera.h_offset = GameConfig.TPS_SHOULDER * k
 	camera.fov = lerpf(GameConfig.FOV_FPS, GameConfig.FOV_TPS, k)
