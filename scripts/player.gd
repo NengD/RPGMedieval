@@ -1,25 +1,38 @@
 class_name Player
 extends CharacterBody3D
-## Héros (capsule) : déplacement, pas de côté, et combat à l'épée (via Combatant).
+## Héros (capsule) : déplacement, pas de côté, combat à l'épée, à l'arc et à l'arbalète.
+
+enum Weapon { SWORD, BOW, CROSSBOW }
+
+signal weapon_changed(kind: int)
+signal notice(text: String)
 
 var spawn_yaw := 0.0
 var rig: CameraRig
 var combatant: Combatant
 var weapon: WeaponVisual
+var ranged_visual: RangedVisual
 var facing_yaw := 0.0
 var invulnerable := false
 var is_dodging := false
-## Direction choisie pour attaquer / parer : 0 haut, 1 droite, 2 bas, 3 gauche
+## Direction choisie pour attaquer / parer : 0 haut, 1 droite, 2 estoc, 3 gauche
 var aim_dir: int = Combatant.Dir.UP
 var aim_accum := Vector2.ZERO
 
+var weapon_kind: int = Weapon.SWORD
+var drawing := false              # arc : corde en cours de tension
+var bow_tension := 0.0            # 0..1
+var crossbow_reload := 0.0        # secondes avant que l'arbalète soit rechargée (0 = prête)
+
 var _body_pivot: Node3D
+var _ranged_pivot: Node3D
 var _coyote := 0.0
 var _jump_buffer := 0.0
 var _dodge_elapsed := 0.0
 var _dodge_cooldown := 0.0
 var _dodge_dir := Vector3.ZERO
 var _assist_yaw := NAN
+var _release_cooldown := 0.0
 
 
 func _ready() -> void:
@@ -69,6 +82,11 @@ func _ready() -> void:
 	weapon = WeaponVisual.new()
 	add_child(weapon)
 	weapon.bind(combatant)
+	_ranged_pivot = Node3D.new()
+	_ranged_pivot.position = Vector3(0, 1.4, 0)   # à hauteur d'épaule : l'arme suit l'inclinaison de la visée
+	add_child(_ranged_pivot)
+	ranged_visual = RangedVisual.new()
+	_ranged_pivot.add_child(ranged_visual)
 
 	facing_yaw = spawn_yaw
 	rotation.y = facing_yaw
@@ -94,31 +112,174 @@ func reset_to(pos: Vector3, yaw: float) -> void:
 	rotation.y = yaw
 	is_dodging = false
 	invulnerable = false
+	drawing = false
+	bow_tension = 0.0
+	crossbow_reload = 0.0
 	_body_pivot.rotation = Vector3.ZERO
 	combatant.reset()
 	rig.snap_to_target()
 
 
+# ---------------------------------------------------------------- entrées
+
 func _unhandled_input(event: InputEvent) -> void:
 	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	if event.is_action_pressed(&"toggle_view"):
 		toggle_view()
+	elif event.is_action_pressed(&"weapon_next"):
+		cycle_weapon(1)
+	elif event.is_action_pressed(&"weapon_prev"):
+		cycle_weapon(-1)
 	elif event is InputEventMouseMotion and captured:
 		aim_accum += (event as InputEventMouseMotion).screen_relative
 	elif event.is_action_pressed(&"attack") and captured:
-		try_attack()
+		primary_action()
 
 
 func _process(_delta: float) -> void:
 	_body_pivot.visible = rig.blend > 0.25   # le corps disparaît en 1re personne
+	weapon.visible = weapon_kind == Weapon.SWORD
+	_ranged_pivot.rotation.x = rig.pitch
+	ranged_visual.refresh(weapon_kind, bow_tension if drawing else 0.0, drawing, crossbow_reload, rig.first_person)
 
 
-## Attaque dans la direction choisie (aim_dir).
+## Action principale (clic gauche) selon l'arme.
+func primary_action() -> bool:
+	match weapon_kind:
+		Weapon.SWORD:
+			return try_attack()
+		Weapon.BOW:
+			return start_draw()
+		Weapon.CROSSBOW:
+			return fire_crossbow()
+	return false
+
+
+# ---------------------------------------------------------------- armes
+
+func cycle_weapon(step: int) -> bool:
+	return switch_weapon(posmod(weapon_kind + step, 3))
+
+
+func switch_weapon(kind: int) -> bool:
+	if kind == weapon_kind or combatant.dead or is_dodging or combatant.state != Combatant.State.IDLE:
+		return false
+	cancel_draw()
+	weapon_kind = kind
+	weapon_changed.emit(kind)
+	return true
+
+
+# --- Épée
+
+## Attaque à l'épée dans la direction choisie (aim_dir).
 func try_attack() -> bool:
 	if combatant.dead or is_dodging:
 		return false
 	_assist_yaw = _find_assist_yaw()
 	return combatant.request_attack(aim_dir)
+
+
+# --- Arc
+
+func start_draw() -> bool:
+	if combatant.dead or is_dodging or drawing or combatant.exhausted or combatant.state != Combatant.State.IDLE:
+		return false
+	if _release_cooldown > 0.0:
+		return false
+	drawing = true
+	bow_tension = 0.0
+	return true
+
+
+func cancel_draw() -> void:
+	drawing = false
+	bow_tension = 0.0
+
+
+## Relâche la corde : tire si assez tendue. Retourne la flèche (ou null).
+func release_draw() -> Arrow:
+	if not drawing:
+		return null
+	var t := bow_tension
+	cancel_draw()
+	if t < GameConfig.BOW_MIN_TENSION:
+		notice.emit("Corde relâchée (pas assez tendue)")
+		return null
+	return fire_bow(t)
+
+
+## Tire une flèche avec une tension donnée (0..1).
+func fire_bow(tension: float) -> Arrow:
+	_release_cooldown = GameConfig.BOW_RELEASE_COOLDOWN
+	combatant.spend_stamina(GameConfig.BOW_STAMINA_COST * tension)
+	var speed := lerpf(GameConfig.BOW_SPEED_MIN, GameConfig.BOW_SPEED_MAX, tension)
+	var dmg := lerpf(GameConfig.BOW_DAMAGE_MIN, GameConfig.BOW_DAMAGE_MAX, tension)
+	var spread := lerpf(GameConfig.BOW_SPREAD_DEG_MAX, GameConfig.BOW_SPREAD_DEG_MIN, tension)
+	return _shoot(speed, GameConfig.ARROW_GRAVITY, dmg, spread, false)
+
+
+# --- Arbalète
+
+func fire_crossbow() -> bool:
+	if combatant.dead or is_dodging or combatant.exhausted or combatant.state != Combatant.State.IDLE:
+		return false
+	if crossbow_reload > 0.0:
+		notice.emit("Rechargement de l'arbalète…")
+		return false
+	combatant.spend_stamina(GameConfig.CROSSBOW_STAMINA_COST)
+	_shoot(GameConfig.CROSSBOW_SPEED, GameConfig.CROSSBOW_GRAVITY, GameConfig.CROSSBOW_DAMAGE, GameConfig.CROSSBOW_SPREAD_DEG, true)
+	crossbow_reload = GameConfig.CROSSBOW_RELOAD_TIME
+	return true
+
+
+## Direction de visée : du point d'où part le tir vers ce que vise le centre de l'écran.
+func _shoot(speed: float, gravity: float, dmg: float, spread_deg: float, bolt: bool) -> Arrow:
+	var cam := rig.camera
+	var from := cam.global_position
+	var fwd := -cam.global_transform.basis.z
+	var query := PhysicsRayQueryParameters3D.create(from, from + fwd * 150.0, GameConfig.LAYER_WORLD | GameConfig.LAYER_ENEMY)
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	var aim_point: Vector3 = hit.position if hit else from + fwd * 150.0
+	var muzzle := _muzzle_position()
+	var dir := (aim_point - muzzle).normalized()
+	if aim_point.distance_to(muzzle) < 2.0:
+		dir = fwd
+	dir = _with_spread(dir, spread_deg)
+	return Arrow.spawn(get_parent(), muzzle, dir * speed, gravity, dmg, combatant, bolt)
+
+
+func _muzzle_position() -> Vector3:
+	var cam := rig.camera
+	var fwd := -cam.global_transform.basis.z
+	var right := cam.global_transform.basis.x
+	if rig.first_person:
+		return cam.global_position + fwd * 0.5 + right * 0.12 - Vector3.UP * 0.1
+	var f := facing_vector()
+	return global_position + Vector3(0.0, 1.4, 0.0) + f * 0.5
+
+
+func _with_spread(dir: Vector3, spread_deg: float) -> Vector3:
+	var axis := dir.cross(Vector3.UP)
+	if axis.length() < 0.01:
+		axis = Vector3.RIGHT
+	axis = axis.normalized().rotated(dir, randf() * TAU)
+	return dir.rotated(axis, deg_to_rad(randf() * spread_deg)).normalized()
+
+
+func _update_ranged(delta: float) -> void:
+	_release_cooldown = maxf(0.0, _release_cooldown - delta)
+	crossbow_reload = maxf(0.0, crossbow_reload - delta)
+	if not drawing:
+		return
+	if combatant.dead or combatant.state == Combatant.State.STAGGER or is_dodging or Input.is_action_just_pressed(&"guard"):
+		cancel_draw()   # touché, esquive ou clic droit : on relâche sans tirer
+		return
+	bow_tension = minf(1.0, bow_tension + delta / GameConfig.BOW_DRAW_TIME)
+	if bow_tension >= 1.0:
+		combatant.spend_stamina(GameConfig.BOW_HOLD_DRAIN * delta)   # tenir la corde fatigue
+	if not Input.is_action_pressed(&"attack") or combatant.exhausted:
+		release_draw()
 
 
 func _find_assist_yaw() -> float:
@@ -159,18 +320,25 @@ func _move_factor() -> float:
 			return 0.2
 		Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY:
 			return GameConfig.ATTACK_MOVE_FACTOR
+	if drawing:
+		return GameConfig.BOW_MOVE_FACTOR
+	if weapon_kind == Weapon.CROSSBOW:
+		return GameConfig.CROSSBOW_MOVE_FACTOR
 	if combatant.guard_held:
 		return GameConfig.GUARD_MOVE_FACTOR
 	return 1.0
 
 
+# ---------------------------------------------------------------- physique
+
 func _physics_process(delta: float) -> void:
 	_dodge_cooldown = maxf(0.0, _dodge_cooldown - delta)
 	_update_aim(delta)
+	_update_ranged(delta)
 
-	# Garde (clic droit maintenu)
+	# Garde (clic droit maintenu, épée seulement)
 	var alive := not combatant.dead
-	combatant.set_guard(alive and Input.is_action_pressed(&"guard"), aim_dir)
+	combatant.set_guard(alive and weapon_kind == Weapon.SWORD and Input.is_action_pressed(&"guard"), aim_dir)
 	combatant.invulnerable = invulnerable
 	if not combatant.is_attacking():
 		_assist_yaw = NAN
@@ -215,7 +383,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _update_facing(wish: Vector3, delta: float) -> void:
-	var in_combat := combatant.state in [Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY] or combatant.guard_held
+	var in_combat := combatant.state in [Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY] \
+		or combatant.guard_held or weapon_kind != Weapon.SWORD
 	if rig.first_person:
 		facing_yaw = rig.yaw
 	elif is_dodging or combatant.state == Combatant.State.STAGGER:

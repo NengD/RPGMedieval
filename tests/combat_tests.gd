@@ -183,6 +183,40 @@ func _run() -> void:
 	_check(solo.exhausted or solo.stamina < GameConfig.STAMINA_MAX, "attaquer en boucle vide l'endurance (%d attaques)" % count)
 	await _cleanup([solo])
 
+	print("[Tirs reçus (flèches)]")
+	p = _pair()
+	a = p[0]
+	b = p[1]
+	await physics_frame
+	var flight := Vector3(0, 0, -1)   # le tir va de A vers B ; B regarde vers A (il le voit venir)
+	res = b.receive_projectile(a, 30.0, flight, false)
+	_check(res == R.HIT and is_equal_approx(b.max_health - b.health, 30.0), "sans garde : le tir touche")
+	_check(b.state == S.STAGGER, "le tir étourdit brièvement")
+	b.reset()
+	b.set_guard(true, D.LEFT)
+	await _seconds(0.5)
+	stam0 = b.stamina
+	res = b.receive_projectile(a, 30.0, flight, false)
+	_check(res == R.BLOCKED and is_equal_approx(b.health, b.max_health), "garde de face : le tir est paré, aucun dégât")
+	_check(is_equal_approx(stam0 - b.stamina, 30.0 * GameConfig.BLOCK_STAMINA_FACTOR * GameConfig.PROJECTILE_BLOCK_FACTOR), "parer un tir coûte moins qu'un coup d'épée")
+	res = b.receive_projectile(a, 30.0, Vector3(0, 0, 1), false)
+	_check(res == R.HIT, "un tir dans le dos passe malgré la garde")
+	b.reset()
+	b.set_guard(true, D.UP)
+	await _frames(3)
+	res = b.receive_projectile(a, 30.0, flight, false)
+	_check(res == R.PARRIED and is_equal_approx(b.health, b.max_health), "garde levée au dernier moment : tir renvoyé")
+	b.reset()
+	b.set_guard(true, D.UP)
+	await _seconds(0.5)
+	b.stamina = 5.0
+	res = b.receive_projectile(a, 40.0, flight, false)
+	_check(res == R.GUARD_BROKEN, "un tir trop fort brise la garde d'un adversaire sans endurance")
+	b.reset()
+	b.invulnerable = true
+	_check(b.receive_projectile(a, 40.0, flight, false) == R.DODGED, "le pas de côté esquive les tirs")
+	await _cleanup(p)
+
 	print("[Esquive]")
 	p = _pair()
 	a = p[0]

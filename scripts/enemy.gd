@@ -6,8 +6,8 @@ extends CharacterBody3D
 ##  - _decide : choisit s'approcher / tourner autour / attaquer / reculer et retourne la vitesse voulue ;
 ##  - _physics_process : applique la vitesse (avec gravité et collisions).
 
-enum Mode { APPROACH, CIRCLE, ATTACK, DEFEND, RETREAT, STAGGERED, DEAD }
-const MODE_NAMES := ["s'approche", "tourne autour de toi", "attaque", "se défend", "RECULE (fatigué)", "déséquilibré", "vaincu"]
+enum Mode { APPROACH, CIRCLE, ATTACK, DEFEND, RETREAT, STAGGERED, DEAD, COVER, EVADE }
+const MODE_NAMES := ["s'approche", "tourne autour de toi", "attaque", "se défend", "RECULE (fatigué)", "déséquilibré", "vaincu", "se met à couvert", "charge en zigzag"]
 const _BASE_COLOR := Color(0.55, 0.15, 0.18)
 
 var combatant: Combatant
@@ -33,6 +33,16 @@ var _guard_wanted := false
 var _guard_dir := 0
 var _guard_release := 0.0
 var _stuck_timer := 0.0
+# face aux tirs
+var cover_objects: Array = []        # [{pos: Vector3, radius: float}] donné par la scène (piliers, caisses)
+var _arrow_guard := 0.0
+var _handled_arrows := {}
+var _cover_active := false
+var _cover_point := Vector3.ZERO
+var _cover_time := 0.0
+var _cover_cooldown := 0.0
+var _zig_sign := 1.0
+var _zig_timer := 0.0
 
 
 func _ready() -> void:
@@ -103,6 +113,12 @@ func reset_to(pos: Vector3) -> void:
 	_seen_threat = false
 	_guard_wanted = false
 	_last_dirs.clear()
+	_cover_active = false
+	_arrow_guard = 0.0
+	_handled_arrows.clear()
+	for child in get_children():
+		if child is Arrow:
+			child.queue_free()
 	_attack_cd = 1.5
 	if target:
 		var to := target.global_position - global_position
@@ -180,7 +196,8 @@ func _update_defense(delta: float, dist: float) -> void:
 			_guard_release -= delta
 			if _guard_release <= 0.0:
 				_guard_wanted = false
-	c.set_guard(_guard_wanted, _guard_dir)
+	_check_arrows(delta)
+	c.set_guard(_guard_wanted or _arrow_guard > 0.0, _guard_dir if _guard_wanted else Combatant.Dir.UP)
 
 
 ## Décide, une fois par coup du joueur, si l'ennemi tente de parer, de quel côté et quand.
@@ -238,6 +255,8 @@ func _decide(delta: float, dist: float, dir_to: Vector3) -> Vector3:
 	elif _guard_wanted:
 		mode = Mode.DEFEND
 		desired = side * _circle_sign * 0.8
+	elif _ranged_threat(dist):
+		desired = _ranged_response(delta, dist, dir_to, side)
 	elif dist > GameConfig.ENEMY_ENGAGE_DISTANCE + 0.4:
 		mode = Mode.APPROACH
 		desired = dir_to * GameConfig.ENEMY_WALK_SPEED
@@ -289,6 +308,98 @@ func _choose_dir(dist: float) -> int:
 		if roll <= 0.0:
 			return d
 	return Combatant.Dir.UP
+
+
+# ---------------------------------------------------------------- face aux tirs
+
+## Le héros tient un arc ou une arbalète et reste à distance : l'ennemi doit réagir.
+func _ranged_threat(dist: float) -> bool:
+	var threat: bool = target.weapon_kind != Player.Weapon.SWORD and not target.combatant.dead \
+		and dist > GameConfig.ENEMY_ENGAGE_DISTANCE + 1.0
+	if not threat:
+		_cover_active = false
+	return threat
+
+
+## Soit il se met derrière un pilier / une caisse, soit il charge en zigzag.
+func _ranged_response(delta: float, _dist: float, dir_to: Vector3, side: Vector3) -> Vector3:
+	_cover_cooldown -= delta
+	if not _cover_active and _cover_cooldown <= 0.0:
+		var chance: float = GameConfig.AI_COVER_CHANCE[difficulty]
+		if randf() < chance and _find_cover():
+			_cover_active = true
+			_cover_time = GameConfig.ENEMY_COVER_MAX_TIME
+		else:
+			_cover_cooldown = 2.5   # nouvelle décision dans 2,5 s
+	if _cover_active:
+		mode = Mode.COVER
+		_cover_time -= delta
+		var to_cover := _cover_point - global_position
+		to_cover.y = 0.0
+		if _cover_time <= 0.0:
+			_cover_active = false
+			_cover_cooldown = 3.0
+			return Vector3.ZERO
+		if to_cover.length() > 0.5:
+			return to_cover.normalized() * GameConfig.ENEMY_RETREAT_SPEED * 1.3
+		return Vector3.ZERO   # arrivé : il attend à l'abri
+	mode = Mode.EVADE
+	_zig_timer -= delta
+	if _zig_timer <= 0.0:
+		_zig_sign = -_zig_sign
+		_zig_timer = randf_range(0.35, 0.7)
+	return dir_to * GameConfig.ENEMY_WALK_SPEED * GameConfig.ENEMY_CHARGE_SPEED_FACTOR + side * _zig_sign * GameConfig.ENEMY_ZIGZAG_SPEED
+
+
+## Cherche le point d'abri le plus proche : derrière un obstacle, du côté opposé au tireur.
+func _find_cover() -> bool:
+	var best := Vector3.ZERO
+	var best_dist := INF
+	var shooter := target.global_position
+	for obj in cover_objects:
+		var center: Vector3 = obj.pos
+		var away := Vector3(center.x - shooter.x, 0.0, center.z - shooter.z)
+		if away.length() < 0.1:
+			continue
+		var point := center + away.normalized() * (float(obj.radius) + 0.8)
+		point.y = 0.0
+		if maxf(absf(point.x), absf(point.z)) > GameConfig.ARENA_HALF_SIZE - 1.3:
+			continue
+		if point.distance_to(shooter) < 4.0:
+			continue
+		var d := global_position.distance_to(point)
+		if d < best_dist and d < 12.0:
+			best_dist = d
+			best = point
+	if best_dist == INF:
+		return false
+	_cover_point = best
+	return true
+
+
+## Surveille les flèches en vol : s'il en voit une arriver, il lève la garde (selon sa difficulté).
+func _check_arrows(delta: float) -> void:
+	_arrow_guard = maxf(0.0, _arrow_guard - delta)
+	if combatant.is_attacking() or combatant.dead:
+		return
+	var react: float = GameConfig.AI_REACTION_TIME[difficulty]
+	var chest := global_position + Vector3(0.0, 1.1, 0.0)
+	for node in get_tree().get_nodes_in_group(&"arrows"):
+		var a := node as Arrow
+		if a == null or not a.flying or a.team == combatant.team:
+			continue
+		var id := a.get_instance_id()
+		if _handled_arrows.has(id) or a.age < react:
+			continue   # il ne l'a pas encore vue partir
+		var t_hit := a.time_to_reach(chest, 0.9)
+		if t_hit < 0.0 or t_hit > 0.6:
+			continue
+		_handled_arrows[id] = true
+		var chance: float = GameConfig.AI_ARROW_GUARD_CHANCE[difficulty]
+		if randf() < chance:
+			_arrow_guard = t_hit + 0.3
+	if _handled_arrows.size() > 40:
+		_handled_arrows.clear()
 
 
 # ---------------------------------------------------------------- réactions

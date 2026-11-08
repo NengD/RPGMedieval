@@ -5,6 +5,7 @@ extends CanvasLayer
 var player: Player
 var dummy: TrainingDummy
 var enemy: Enemy
+var target_score := 0
 
 var _help: Label
 var _status: Label
@@ -18,16 +19,16 @@ const _STATE_NAMES := ["libre", "préparation", "COUP", "récupération", "DÉS�
 func _ready() -> void:
 	_help = _make_label()
 	_help.position = Vector2(16, 12)
-	_help.text = "ÉTAPE 3 — Combat contre un ennemi\n" \
+	_help.text = "ÉTAPE 4 — Combat à distance\n" \
 		+ "ZQSD : bouger   Maj : courir   Espace : sauter   C : pas de côté   V : changer de vue\n" \
-		+ "Bouge la souris (ou stick droit) pour choisir haut/bas/gauche/droite, puis :\n" \
-		+ "Clic gauche : attaquer   Clic droit (maintenu) : parer\n" \
-		+ "F1 / F2 / F3 : difficulté facile / normal / difficile   R : recommencer le combat\n" \
-		+ "T : mannequin agressif (coin du fond)   Échap : libérer la souris"
+		+ "Tab / molette : changer d'arme (épée, arc, arbalète)\n" \
+		+ "ÉPÉE : bouge la souris pour choisir haut/estoc/gauche/droite, clic gauche attaque, clic droit (maintenu) pare\n" \
+		+ "ARC : maintiens le clic gauche pour bander, relâche pour tirer (clic droit = annuler)   ARBALÈTE : clic gauche, recharge lente\n" \
+		+ "F1 / F2 / F3 : difficulté   R : recommencer   Retour arrière : retirer les flèches   T : mannequin agressif   Échap : souris\n"
 	add_child(_help)
 
 	_status = _make_label()
-	_status.position = Vector2(16, 160)
+	_status.position = Vector2(16, 175)
 	add_child(_status)
 
 	_canvas = HudCanvas.new()
@@ -55,6 +56,8 @@ func _ready() -> void:
 	c.hit_resolved.connect(_on_player_hit_resolved)
 	c.strike_result.connect(_on_player_strike_result)
 	c.died.connect(func(): show_message("VOUS ÊTES MORT", Color(1, 0.3, 0.3), 2.0))
+	player.notice.connect(func(text: String): show_message(text, Color(0.9, 0.9, 0.9), 1.0))
+	player.combatant.projectile_result.connect(_on_player_shot_result)
 	enemy.combatant.died.connect(func(): show_message("ENNEMI VAINCU !", Color(0.5, 1.0, 0.5), 2.0))
 
 
@@ -75,6 +78,16 @@ func _on_player_hit_resolved(result: int, _dir: int, amount: float, _attacker: C
 		Combatant.Result.DODGED: show_message("Esquive", Color(0.8, 0.8, 0.8))
 
 
+func _on_player_shot_result(result: int, _victim: Combatant, amount: float, head: bool) -> void:
+	match result:
+		Combatant.Result.HIT:
+			show_message(("TIR À LA TÊTE !  -%d" if head else "Touché  -%d") % int(round(amount)), Color(1.0, 0.85, 0.2) if head else Color(1.0, 0.7, 0.4))
+		Combatant.Result.BLOCKED, Combatant.Result.PARRIED:
+			show_message("Tir paré", Color(0.8, 0.8, 0.8))
+		Combatant.Result.GUARD_BROKEN:
+			show_message("Garde brisée par le tir !", Color(1, 0.55, 0.1))
+
+
 func _on_player_strike_result(result: int, _victim: Combatant) -> void:
 	if result == Combatant.Result.BLOCKED:
 		show_message("Ton coup est paré", Color(0.8, 0.8, 0.8))
@@ -90,7 +103,7 @@ func _process(_delta: float) -> void:
 	var guard_text := ""
 	if c.is_guarding():
 		guard_text = "   GARDE : %s%s" % [GameConfig.DIR_NAMES[c.guard_dir], " (parfaite !)" if c.guard_time <= GameConfig.PERFECT_PARRY_WINDOW else ""]
-	_status.text = "Vue : %s   Vitesse : %.1f m/s   Direction choisie : %s\nÉtat : %s%s%s\nMannequin agressif : %s (T)\nDifficulté : %s    Ennemi : %s" % [
+	_status.text = "Vue : %s   Vitesse : %.1f m/s   Direction choisie : %s\nÉtat : %s%s%s\nMannequin agressif : %s (T)\nDifficulté : %s    Ennemi : %s\nArme : %s    Score aux cibles : %d" % [
 		"1re personne" if fps_view else "3e personne",
 		speed,
 		GameConfig.DIR_NAMES[player.aim_dir].to_upper(),
@@ -100,9 +113,22 @@ func _process(_delta: float) -> void:
 		"OUI" if dummy.practice else "non",
 		GameConfig.DIFFICULTY_NAMES[enemy.difficulty],
 		Enemy.MODE_NAMES[enemy.mode],
+		GameConfig.WEAPON_NAMES[player.weapon_kind],
+		target_score,
 	]
 
 	_canvas.selected_dir = player.aim_dir
+	_canvas.weapon_kind = player.weapon_kind
+	_canvas.drawing = player.drawing
+	_canvas.tension = player.bow_tension
+	_canvas.reload_ratio = 1.0 - clampf(player.crossbow_reload / GameConfig.CROSSBOW_RELOAD_TIME, 0.0, 1.0)
+	var spread := 0.0
+	if player.weapon_kind == Player.Weapon.BOW:
+		spread = lerpf(GameConfig.BOW_SPREAD_DEG_MAX, GameConfig.BOW_SPREAD_DEG_MIN, player.bow_tension if player.drawing else 0.0)
+	else:
+		spread = GameConfig.CROSSBOW_SPREAD_DEG
+	var focal := _canvas.size.y * 0.5 / tan(deg_to_rad(player.rig.camera.fov * 0.5))
+	_canvas.reticle_radius = 8.0 + focal * tan(deg_to_rad(spread))
 	_canvas.guarding = c.guard_held
 	_canvas.health_ratio = c.health / c.max_health
 	_canvas.stamina_ratio = c.stamina / GameConfig.STAMINA_MAX

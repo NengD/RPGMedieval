@@ -146,3 +146,56 @@ const ENEMY_RETREAT_DISTANCE := 5.5       # distance où il se met en sécurité
 const ENEMY_RETREAT_STAMINA := 20.0       # il recule sous cette endurance
 const ENEMY_RESUME_STAMINA := 65.0        # il revient au combat au-dessus de cette endurance
 const ENEMY_MIN_ATTACK_STAMINA := 30.0    # endurance minimale pour lancer une attaque
+
+# ============================================================
+# COMBAT À DISTANCE (étape 4) — arc et arbalète
+# Changer d'arme : Tab ou molette de la souris (D-pad droit sur manette).
+# ============================================================
+const WEAPON_NAMES := ["Épée", "Arc", "Arbalète"]
+
+# Arc : maintenir le clic gauche pour bander, relâcher pour tirer (clic droit = annuler)
+const BOW_DRAW_TIME := 1.1              # temps pour bander à fond (s)
+const BOW_MIN_TENSION := 0.15           # en dessous, la corde est relâchée sans tirer
+const BOW_SPEED_MIN := 14.0             # vitesse de la flèche corde à peine tendue (m/s)
+const BOW_SPEED_MAX := 42.0             # vitesse à pleine tension
+const BOW_DAMAGE_MIN := 8.0             # dégâts à peine tendu
+const BOW_DAMAGE_MAX := 40.0            # dégâts à pleine tension
+const BOW_SPREAD_DEG_MIN := 0.15        # imprécision à pleine tension (degrés)
+const BOW_SPREAD_DEG_MAX := 4.0         # imprécision à peine tendu
+const BOW_STAMINA_COST := 8.0           # endurance consommée au tir (x tension)
+const BOW_HOLD_DRAIN := 12.0            # endurance perdue par seconde quand on tient la corde à fond
+const BOW_MOVE_FACTOR := 0.5            # vitesse de déplacement en bandant
+const BOW_RELEASE_COOLDOWN := 0.30      # pause après un tir
+
+# Arbalète : clic gauche = tir immédiat, puis rechargement lent
+const CROSSBOW_SPEED := 62.0
+const CROSSBOW_DAMAGE := 52.0
+const CROSSBOW_RELOAD_TIME := 2.4       # temps de rechargement (s)
+const CROSSBOW_SPREAD_DEG := 0.25
+const CROSSBOW_STAMINA_COST := 12.0
+const CROSSBOW_MOVE_FACTOR := 0.8
+const CROSSBOW_GRAVITY := 3.5           # le carreau tombe très peu : tir presque droit
+
+# Flèches
+const ARROW_GRAVITY := 12.0             # chute de la flèche (m/s²) : plus haut = trajectoire plus courbe
+const ARROW_LIFETIME := 8.0
+const MAX_STUCK_ARROWS := 80            # nombre de flèches gardées plantées (les plus anciennes disparaissent)
+const HEADSHOT_MULTIPLIER := 1.5        # tir à la tête
+const HEAD_HEIGHT := 1.45               # hauteur au-dessus des pieds à partir de laquelle c'est la tête
+
+# Se protéger des tirs avec l'épée
+const GUARD_ARC_DEG := 120.0            # la garde protège des tirs venant de face (cône)
+const PROJECTILE_BLOCK_FACTOR := 0.6    # parer un tir coûte moins d'endurance qu'un coup d'épée
+const PROJECTILE_STUN := 0.25           # étourdissement quand on est touché par un tir
+
+# Cibles d'entraînement
+const TARGET_RADIUS := 0.6
+const TARGET_BULLSEYE := 0.12           # rayon du centre (10 points)
+const TARGET_INNER := 0.30              # anneau du milieu (5 points) ; le reste = 2 points
+
+# Ennemi face aux tirs (listes [Facile, Normal, Difficile])
+const AI_ARROW_GUARD_CHANCE := [0.5, 0.75, 0.95]   # chance de lever la garde contre un tir qu'il voit venir
+const AI_COVER_CHANCE := [0.35, 0.55, 0.75]        # chance de se mettre à couvert quand tu tires de loin
+const ENEMY_COVER_MAX_TIME := 4.0                  # temps passé à couvert avant de ressortir (s)
+const ENEMY_CHARGE_SPEED_FACTOR := 1.5             # vitesse de sa charge en zigzag
+const ENEMY_ZIGZAG_SPEED := 3.0                    # amplitude latérale du zigzag

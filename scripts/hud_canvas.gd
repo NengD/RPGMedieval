@@ -8,6 +8,11 @@ var threat_dir := -1         # côté d'où arrive un coup ennemi (= côté à g
 var health_ratio := 1.0
 var stamina_ratio := 1.0
 var exhausted := false
+var weapon_kind := 0         # 0 épée, 1 arc, 2 arbalète
+var reticle_radius := 20.0
+var drawing := false
+var tension := 0.0
+var reload_ratio := 1.0      # arbalète : 0 = vient de tirer, 1 = prête
 var enemy_visible := false
 var enemy_health_ratio := 1.0
 var enemy_stamina_ratio := 1.0
@@ -30,7 +35,7 @@ static func dir_vector(d: int) -> Vector2:
 
 func _draw() -> void:
 	var center := size * 0.5
-	for d in 4:
+	for d in (4 if weapon_kind == 0 else 0):
 		var v := dir_vector(d)
 		var chosen := d == selected_dir
 		var color := Color(1, 1, 1, 0.22)
@@ -39,6 +44,9 @@ func _draw() -> void:
 		_triangle(center + v * 46.0, v, 9.0 if chosen else 6.0, color)
 		if d == threat_dir:
 			_triangle(center + v * 66.0, -v, 13.0, Color(1.0, 0.15, 0.1, 0.95))
+
+	if weapon_kind != 0:
+		_draw_reticle(center)
 
 	if enemy_visible:
 		var w := 380.0
@@ -55,6 +63,26 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	draw_string(font, Vector2(x + 4.0, y - 4.0), "Vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.8))
 	draw_string(font, Vector2(x + 4.0, y + 56.0), "Endurance" + ("  (ÉPUISÉ)" if exhausted else ""), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.8))
+
+
+func _draw_reticle(center: Vector2) -> void:
+	var col := Color(1, 1, 1, 0.9)
+	draw_arc(center, reticle_radius, 0.0, TAU, 48, col, 2.0)
+	draw_circle(center, 2.0, col)
+	for d in 4:
+		var v := dir_vector(d)
+		draw_line(center + v * (reticle_radius + 2.0), center + v * (reticle_radius + 10.0), col, 2.0)
+	var w := 120.0
+	var p := center + Vector2(-w * 0.5, reticle_radius + 26.0)
+	var font := ThemeDB.fallback_font
+	if weapon_kind == 1 and drawing:
+		_bar(p, Vector2(w, 8), tension, Color(1.0, 0.85, 0.2) if tension >= 1.0 else Color(0.9, 0.9, 0.9))
+	elif weapon_kind == 2:
+		if reload_ratio < 1.0:
+			_bar(p, Vector2(w, 8), reload_ratio, Color(0.9, 0.5, 0.2))
+			draw_string(font, p + Vector2(0, 26), "Recharge…", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.85))
+		else:
+			draw_string(font, p + Vector2(0, 12), "Prête", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.6, 1.0, 0.6, 0.9))
 
 
 func _bar(pos: Vector2, bar_size: Vector2, ratio: float, color: Color) -> void:

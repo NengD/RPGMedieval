@@ -30,6 +30,9 @@ static func register_actions() -> void:
 	_add(&"difficulty_normal", [_key(KEY_F2)])
 	_add(&"difficulty_hard", [_key(KEY_F3)])
 	_add(&"difficulty_cycle", [_btn(JOY_BUTTON_DPAD_UP)])
+	_add(&"weapon_next", [_key(KEY_TAB), _mouse(MOUSE_BUTTON_WHEEL_DOWN), _btn(JOY_BUTTON_DPAD_RIGHT)])
+	_add(&"weapon_prev", [_mouse(MOUSE_BUTTON_WHEEL_UP), _btn(JOY_BUTTON_DPAD_LEFT)])
+	_add(&"clear_arrows", [_key(KEY_BACKSPACE)])
 	_add(&"reset_combat", [_key(KEY_R), _btn(JOY_BUTTON_START)])
 
 

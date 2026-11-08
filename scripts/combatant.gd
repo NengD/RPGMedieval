@@ -12,6 +12,8 @@ signal hit_resolved(result: int, dir: int, amount: float, attacker: Combatant)
 ## Côté attaquant : son coup a touché quelqu'un (result = ce qui est arrivé à la victime).
 signal strike_result(result: int, victim: Combatant)
 signal died
+## Côté tireur : son tir a touché (result = Result.*, amount = dégâts, head = tir à la tête).
+signal projectile_result(result: int, victim: Combatant, amount: float, head: bool)
 
 enum State { IDLE, WINDUP, STRIKE, RECOVERY, STAGGER }
 enum Dir { UP, RIGHT, DOWN, LEFT }
@@ -58,6 +60,8 @@ static func mirror(dir: int) -> int:
 
 func _ready() -> void:
 	add_to_group(&"combatants")
+	if body:
+		body.set_meta(&"combatant", self)   # permet aux flèches de retrouver le combattant touché
 
 
 func reset() -> void:
@@ -181,6 +185,41 @@ func receive_hit(attacker: Combatant, dir: int, damage: float) -> int:
 	stagger(GameConfig.HIT_STUN)
 	take_damage(dealt, attacker)
 	hit_resolved.emit(Result.HIT, dir, dealt, attacker)
+	return Result.HIT
+
+
+## Un tir (flèche, carreau) arrive. `dir` = direction de vol. Retourne un Result.
+func receive_projectile(attacker: Combatant, damage: float, dir: Vector3, head: bool) -> int:
+	if dead:
+		return Result.DODGED
+	if invulnerable:
+		hit_resolved.emit(Result.DODGED, -1, 0.0, attacker)
+		return Result.DODGED
+	# La garde arrête les tirs venant de face (peu importe le côté choisi)
+	var fwd := -body.global_transform.basis.z
+	fwd.y = 0.0
+	var to_shooter := Vector3(-dir.x, 0.0, -dir.z)
+	var frontal := to_shooter.length() < 0.01 or fwd.normalized().angle_to(to_shooter.normalized()) <= deg_to_rad(GameConfig.GUARD_ARC_DEG * 0.5)
+	if is_guarding() and frontal:
+		if guard_time <= GameConfig.PERFECT_PARRY_WINDOW:
+			hit_resolved.emit(Result.PARRIED, -1, 0.0, attacker)
+			return Result.PARRIED
+		var cost := damage * GameConfig.BLOCK_STAMINA_FACTOR * GameConfig.PROJECTILE_BLOCK_FACTOR
+		if stamina > cost:
+			spend_stamina(cost)
+			hit_resolved.emit(Result.BLOCKED, -1, 0.0, attacker)
+			return Result.BLOCKED
+		spend_stamina(stamina)
+		var broken := damage * GameConfig.GUARD_BREAK_DAMAGE_FACTOR
+		stagger(GameConfig.GUARD_BREAK_STAGGER)
+		take_damage(broken, attacker)
+		hit_resolved.emit(Result.GUARD_BROKEN, -1, broken, attacker)
+		return Result.GUARD_BROKEN
+	var dealt := damage * (GameConfig.STAGGER_DAMAGE_BONUS if state == State.STAGGER else 1.0)
+	if state != State.STAGGER:
+		stagger(GameConfig.PROJECTILE_STUN)
+	take_damage(dealt, attacker)
+	hit_resolved.emit(Result.HIT, -1, dealt, attacker)
 	return Result.HIT
 
 

@@ -266,6 +266,155 @@ func _run() -> void:
 	_check(not enemy.combatant.dead and is_equal_approx(enemy.combatant.health, enemy.combatant.max_health), "R remet l'ennemi à neuf")
 	_check(player.combatant.health == player.combatant.max_health, "R remet le héros à neuf")
 
+	print("[Changement d'arme]")
+	main.reset_combat()
+	player.combatant.invincible = true
+	enemy.process_mode = Node.PROCESS_MODE_DISABLED
+	enemy.position = Vector3(40, 0, 40)
+	_teleport(Vector3(0, 0.05, 9), 0.0)
+	await _frames(30)
+	_check(player.weapon_kind == Player.Weapon.SWORD, "on commence à l'épée")
+	player.cycle_weapon(1)
+	player.cycle_weapon(1)
+	_check(player.weapon_kind == Player.Weapon.CROSSBOW, "Tab : épée, arc, arbalète")
+	player.cycle_weapon(1)
+	_check(player.weapon_kind == Player.Weapon.SWORD, "puis retour à l'épée")
+	player.switch_weapon(Player.Weapon.BOW)
+	_check(player.weapon_kind == Player.Weapon.BOW, "choix direct de l'arc")
+
+	print("[Arc]")
+	var weak := player.fire_bow(0.3)
+	var strong := player.fire_bow(1.0)
+	_check(strong.velocity.length() > weak.velocity.length() * 1.4 and strong.damage > weak.damage * 2.0, "plus la corde est tendue, plus la flèche est rapide et forte (%.0f -> %.0f m/s, %.0f -> %.0f dégâts)" % [weak.velocity.length(), strong.velocity.length(), weak.damage, strong.damage])
+	weak.queue_free()
+	strong.queue_free()
+	# gravité : horizontale à 30 m/s pendant 0,5 s -> chute ~ 0,5 * g * t²
+	var shot := Arrow.spawn(main, Vector3(0, 3.0, 5.0), Vector3(0, 0, -30.0), GameConfig.ARROW_GRAVITY, 10.0, player.combatant)
+	await _frames(60)
+	var drop := 3.0 - shot.global_position.y
+	var expected_drop := 0.5 * GameConfig.ARROW_GRAVITY * 0.25
+	_check(absf(drop - expected_drop) < 0.25 and shot.global_position.z < -8.0, "la flèche suit une trajectoire courbe (chute %.2f m, attendu %.2f m)" % [drop, expected_drop])
+	shot.queue_free()
+	# plantée dans un mur
+	var stuck := Arrow.spawn(main, Vector3(10.0, 4.0, 5.0), Vector3(0, 0, -60.0), GameConfig.ARROW_GRAVITY, 10.0, player.combatant)
+	await _frames(240)
+	_check(is_instance_valid(stuck) and not stuck.flying and absf(stuck.global_position.z + 15.0) < 0.5, "la flèche reste plantée dans le mur (z=%.2f)" % stuck.global_position.z)
+	# tir complet sur le mannequin
+	dummy.reset_stats()
+	_teleport(main.DUMMY_POS + Vector3(-GameConfig.TPS_SHOULDER, 0.05, 9.0), 0.0)   # la caméra est décalée d'épaule : on se place pour que le viseur soit sur le mannequin
+	player.rig.pitch = 0.0
+	await _frames(40)
+	Input.action_press(&"attack")
+	player.start_draw()
+	await _frames(int(120 * (GameConfig.BOW_DRAW_TIME + 0.2)))
+	_check(player.drawing and is_equal_approx(player.bow_tension, 1.0), "en maintenant, la corde se tend jusqu'au maximum")
+	Input.action_release(&"attack")
+	await _frames(120)
+	_check(not player.drawing, "relâcher tire la flèche")
+	_check(dummy.total_damage >= GameConfig.BOW_DAMAGE_MAX - 0.5, "la flèche touche le mannequin (%d dégâts)" % int(dummy.total_damage))
+	var planted := false
+	for child in dummy.get_children():
+		planted = planted or child is Arrow
+	_check(planted, "la flèche reste plantée dans le mannequin")
+	# annuler avec le clic droit
+	var arrows_before := get_nodes_in_group(&"arrows").size()
+	Input.action_press(&"attack")
+	player.start_draw()
+	await _frames(40)
+	Input.action_press(&"guard")
+	await _frames(3)
+	Input.action_release(&"guard")
+	Input.action_release(&"attack")
+	await _frames(10)
+	_check(not player.drawing and get_nodes_in_group(&"arrows").size() == arrows_before, "clic droit : on annule sans tirer")
+
+	print("[Cibles]")
+	var target: ArcheryTarget = main.targets[1]
+	_check(target.score_at(target.global_position) == 10, "centre = 10 points")
+	_check(target.score_at(target.global_position + target.global_transform.basis.x * 0.2) == 5, "anneau = 5 points")
+	_check(target.score_at(target.global_position + target.global_transform.basis.x * 0.5) == 2, "bord = 2 points")
+	_teleport(Vector3(6.2, 0.05, 0.0), -PI * 0.5)   # regarde vers +X, la cible est à 8 m
+	player.rig.pitch = 0.0
+	await _frames(40)
+	player.fire_bow(1.0)
+	await _frames(120)
+	_check(target.shots >= 1 and main.target_score >= 2, "un tir sur la cible marque des points (score %d)" % main.target_score)
+
+	print("[Arbalète]")
+	player.switch_weapon(Player.Weapon.CROSSBOW)
+	_check(player.fire_crossbow(), "l'arbalète tire")
+	_check(not player.fire_crossbow() and player.crossbow_reload > GameConfig.CROSSBOW_RELOAD_TIME - 0.2, "elle doit être rechargée avant de tirer à nouveau")
+	await _frames(int(120 * (GameConfig.CROSSBOW_RELOAD_TIME + 0.2)))
+	_check(player.crossbow_reload == 0.0 and player.fire_crossbow(), "rechargée après %.1f s" % GameConfig.CROSSBOW_RELOAD_TIME)
+	_check(GameConfig.CROSSBOW_SPEED > GameConfig.BOW_SPEED_MAX and GameConfig.CROSSBOW_DAMAGE > GameConfig.BOW_DAMAGE_MAX and GameConfig.CROSSBOW_GRAVITY < GameConfig.ARROW_GRAVITY, "plus droite et plus puissante que l'arc")
+	player.switch_weapon(Player.Weapon.SWORD)
+
+	print("[Ennemi face aux tirs]")
+	# garde contre une flèche vue à temps (scène figée pour être déterministe)
+	enemy.process_mode = Node.PROCESS_MODE_INHERIT
+	enemy.aggressive = false
+	enemy.combatant.invincible = false
+	enemy.set_difficulty(2)
+	_teleport(Vector3(0, 0.05, 9), 0.0)
+	enemy.reset_to(Vector3(0, 0, -2))
+	enemy.set_physics_process(false)   # figé (son corps reste là) pour un test déterministe
+	await _frames(5)
+	seed(777)
+	var guarded_results := []
+	enemy.combatant.hit_resolved.connect(func(r: int, _d: int, _a: float, _by: Combatant): guarded_results.append(r))
+	var protected_hits := 0
+	for n in 12:
+		enemy.combatant.reset()
+		enemy.set_difficulty(2)
+		enemy._arrow_guard = 0.0
+		enemy._handled_arrows.clear()
+		var incoming := Arrow.spawn(main, Vector3(0, 1.1, 4.0), Vector3(0, 0, -30.0), 0.0, 20.0, player.combatant)
+		incoming.age = 1.0   # il l'a "vue" partir depuis assez longtemps
+		enemy._update_defense(0.016, 6.0)
+		if enemy._arrow_guard > 0.0:
+			protected_hits += 1
+		await _frames(60)
+		incoming.queue_free()
+	var parried := 0
+	var wounded := 0
+	for r in guarded_results:
+		if r == Combatant.Result.BLOCKED or r == Combatant.Result.PARRIED:
+			parried += 1
+		elif r == Combatant.Result.HIT:
+			wounded += 1
+	_check(protected_hits >= 8, "difficile : il lève la garde contre la plupart des tirs qu'il voit (%d/12)" % protected_hits)
+	_check(parried >= 8, "et la flèche est bien parée (%d parées, %d touchent)" % [parried, wounded])
+	enemy.combatant.reset()
+	enemy._arrow_guard = 0.0
+	enemy.combatant.set_guard(false, 0)
+	var unseen := Arrow.spawn(main, Vector3(0, 1.1, 4.0), Vector3(0, 0, -30.0), 0.0, 20.0, player.combatant)
+	await _frames(60)
+	_check(enemy.combatant.health < enemy.combatant.max_health, "sans garde, la flèche le blesse")
+	unseen.queue_free()
+
+	# mise à couvert : le héros tient un arc, l'ennemi file derrière un pilier ou une caisse
+	seed(2024)
+	enemy.set_physics_process(true)
+	enemy.set_difficulty(2)
+	enemy.reset_to(Vector3(0, 0, -6))
+	_teleport(Vector3(0, 0.05, 9), 0.0)
+	player.switch_weapon(Player.Weapon.BOW)
+	var found_cover := false
+	var saw_zigzag := false
+	var hidden := false
+	for i in 120 * 16:
+		await physics_frame
+		saw_zigzag = saw_zigzag or enemy.mode == Enemy.Mode.EVADE
+		if enemy.mode == Enemy.Mode.COVER:
+			found_cover = true
+			if enemy.global_position.distance_to(enemy._cover_point) < 0.7:
+				var ray := PhysicsRayQueryParameters3D.create(player.global_position + Vector3(0, 1.65, 0), enemy.global_position + Vector3(0, 1.1, 0), GameConfig.LAYER_WORLD)
+				hidden = not player.get_world_3d().direct_space_state.intersect_ray(ray).is_empty()
+				break
+	_check(found_cover, "face à un archer, il peut se mettre à couvert")
+	_check(hidden, "et il se cache vraiment : un obstacle le sépare du tireur")
+	player.switch_weapon(Player.Weapon.SWORD)
+
 	print("")
 	print("RÉSULTAT : %s (%d échec(s))" % ["SUCCÈS" if failures == 0 else "ÉCHEC", failures])
 	quit(1 if failures > 0 else 0)

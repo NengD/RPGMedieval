@@ -26,13 +26,13 @@ savoir si le combat est amusant. Toutes les valeurs de réglage sont dans `scrip
 - Couches physiques : 1 monde, 2 joueur, 3 ennemis.
 
 ## Contrôles
-F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le combat · ZQSD/stick G déplacer · souris/stick D regarder + choisir la direction · Maj courir · Espace sauter · C pas de côté · V changer de vue · clic gauche (RB) attaquer · clic droit (LB) parer · T mannequin agressif · R reset · Échap libère la souris.
+F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le combat · ZQSD/stick G déplacer · souris/stick D regarder + choisir la direction · Maj courir · Espace sauter · C pas de côté · V changer de vue · Tab/molette changer d'arme (épée, arc, arbalète) · clic gauche (RB) attaquer/bander/tirer · clic droit (LB) parer ou annuler la corde · Retour arrière retire les flèches · T mannequin agressif · R reset · Échap libère la souris.
 
 ## Avancement
 - [x] Étape 1 — Base : arène, héros, caméra 3e/1re personne, mannequin
 - [x] Étape 2 — Corps à corps 4 directions, parade directionnelle + parfaite, endurance (animations = poses codées)
 - [x] Étape 3 — Ennemi IA (approche, tourne autour, attaque variée, parade imparfaite, recule épuisé, 3 difficultés)
-- [ ] Étape 4 — Arc / arbalète
+- [x] Étape 4 — Arc / arbalète (trajectoire, tension, flèches plantées, cibles, ennemi qui pare les tirs ou se met à couvert)
 - [ ] Étape 5 — Animations Mixamo, vrais modèles
 - [ ] Étape 6 — Game feel, sons
 
@@ -54,3 +54,12 @@ F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le com
 - Parade volontairement faible (réglée après retour du propriétaire) : AI_PARRY_CHANCE, AI_REACTION_TIME, AI_WRONG_SIDE_CHANCE.
 - Vaincu → "ENNEMI VAINCU" puis combat relancé ; changer de difficulté relance le combat.
 - Pas encore : se protéger des flèches / se mettre à couvert (étape 4).
+
+## Combat à distance (étape 4)
+- Arme : Tab / molette (D-pad gauche/droite). Avec arc ou arbalète le héros fait toujours face à la caméra (posture de visée), pas de garde.
+- Arc : maintenir clic gauche → tension 0→1 en BOW_DRAW_TIME ; relâcher tire (clic droit annule ; touché / pas de côté annule aussi). Vitesse, dégâts et précision dépendent de la tension. Tenir la corde à fond fatigue.
+- Arbalète : clic gauche tire tout de suite (presque droit, puissant), puis CROSSBOW_RELOAD_TIME de rechargement.
+- Visée : le tir part de la main vers le point visé par le centre de l'écran (réticule) ; la gravité courbe la trajectoire (ARROW_GRAVITY). Tir à la tête (> HEAD_HEIGHT) = x1,5.
+- Se protéger avec l'épée : la garde de face arrête les tirs (coût en endurance réduit) ; garde levée au dernier moment = tir renvoyé ; dos tourné ou garde brisée = touché.
+- Ennemi face à un archer (> ~4 m) : il voit les flèches (selon AI_REACTION_TIME), lève la garde (AI_ARROW_GUARD_CHANCE), et soit se met à couvert derrière un pilier/une caisse (AI_COVER_CHANCE, max ENEMY_COVER_MAX_TIME), soit charge en zigzag.
+- Cibles : 4 dans l'arène (une mobile). Score affiché dans le HUD.

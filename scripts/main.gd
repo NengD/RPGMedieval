@@ -5,6 +5,9 @@ var player: Player
 var dummy: TrainingDummy
 var enemy: Enemy
 var hud: Hud
+var arena: Arena
+var targets: Array = []
+var target_score := 0
 
 const PLAYER_START := Vector3(0, 0.05, 9)
 const DUMMY_POS := Vector3(-8, 0, -9)
@@ -12,7 +15,8 @@ const ENEMY_START := Vector3(0, 0, -6)
 
 
 func _ready() -> void:
-	add_child(Arena.new())
+	arena = Arena.new()
+	add_child(arena)
 
 	dummy = TrainingDummy.new()
 	dummy.position = DUMMY_POS
@@ -28,8 +32,11 @@ func _ready() -> void:
 	enemy.position = ENEMY_START
 	enemy.target = player
 	enemy.difficulty = GameConfig.DEFAULT_DIFFICULTY
+	enemy.cover_objects = arena.cover_objects
 	add_child(enemy)
 	enemy.combatant.died.connect(_on_enemy_died)
+
+	_build_targets()
 
 	hud = Hud.new()
 	hud.player = player
@@ -47,6 +54,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event.is_action_pressed(&"reset_combat"):
 		reset_combat()
+	elif event.is_action_pressed(&"clear_arrows"):
+		Arrow.clear_all(get_tree())
 	elif event.is_action_pressed(&"toggle_practice"):
 		dummy.set_practice(not dummy.practice)
 	elif event.is_action_pressed(&"difficulty_easy"):
@@ -57,6 +66,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		set_difficulty(2)
 	elif event.is_action_pressed(&"difficulty_cycle"):
 		set_difficulty((enemy.difficulty + 1) % 3)
+
+
+## Cibles d'entraînement au tir, à différentes distances (la dernière se déplace).
+func _build_targets() -> void:
+	var specs := [
+		{"pos": Vector3(-14.2, 1.5, 6.0), "move": 0.0},
+		{"pos": Vector3(14.2, 1.5, 0.0), "move": 0.0},
+		{"pos": Vector3(-14.2, 1.5, -11.0), "move": 0.0},
+		{"pos": Vector3(0.0, 1.4, -14.3), "move": 5.0},
+	]
+	for spec in specs:
+		var t := ArcheryTarget.new()
+		t.move_range = spec.move
+		t.move_speed = 1.2
+		add_child(t)
+		t.place(spec.pos, Vector3(0.0, spec.pos.y, 0.0))
+		t.scored.connect(func(points: int):
+			target_score += points
+			hud.target_score = target_score)
+		targets.append(t)
 
 
 func _on_player_died() -> void:

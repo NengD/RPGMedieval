@@ -18,6 +18,8 @@ void fragment() {
 """
 
 var _shader: Shader
+## Obstacles derrière lesquels on peut se cacher : [{pos: Vector3, radius: float}]
+var cover_objects: Array = []
 
 
 func _ready() -> void:
@@ -53,6 +55,7 @@ func _build_geometry() -> void:
 	# Piliers
 	for p in [Vector2(-7, -3), Vector2(7, -3), Vector2(-7, 5), Vector2(7, 5)]:
 		_add_pillar(Vector3(p.x, 0, p.y), 0.7, 5.0, obj_mat)
+		cover_objects.append({"pos": Vector3(p.x, 0, p.y), "radius": 0.7})
 
 	# Plateforme + rampe (dans le coin nord-est)
 	var ph := GameConfig.PLATFORM_HEIGHT
@@ -65,6 +68,8 @@ func _build_geometry() -> void:
 	# Quelques caisses pour s'abriter plus tard
 	_add_box("Caisse1", Vector3(1.2, 1.2, 1.2), Vector3(-4.5, 0.6, 2.0), obj_mat)
 	_add_box("Caisse2", Vector3(1.2, 1.2, 1.2), Vector3(-5.8, 0.6, 2.4), obj_mat)
+	cover_objects.append({"pos": Vector3(-4.5, 0, 2.0), "radius": 0.9})
+	cover_objects.append({"pos": Vector3(-5.8, 0, 2.4), "radius": 0.9})
 
 
 ## Rampe qui monte vers -Z. `bottom` = point au sol où elle commence.
