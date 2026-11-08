@@ -23,6 +23,8 @@ savoir si le combat est amusant. Toutes les valeurs de réglage sont dans `scrip
 - `combatant.gd` — cerveau du combat (états, parade, endurance, vie), réutilisé par le héros, le mannequin et l'ennemi (étape 3).
 - `weapon_visual.gd` — épée en formes simples, poses par code selon l'état. `training_dummy.gd` — mannequin (T = agressif).
 - `hud.gd` + `hud_canvas.gd` — aide, messages, barres vie/endurance, indicateur de direction (JAMAIS de Control qui bloque la souris : mouse_filter = IGNORE).
+- `hero_model.gd` — chevalier Mixamo animé (héros ET ennemi) : AnimationTree = Loco (BlendSpace2D) → haut du corps (filtre os Spine et enfants : attaque / parade / coup reçu) → corps entier (esquive / saut / mort). Les attaques sont « scrubbées » par TimeSeek au rythme du Combatant (contact visuel = début du coup). Épée en BoneAttachment3D (main droite).
+- `arrow.gd` — flèche/carreau (gravité, rayon balayé, reste planté, max MAX_STUCK_ARROWS). `archery_target.gd` — cibles 10/5/2 pts. `ranged_visual.gd` — arc et arbalète en formes simples (à remplacer par les animations à l'étape 5, lot 2).
 - Couches physiques : 1 monde, 2 joueur, 3 ennemis.
 
 ## Contrôles
@@ -33,7 +35,7 @@ F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le com
 - [x] Étape 2 — Corps à corps 4 directions, parade directionnelle + parfaite, endurance (animations = poses codées)
 - [x] Étape 3 — Ennemi IA (approche, tourne autour, attaque variée, parade imparfaite, recule épuisé, 3 difficultés)
 - [x] Étape 4 — Arc / arbalète (trajectoire, tension, flèches plantées, cibles, ennemi qui pare les tirs ou se met à couvert)
-- [ ] Étape 5 — Animations Mixamo, vrais modèles
+- [~] Étape 5 — Animations Mixamo : FAIT = chevalier animé (héros + ennemi teinté), AnimationTree (jambes + haut du corps), épée en main. RESTE = animations arc/arbalète (Pro Longbow Pack, Pro Rifle Pack), armes/bouclier gratuits (Quaternius…), garde par direction
 - [ ] Étape 6 — Game feel, sons
 
 ## Règles du combat
@@ -65,3 +67,10 @@ F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le com
 - Cibles : 4 dans l'arène (une mobile). Score affiché dans le HUD.
 - F4 (D-pad bas) coupe / remet l'IA de l'ennemi (`Enemy.ai_enabled`, valeur de départ : `ENEMY_AI_ENABLED_AT_START` dans game_config.gd). IA coupée = il reste immobile, ne frappe pas, ne pare pas.
 - Visée (clic droit maintenu, arc/arbalète) : zoom (AIM_FOV_FACTOR_*), caméra 3e personne rapprochée (TPS_AIM_DISTANCE), souris moins sensible, déplacement lent, tir plus précis (AIM_SPREAD_FACTOR ; sans viser x HIPFIRE_SPREAD_FACTOR), distance affichée et (option AIM_SHOW_DROP_MARKER, désactivée par défaut) repère orange = point où le tir tombe vraiment (gravité). Avec l'épée le clic droit reste la parade.
+
+## Animations (étape 5)
+- Sources : `assets/hero/hero.fbx` (Paladin J Nordstrom, avec peau) et `assets/anims/*.fbx` (Pro Sword and Shield Pack, sans personnage). Le modèle regarde vers +Z (on le tourne de 180° dans HeroModel).
+- `tools/bake_animations.gd` fabrique `assets/anims/hero_library.res` : noms clairs, déplacement de la racine retiré (« sur place »), boucles, instant du coup (`peak_time` en méta). À relancer si on change le pack : `godot --headless --path . -s tools/bake_animations.gd`.
+- Correspondance : haut = slash_4 (coup vertical), droite = slash_5, gauche = slash_3, estoc = attack_4 ; garde = block_idle ; coups reçus = impact 1-3 ; esquive = strafe_3/4 ou run_2 accélérés ; mort = death.
+- Réglages : `ANIM_CONTACT_OFFSET`, `ANIM_FOLLOW_THROUGH` dans game_config.gd. Outils de diagnostic : `tools/analyze_anims.gd`, `tools/hand_axes.gd`, `tools/inspect_fbx.gd`.
+- En 1re personne le corps est caché : on garde l'épée à poses codées (`weapon_visual.gd`). Arc/arbalète en 3e personne : encore les formes codées en attendant les animations.
