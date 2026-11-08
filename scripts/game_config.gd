@@ -118,3 +118,34 @@ const PRACTICE_INTERVAL := 2.6       # secondes entre deux attaques
 const PRACTICE_SPEED_SCALE := 0.7    # < 1 = attaques plus lentes (plus faciles à lire)
 const PRACTICE_DIRECTION := -1       # -1 = au hasard, 0 haut, 1 droite, 2 bas, 3 gauche
 const PRACTICE_DAMAGE_SCALE := 0.6   # le mannequin frappe moins fort
+
+# ============================================================
+# ENNEMI (étape 3) — IA et difficulté
+# Les listes ont 3 valeurs : [Facile, Normal, Difficile].
+# Touches en jeu : F1 facile · F2 normal · F3 difficile.
+# ============================================================
+const DIFFICULTY_NAMES := ["Facile", "Normal", "Difficile"]
+const DEFAULT_DIFFICULTY := 1
+const AI_REACTION_TIME := [0.50, 0.30, 0.15]          # délai avant de réagir à ton coup (s)
+const AI_PARRY_CHANCE := [0.30, 0.55, 0.80]           # chance de tenter une parade
+const AI_PERFECT_PARRY_CHANCE := [0.03, 0.12, 0.30]   # parmi les parades : tentative de parade parfaite
+const AI_WRONG_SIDE_CHANCE := [0.35, 0.18, 0.06]      # chance de garder du mauvais côté
+const AI_ATTACK_INTERVAL := [2.4, 1.6, 0.9]           # pause moyenne entre deux attaques (s)
+const AI_FEINT_CHANCE := [0.05, 0.15, 0.30]           # chance de feinter une attaque
+const AI_SMART_CHANCE := [0.15, 0.45, 0.75]           # chance d'éviter la direction que tu gardes
+const AI_SPEED_SCALE := [0.75, 0.90, 1.05]            # vitesse de ses attaques (1 = comme toi)
+const AI_DAMAGE_SCALE := [0.6, 0.8, 1.0]              # force de ses coups
+const AI_MAX_HEALTH := [70.0, 100.0, 130.0]           # points de vie
+
+const ENEMY_RADIUS := 0.4
+const ENEMY_HEIGHT := 1.8
+const ENEMY_WALK_SPEED := 3.0
+const ENEMY_CIRCLE_SPEED := 2.2
+const ENEMY_RETREAT_SPEED := 3.2
+const ENEMY_ACCELERATION := 20.0
+const ENEMY_ENGAGE_DISTANCE := 3.0        # il s'approche jusqu'à cette distance
+const ENEMY_CIRCLE_DISTANCE := 2.6        # distance gardée quand il tourne autour de toi
+const ENEMY_RETREAT_DISTANCE := 5.5       # distance où il se met en sécurité quand il est fatigué
+const ENEMY_RETREAT_STAMINA := 20.0       # il recule sous cette endurance
+const ENEMY_RESUME_STAMINA := 65.0        # il revient au combat au-dessus de cette endurance
+const ENEMY_MIN_ATTACK_STAMINA := 30.0    # endurance minimale pour lancer une attaque

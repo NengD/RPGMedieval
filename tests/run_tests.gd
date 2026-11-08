@@ -47,6 +47,9 @@ func _run() -> void:
 	root.add_child(main)
 	await physics_frame
 	player = main.player
+	# L'ennemi est mis de côté pendant les premiers tests (il revient dans la section [Ennemi])
+	main.enemy.process_mode = Node.PROCESS_MODE_DISABLED
+	main.enemy.position = Vector3(40, 0, 40)
 	await _frames(120)
 
 	print("[Sol et gravité]")
@@ -159,7 +162,7 @@ func _run() -> void:
 	print("[Combat contre le mannequin]")
 	var dummy: TrainingDummy = main.dummy
 	dummy.reset_stats()
-	_teleport(Vector3(0, 0.05, -2.5), 0.0)
+	_teleport(main.DUMMY_POS + Vector3(0, 0.05, 2.5), 0.0)
 	await _frames(30)
 	_check(player.try_attack(), "le héros lance une attaque")
 	await _frames(240)
@@ -172,12 +175,102 @@ func _run() -> void:
 	_check(is_equal_approx(dummy.total_damage, before), "une attaque feintée ne touche pas")
 
 	print("[Mannequin agressif]")
-	_teleport(Vector3(0, 0.05, -2.5), 0.0)
+	_teleport(main.DUMMY_POS + Vector3(0, 0.05, 2.5), 0.0)
 	player.combatant.reset()
 	dummy.set_practice(true)
 	await _frames(120 * 6)
 	_check(player.combatant.health < player.combatant.max_health, "le mannequin agressif blesse un héros qui ne pare pas (vie %.0f)" % player.combatant.health)
 	dummy.set_practice(false)
+
+	print("[Ennemi]")
+	var enemy: Enemy = main.enemy
+	seed(12345)
+	enemy.process_mode = Node.PROCESS_MODE_INHERIT
+	player.combatant.invincible = true   # on observe l'IA sans que le héros meure
+	enemy.aggressive = false
+	enemy.set_difficulty(1)
+	_teleport(Vector3(0, 0.05, 9), 0.0)
+	player.combatant.reset()
+	enemy.reset_to(Vector3(0, 0, -6))
+	var d_start := enemy.global_position.distance_to(player.global_position)
+	await _frames(120 * 4)
+	var d_now := enemy.global_position.distance_to(player.global_position)
+	_check(d_now < d_start - 3.0 and d_now < 4.6, "il s'approche du héros (%.1f m -> %.1f m)" % [d_start, d_now])
+	# tourne autour : on cumule l'angle parcouru autour du héros
+	var travel := 0.0
+	var last_angle := 0.0
+	var saw_circle := false
+	for i in 120 * 8:
+		await physics_frame
+		var rel := enemy.global_position - player.global_position
+		var ang := atan2(rel.x, rel.z)
+		if i > 0:
+			travel += absf(angle_difference(last_angle, ang))
+		last_angle = ang
+		saw_circle = saw_circle or enemy.mode == Enemy.Mode.CIRCLE
+	_check(saw_circle and rad_to_deg(travel) > 40.0, "il tourne autour du héros (%.0f° parcourus en 8 s)" % rad_to_deg(travel))
+
+	# attaque dans des directions variées
+	enemy.aggressive = true
+	enemy.set_difficulty(2)
+	enemy.reset_to(Vector3(0, 0, 3))
+	var dirs := {}
+	var attacks := [0]
+	enemy.combatant.attack_started.connect(func(d: int): dirs[d] = true; attacks[0] += 1)
+	for i in 120 * 40:
+		await physics_frame
+		player.combatant.stamina = GameConfig.STAMINA_MAX   # héros inépuisable : il reste dans le combat
+		if player.combatant.state == Combatant.State.STAGGER and i % 60 == 0:
+			_teleport(Vector3(0, 0.05, 9), 0.0)
+	_check(attacks[0] >= 8, "il attaque régulièrement (%d attaques en 40 s)" % attacks[0])
+	_check(dirs.size() >= 3, "il varie les directions (%d différentes)" % dirs.size())
+
+	# fatigue : il recule
+	enemy.set_difficulty(1)
+	enemy.reset_to(Vector3(0, 0, 3))
+	_teleport(Vector3(0, 0.05, 5), PI)
+	await _frames(30)
+	enemy.combatant.stamina = 0.0
+	enemy.combatant.exhausted = true
+	var d_before := enemy.global_position.distance_to(player.global_position)
+	await _frames(120 * 2)
+	var d_after := enemy.global_position.distance_to(player.global_position)
+	_check(enemy.mode == Enemy.Mode.RETREAT, "épuisé, il passe en mode recul")
+	_check(d_after > d_before + 1.5, "il s'éloigne du héros (%.1f m -> %.1f m)" % [d_before, d_after])
+
+	# parades imparfaites : certaines parées, d'autres non
+	enemy.aggressive = false
+	enemy.combatant.invincible = true
+	enemy.reset_to(Vector3(0, 0, 0))
+	var results := {}
+	enemy.combatant.hit_resolved.connect(func(r: int, _d: int, _a: float, _by: Combatant): results[r] = results.get(r, 0) + 1)
+	for n in 16:
+		var p := enemy.global_position + Vector3(0.0, 0.05, 2.0)
+		_teleport(p, 0.0)
+		player.combatant.reset()
+		enemy.combatant.stamina = GameConfig.STAMINA_MAX
+		enemy.combatant.exhausted = false
+		player.aim_dir = n % 4
+		await _frames(30)
+		player.try_attack()
+		await _frames(120 * 2)
+	var guarded: int = results.get(Combatant.Result.BLOCKED, 0) + results.get(Combatant.Result.PARRIED, 0) + results.get(Combatant.Result.GUARD_BROKEN, 0)
+	var passed: int = results.get(Combatant.Result.HIT, 0)
+	_check(guarded >= 2, "il pare une partie des coups (%d parés)" % guarded)
+	_check(passed >= 2, "mais pas tous : la parade est imparfaite (%d coups passent)" % passed)
+
+	# difficulté et réinitialisation
+	enemy.set_difficulty(0)
+	_check(enemy.combatant.max_health == GameConfig.AI_MAX_HEALTH[0] and is_equal_approx(enemy.combatant.speed_scale, GameConfig.AI_SPEED_SCALE[0]), "la difficulté Facile applique ses réglages")
+	enemy.set_difficulty(2)
+	_check(enemy.combatant.max_health == GameConfig.AI_MAX_HEALTH[2], "la difficulté Difficile applique ses réglages")
+	enemy.combatant.invincible = false
+	enemy.combatant.take_damage(9999.0)
+	_check(enemy.combatant.dead, "l'ennemi peut être vaincu")
+	main.reset_combat()
+	await _frames(10)
+	_check(not enemy.combatant.dead and is_equal_approx(enemy.combatant.health, enemy.combatant.max_health), "R remet l'ennemi à neuf")
+	_check(player.combatant.health == player.combatant.max_health, "R remet le héros à neuf")
 
 	print("")
 	print("RÉSULTAT : %s (%d échec(s))" % ["SUCCÈS" if failures == 0 else "ÉCHEC", failures])

@@ -26,6 +26,10 @@ static func register_actions() -> void:
 	_add(&"attack", [_mouse(MOUSE_BUTTON_LEFT), _btn(JOY_BUTTON_RIGHT_SHOULDER)])
 	_add(&"guard", [_mouse(MOUSE_BUTTON_RIGHT), _btn(JOY_BUTTON_LEFT_SHOULDER)])
 	_add(&"toggle_practice", [_key(KEY_T), _btn(JOY_BUTTON_Y)])
+	_add(&"difficulty_easy", [_key(KEY_F1)])
+	_add(&"difficulty_normal", [_key(KEY_F2)])
+	_add(&"difficulty_hard", [_key(KEY_F3)])
+	_add(&"difficulty_cycle", [_btn(JOY_BUTTON_DPAD_UP)])
 	_add(&"reset_combat", [_key(KEY_R), _btn(JOY_BUTTON_START)])
 
 

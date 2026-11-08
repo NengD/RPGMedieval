@@ -8,6 +8,11 @@ var threat_dir := -1         # côté d'où arrive un coup ennemi (= côté à g
 var health_ratio := 1.0
 var stamina_ratio := 1.0
 var exhausted := false
+var enemy_visible := false
+var enemy_health_ratio := 1.0
+var enemy_stamina_ratio := 1.0
+var enemy_exhausted := false
+var enemy_title := ""
 
 
 func _ready() -> void:
@@ -34,6 +39,13 @@ func _draw() -> void:
 		_triangle(center + v * 46.0, v, 9.0 if chosen else 6.0, color)
 		if d == threat_dir:
 			_triangle(center + v * 66.0, -v, 13.0, Color(1.0, 0.15, 0.1, 0.95))
+
+	if enemy_visible:
+		var w := 380.0
+		var ex := size.x - w - 24.0   # en haut à droite
+		_bar(Vector2(ex, 30.0), Vector2(w, 14), enemy_health_ratio, Color(0.75, 0.2, 0.2))
+		_bar(Vector2(ex, 50.0), Vector2(w, 7), enemy_stamina_ratio, Color(1.0, 0.55, 0.1) if enemy_exhausted else Color(0.85, 0.8, 0.3))
+		draw_string(ThemeDB.fallback_font, Vector2(ex, 22.0), enemy_title, HORIZONTAL_ALIGNMENT_CENTER, w, 14, Color(1, 1, 1, 0.9))
 
 	# Barres : vie (rouge) et endurance (verte, orange quand épuisé)
 	var x := 24.0

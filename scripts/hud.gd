@@ -4,6 +4,7 @@ extends CanvasLayer
 
 var player: Player
 var dummy: TrainingDummy
+var enemy: Enemy
 
 var _help: Label
 var _status: Label
@@ -17,15 +18,16 @@ const _STATE_NAMES := ["libre", "préparation", "COUP", "récupération", "DÉS�
 func _ready() -> void:
 	_help = _make_label()
 	_help.position = Vector2(16, 12)
-	_help.text = "ÉTAPE 2 — Combat à l'épée\n" \
+	_help.text = "ÉTAPE 3 — Combat contre un ennemi\n" \
 		+ "ZQSD : bouger   Maj : courir   Espace : sauter   C : pas de côté   V : changer de vue\n" \
 		+ "Bouge la souris (ou stick droit) pour choisir haut/bas/gauche/droite, puis :\n" \
 		+ "Clic gauche : attaquer   Clic droit (maintenu) : parer   Clic droit pendant l'élan : feinte\n" \
-		+ "T : mannequin agressif   R : tout remettre à zéro   Échap : libérer la souris"
+		+ "F1 / F2 / F3 : difficulté facile / normal / difficile   R : recommencer le combat\n" \
+		+ "T : mannequin agressif (coin du fond)   Échap : libérer la souris"
 	add_child(_help)
 
 	_status = _make_label()
-	_status.position = Vector2(16, 140)
+	_status.position = Vector2(16, 160)
 	add_child(_status)
 
 	_canvas = HudCanvas.new()
@@ -54,6 +56,7 @@ func _ready() -> void:
 	c.strike_result.connect(_on_player_strike_result)
 	c.feinted.connect(func(): show_message("Feinte", Color(0.8, 0.8, 0.8)))
 	c.died.connect(func(): show_message("VOUS ÊTES MORT", Color(1, 0.3, 0.3), 2.0))
+	enemy.combatant.died.connect(func(): show_message("ENNEMI VAINCU !", Color(0.5, 1.0, 0.5), 2.0))
 
 
 func show_message(text: String, color: Color, duration := 0.9) -> void:
@@ -88,7 +91,7 @@ func _process(_delta: float) -> void:
 	var guard_text := ""
 	if c.is_guarding():
 		guard_text = "   GARDE : %s%s" % [GameConfig.DIR_NAMES[c.guard_dir], " (parfaite !)" if c.guard_time <= GameConfig.PERFECT_PARRY_WINDOW else ""]
-	_status.text = "Vue : %s   Vitesse : %.1f m/s   Direction choisie : %s\nÉtat : %s%s%s\nMannequin agressif : %s (T)" % [
+	_status.text = "Vue : %s   Vitesse : %.1f m/s   Direction choisie : %s\nÉtat : %s%s%s\nMannequin agressif : %s (T)\nDifficulté : %s    Ennemi : %s" % [
 		"1re personne" if fps_view else "3e personne",
 		speed,
 		GameConfig.DIR_NAMES[player.aim_dir].to_upper(),
@@ -96,6 +99,8 @@ func _process(_delta: float) -> void:
 		guard_text,
 		"   PAS DE CÔTÉ" if player.is_dodging else "",
 		"OUI" if dummy.practice else "non",
+		GameConfig.DIFFICULTY_NAMES[enemy.difficulty],
+		Enemy.MODE_NAMES[enemy.mode],
 	]
 
 	_canvas.selected_dir = player.aim_dir
@@ -103,6 +108,11 @@ func _process(_delta: float) -> void:
 	_canvas.health_ratio = c.health / c.max_health
 	_canvas.stamina_ratio = c.stamina / GameConfig.STAMINA_MAX
 	_canvas.exhausted = c.exhausted
+	_canvas.enemy_visible = not enemy.combatant.dead
+	_canvas.enemy_health_ratio = enemy.combatant.health / enemy.combatant.max_health
+	_canvas.enemy_stamina_ratio = enemy.combatant.stamina / GameConfig.STAMINA_MAX
+	_canvas.enemy_exhausted = enemy.combatant.exhausted
+	_canvas.enemy_title = "ENNEMI — %s" % GameConfig.DIFFICULTY_NAMES[enemy.difficulty]
 	_canvas.threat_dir = _find_threat()
 	_canvas.queue_redraw()
 
