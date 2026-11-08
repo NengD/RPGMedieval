@@ -255,10 +255,11 @@ func _ik_hand_position(c: Combatant) -> Vector3:
 		follow = GameConfig.IK_STAB_FOLLOW
 	match c.state:
 		Combatant.State.WINDUP:
-			var share := GameConfig.IK_RAISE_SHARE
+			var stab := c.attack_dir == Combatant.Dir.DOWN
+			var share := GameConfig.IK_RAISE_SHARE if stab else GameConfig.IK_UP_RAISE_SHARE
 			if p < share:
-				return GameConfig.IK_REST.lerp(raised, ease(p / share, 0.4))   # lever / armer, en douceur
-			return raised.lerp(contact, ease((p - share) / (1.0 - share), 2.2))   # le geste rapide, juste avant le coup
+				return GameConfig.IK_REST.lerp(raised, ease(p / share, 0.4 if stab else 0.85))   # lever / armer (le coup d'en haut monte de façon continue)
+			return raised.lerp(contact, ease((p - share) / (1.0 - share), 1.8))   # le geste rapide, juste avant le coup
 		Combatant.State.STRIKE:
 			return contact.lerp(follow, p)
 		_:
@@ -274,10 +275,10 @@ func _ik_blade_direction(c: Combatant) -> Vector3:
 	var contact := GameConfig.IK_BLADE_UP_CONTACT.normalized()
 	match c.state:
 		Combatant.State.WINDUP:
-			var share := GameConfig.IK_RAISE_SHARE
+			var share := GameConfig.IK_UP_RAISE_SHARE
 			if p < share:
-				return GameConfig.IK_REST_BLADE.normalized().slerp(raised, ease(p / share, 0.4))
-			return raised.slerp(contact, ease((p - share) / (1.0 - share), 2.2))
+				return GameConfig.IK_REST_BLADE.normalized().slerp(raised, ease(p / share, 0.85))
+			return raised.slerp(contact, ease((p - share) / (1.0 - share), 1.8))
 		Combatant.State.STRIKE:
 			return contact
 		_:
