@@ -70,9 +70,9 @@ const DUMMY_HEIGHT := 1.8
 const DIR_NAMES := ["haut", "droite", "estoc", "gauche"]   # "bas" = l'estoc (coup pointé droit devant)
 
 # Une attaque = préparation -> coup (touche) -> récupération.
-const ATTACK_WINDUP   := [0.50, 0.34, 0.40, 0.34]   # préparation (s)
-const ATTACK_STRIKE   := [0.14, 0.12, 0.10, 0.12]   # durée où le coup peut toucher (s)
-const ATTACK_RECOVERY := [0.45, 0.35, 0.40, 0.35]   # récupération (s)
+const ATTACK_WINDUP   := [0.65, 0.48, 0.45, 0.48]   # préparation (s)
+const ATTACK_STRIKE   := [0.14, 0.12, 0.12, 0.12]   # durée où le coup peut toucher (s)
+const ATTACK_RECOVERY := [0.55, 0.45, 0.45, 0.45]   # récupération (s)
 const ATTACK_DAMAGE   := [28.0, 20.0, 24.0, 20.0]   # dégâts
 const ATTACK_STAMINA  := [22.0, 16.0, 18.0, 16.0]   # endurance consommée en lançant l'attaque
 const ATTACK_REACH    := [0.0, 0.0, 0.7, 0.0]        # portée en plus (l'estoc porte plus loin)

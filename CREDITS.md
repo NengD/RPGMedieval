@@ -7,5 +7,6 @@ Toutes les ressources doivent être gratuites (CC0 ou licence libre) et notées 
 | *(étapes 1 à 4 : formes simples générées en code, aucune ressource externe)* | | | | |
 | Personnage « Paladin J Nordstrom » | Mixamo / Adobe | Gratuit avec compte Adobe, usage libre dans un jeu | https://www.mixamo.com | héros et ennemi (`assets/hero/hero.fbx`) |
 | Animations « Pro Sword and Shield Pack » (51 animations, 22 utilisées) | Mixamo / Adobe | Gratuit avec compte Adobe, usage libre dans un jeu | https://www.mixamo.com | marche, course, attaques, parade, coups reçus, mort… (`assets/anims/`) |
+| Animations « Pro Melee Axe Pack » (47 animations, 4 attaques utilisées) | Mixamo / Adobe | Gratuit avec compte Adobe, usage libre dans un jeu | https://www.mixamo.com | attaques haut / droite / gauche / estoc (`assets/anims/axe_*.fbx`) |
 
 Moteur : [Godot Engine](https://godotengine.org) (licence MIT).

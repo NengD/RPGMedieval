@@ -61,3 +61,6 @@ dans les 4 directions, télécharge ces animations Mixamo seules (Without Skin /
 | Attaque droite | `standing melee attack horizontal` | |
 | Attaque gauche | la même, avec **Mirror** coché | ajoute `_mirror` au nom du fichier |
 | Estoc (pointe en avant) | `stab` ou `thrust` ou `lunge` | prends celle qui pousse l'épée droit devant |
+
+> Mise à jour : le « Pro Melee Axe Pack » (No Character) a été téléchargé et fournit finalement les attaques propres
+> (fichiers `assets/anims/axe_*.fbx`). Les 4 téléchargements ci-dessus ne sont plus nécessaires.

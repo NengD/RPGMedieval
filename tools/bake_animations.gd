@@ -25,10 +25,10 @@ const MAP := {
 	&"dodge_l": ["sword_and_shield_strafe_3", true, false, false],
 	&"dodge_r": ["sword_and_shield_strafe_4", true, false, false],
 	&"dodge_b": ["sword_and_shield_run_2", true, false, false],
-	&"attack_up": ["sword_and_shield_attack_4", true, false, true],   # PROVISOIRE : pas de coup vertical propre dans le pack (voir CLAUDE.md)
-	&"attack_right": ["sword_and_shield_attack_4", true, false, true],
-	&"attack_estoc": ["sword_and_shield_slash", true, false, true],
-	&"attack_left": ["sword_and_shield_attack_2", true, false, true],
+	&"attack_up": ["axe_standing_melee_attack_downward", true, false, true, 0.1, 2.0],   # coup vertical de haut en bas
+	&"attack_right": ["axe_standing_melee_attack_horizontal", true, false, true, 0.1, 2.2],   # balayage horizontal
+	&"attack_estoc": ["axe_standing_melee_combo_attack_ver__3", true, false, true, 0.55, 1.6],   # fente avec poussée (fin du combo 3)
+	&"attack_left": ["axe_standing_melee_attack_backhand", true, false, true, 0.1, 2.8],   # revers (de l'autre côté)
 	&"guard": ["sword_and_shield_block_idle", true, true, false],
 	&"hit_1": ["sword_and_shield_impact", true, false, false],
 	&"hit_2": ["sword_and_shield_impact_2", true, false, false],
@@ -59,10 +59,14 @@ func _run() -> void:
 			_make_in_place(anim)
 		anim.loop_mode = Animation.LOOP_LINEAR if spec[2] else Animation.LOOP_NONE
 		if spec[3]:
-			var peak := await _peak_time(ap, sk)
-			anim.set_meta(&"peak_time", peak)
+			var t_min: float = spec[4] if spec.size() > 4 else 0.0
+			var t_max: float = spec[5] if spec.size() > 5 else anim.length
+			var prof := await _profile(ap, sk, t_min, minf(t_max, anim.length))
+			anim.set_meta(&"start_time", prof[0])
+			anim.set_meta(&"peak_time", prof[1])
+			anim.set_meta(&"end_time", prof[2])
 		lib.add_animation(key, anim)
-		print("%-14s %-30s %.2fs%s" % [key, spec[0], anim.length, ("  coup@%.2fs" % anim.get_meta(&"peak_time")) if anim.has_meta(&"peak_time") else ""])
+		print("%-14s %-30s %.2fs%s" % [key, spec[0], anim.length, ("  début %.2f  coup %.2f  fin %.2f" % [anim.get_meta(&"start_time"), anim.get_meta(&"peak_time"), anim.get_meta(&"end_time")]) if anim.has_meta(&"peak_time") else ""])
 		inst.queue_free()
 	var err := ResourceSaver.save(lib, "res://assets/anims/hero_library.res")
 	print("SAUVEGARDE : ", "OK" if err == OK else "ERREUR %d" % err)
@@ -79,27 +83,44 @@ func _make_in_place(anim: Animation) -> void:
 				anim.track_set_key_value(i, k, Vector3(first.x, v.y, first.z))
 
 
-## Instant où la main droite va le plus vite (= le coup), mesuré par rapport aux hanches.
-func _peak_time(ap: AnimationPlayer, sk: Skeleton3D) -> float:
-	var anim := ap.get_animation(ap.get_animation_list()[0])
+## Profil du geste : [début du mouvement, instant du coup (main la plus rapide), fin du geste] dans la fenêtre [t_min, t_max].
+## Mesuré sur la main droite par rapport aux hanches.
+func _profile(ap: AnimationPlayer, sk: Skeleton3D, t_min: float, t_max: float) -> Array:
 	var hips := sk.find_bone(HIPS)
 	var hand := sk.find_bone(HAND)
 	ap.play(ap.get_animation_list()[0])
-	var steps := 40
+	var step := 0.03
+	var times: Array = []
+	var speeds: Array = []
 	var prev := Vector3.ZERO
-	var best_speed := 0.0
-	var best_t := 0.0
-	for i in steps + 1:
-		var t := anim.length * i / steps
+	var t := t_min
+	var first := true
+	while t <= t_max:
 		ap.seek(t, true)
 		await process_frame
 		await process_frame
 		var hp := sk.get_bone_global_pose(hips).origin
 		var hd := sk.get_bone_global_pose(hand).origin - Vector3(hp.x, 0.0, hp.z)
-		if i > 0:
-			var speed: float = (hd - prev).length()
-			if speed > best_speed:
-				best_speed = speed
-				best_t = t
+		if not first:
+			times.append(t)
+			speeds.append((hd - prev).length() / step)
 		prev = hd
-	return best_t
+		first = false
+		t += step
+	var best := 0.0
+	var best_t := t_min
+	for i in speeds.size():
+		if speeds[i] > best:
+			best = speeds[i]
+			best_t = times[i]
+	var start := t_min
+	var end := t_max
+	for i in speeds.size():
+		if speeds[i] > best * 0.12:
+			start = times[i]
+			break
+	for i in range(speeds.size() - 1, -1, -1):
+		if speeds[i] > best * 0.12:
+			end = minf(times[i] + 0.2, t_max)
+			break
+	return [start, best_t, end]

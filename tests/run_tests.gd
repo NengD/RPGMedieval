@@ -488,7 +488,7 @@ func _run() -> void:
 	for d in 4:
 		fake.attack_dir = d
 		var anim := lib.get_animation(HeroModel.ATTACK_ANIMS[d])
-		var want: float = minf(float(anim.get_meta(&"peak_time")) + GameConfig.ANIM_CONTACT_OFFSET, anim.length * 0.95)
+		var want: float = minf(float(anim.get_meta(&"peak_time")) + GameConfig.ANIM_CONTACT_OFFSET, float(anim.get_meta(&"end_time")))
 		_check(absf(model._attack_time(fake) - want) < 0.01, "attaque %s : le contact visuel tombe au début du coup (%.2f s)" % [GameConfig.DIR_NAMES[d], want])
 	fake.free()
 	# esquive, mort, remise à zéro

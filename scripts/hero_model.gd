@@ -354,14 +354,16 @@ func _start_dodge(body_basis: Basis, dodge_dir: Vector3) -> void:
 func _attack_time(c: Combatant) -> float:
 	var anim := _library.get_animation(ATTACK_ANIMS[c.attack_dir])
 	var length := anim.length
+	var start: float = anim.get_meta(&"start_time", 0.0)
 	var peak: float = anim.get_meta(&"peak_time", length * 0.5)
-	var contact := minf(peak + GameConfig.ANIM_CONTACT_OFFSET, length * 0.95)
-	var follow := minf(contact + GameConfig.ANIM_FOLLOW_THROUGH, length)
+	var finish: float = anim.get_meta(&"end_time", length)
+	var contact := minf(peak + GameConfig.ANIM_CONTACT_OFFSET, finish)
+	var follow := minf(contact + GameConfig.ANIM_FOLLOW_THROUGH, finish)
 	var p := clampf(c.state_time / maxf(c.state_duration, 0.001), 0.0, 1.0)
 	match c.state:
 		Combatant.State.WINDUP:
-			return contact * p
+			return lerpf(start, contact, p)
 		Combatant.State.STRIKE:
 			return lerpf(contact, follow, p)
 		_:
-			return lerpf(follow, length, p)
+			return lerpf(follow, finish, p)
