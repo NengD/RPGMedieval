@@ -25,10 +25,10 @@ const MAP := {
 	&"dodge_l": ["sword_and_shield_strafe_3", true, false, false],
 	&"dodge_r": ["sword_and_shield_strafe_4", true, false, false],
 	&"dodge_b": ["sword_and_shield_run_2", true, false, false],
-	&"attack_up": ["axe_standing_melee_attack_downward", true, false, true, 0.1, 2.0],   # coup vertical de haut en bas
+	&"attack_up": ["axe_standing_melee_attack_backhand", true, false, true, 0.85, 1.9, [0.95, 1.35, 1.85]],   # coup de haut en bas au milieu du clip « backhand » (la main descend de 1,78 m à 0,88 m entre 1,19 s et 1,54 s) : instants réglés à la main [début, coup, fin]
 	&"attack_right": ["axe_standing_melee_attack_horizontal", true, false, true, 0.1, 2.2],   # balayage horizontal
 	&"attack_estoc": ["axe_standing_melee_combo_attack_ver__3", true, false, true, 0.55, 1.6],   # fente avec poussée (fin du combo 3)
-	&"attack_left": ["axe_standing_melee_attack_backhand", true, false, true, 0.1, 2.8],   # revers (de l'autre côté)
+	&"attack_left": ["sword_and_shield_attack_2", true, false, true, 0.0, 1.1],   # balayage de la gauche vers la droite
 	&"guard": ["sword_and_shield_block_idle", true, true, false],
 	&"hit_1": ["sword_and_shield_impact", true, false, false],
 	&"hit_2": ["sword_and_shield_impact_2", true, false, false],
@@ -62,6 +62,8 @@ func _run() -> void:
 			var t_min: float = spec[4] if spec.size() > 4 else 0.0
 			var t_max: float = spec[5] if spec.size() > 5 else anim.length
 			var prof := await _profile(ap, sk, t_min, minf(t_max, anim.length))
+			if spec.size() > 6:
+				prof = spec[6]   # instants réglés à la main
 			anim.set_meta(&"start_time", prof[0])
 			anim.set_meta(&"peak_time", prof[1])
 			anim.set_meta(&"end_time", prof[2])

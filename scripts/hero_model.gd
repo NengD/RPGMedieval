@@ -150,7 +150,7 @@ func _build_tree() -> void:
 	bt.connect_node(&"LocoTS", 0, &"Loco")
 
 	# Haut du corps : choix de l'animation, vitesse (0 = on la pilote à la main), saut dans le temps
-	var upper := _transition(UPPER_STATES, 0.06)
+	var upper := _transition(UPPER_STATES, 0.0)
 	bt.add_node(&"Upper", upper, Vector2(0, 300))
 	for i in UPPER_STATES.size():
 		var node_name := StringName("A_" + str(UPPER_STATES[i]))
@@ -170,7 +170,7 @@ func _build_tree() -> void:
 	bt.connect_node(&"UpperBlend", 1, &"UpperSeek")
 
 	# Corps entier : esquive, saut, mort
-	var full := _transition(FULL_STATES, 0.05)
+	var full := _transition(FULL_STATES, 0.0)   # pas de fondu : la vitesse est à 0 pendant les attaques pilotées à la main, un fondu resterait bloqué
 	bt.add_node(&"Full", full, Vector2(0, 700))
 	for i in FULL_STATES.size():
 		var node_name := StringName("F_" + str(FULL_STATES[i]))
