@@ -173,14 +173,14 @@ func _run() -> void:
 	print("[Endurance : attaques à la chaîne]")
 	var solo := _make(0, Vector3.ZERO, 0.0)
 	await physics_frame
-	var count := 0
+	var counter := [0]
+	solo.attack_started.connect(func(_d: int): counter[0] += 1)
 	var lowest := GameConfig.STAMINA_MAX
 	for i in 400:   # on relance une attaque dès que possible pendant ~13 s
-		if solo.request_attack(D.UP):
-			count += 1
+		solo.request_attack(D.UP)
 		await _frames(4)
 		lowest = minf(lowest, solo.stamina)
-	_check(count >= 5 and lowest < GameConfig.STAMINA_MAX * 0.5, "attaquer en boucle fait baisser l'endurance (%d attaques, minimum %.0f)" % [count, lowest])
+	_check(counter[0] >= 5 and lowest < GameConfig.STAMINA_MAX * 0.5, "attaquer en boucle fait baisser l'endurance (%d attaques, minimum %.0f)" % [counter[0], lowest])
 	await _cleanup([solo])
 
 	print("[Tirs reçus (flèches)]")
