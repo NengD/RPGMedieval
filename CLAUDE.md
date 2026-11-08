@@ -37,7 +37,7 @@ ZQSD/stick G déplacer · souris/stick D regarder + choisir la direction · Maj 
 - [ ] Étape 6 — Game feel, sons
 
 ## Règles du combat
-- 4 directions : 0 haut, 1 droite, 2 bas, 3 gauche. Direction choisie par le mouvement de souris / stick droit récent ; elle reste affichée (chevrons autour du centre). Attaquer / parer utilisent la direction courante.
+- 4 directions : 0 haut, 1 droite, 2 estoc (ex-« bas »), 3 gauche. L'estoc = coup pointé droit devant : plus de portée, cône plus étroit (ATTACK_REACH / ATTACK_ARC_DEG). Direction choisie par le mouvement de souris / stick droit récent ; elle reste affichée (chevrons autour du centre). Attaquer / parer utilisent la direction courante.
 - Attaque = préparation (feintable) → coup (touche une fois, cône devant, portée MELEE_RANGE) → récupération. Un clic pendant la récupération est mémorisé.
 - Feinte : clic droit pendant la préparation (coûte un peu d'endurance).
 - Parade : maintenir clic droit, du côté d'où vient le coup *à l'écran* (gauche/droite inversés par rapport à la direction d'attaque : `Combatant.mirror`). Haut/bas identiques.

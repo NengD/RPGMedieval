@@ -255,9 +255,11 @@ func _strike_check() -> void:
 		var to := c.body.global_position - body.global_position
 		to.y = 0.0
 		var dist := to.length()
-		if dist > GameConfig.MELEE_RANGE + c.radius:
+		var reach: float = GameConfig.MELEE_RANGE + GameConfig.ATTACK_REACH[attack_dir]
+		var arc: float = GameConfig.ATTACK_ARC_DEG[attack_dir]
+		if dist > reach + c.radius:
 			continue
-		if dist > 0.01 and rad_to_deg(fwd.angle_to(to)) > GameConfig.MELEE_ARC_DEG * 0.5:
+		if dist > 0.01 and rad_to_deg(fwd.angle_to(to)) > arc * 0.5:
 			continue
 		_strike_done = true
 		var dmg: float = GameConfig.ATTACK_DAMAGE[attack_dir] * damage_scale

@@ -109,6 +109,26 @@ func _run() -> void:
 	_check(is_equal_approx(behind.health, behind.max_health), "dans le dos : pas de touche")
 	await _cleanup([back, behind])
 
+	print("[Estoc]")
+	var s_a := _make(0, Vector3.ZERO, 0.0)
+	var s_b := _make(1, Vector3(0, 0, -3.0), PI)
+	await physics_frame
+	s_a.request_attack(D.RIGHT)
+	await _seconds(1.0)
+	_check(is_equal_approx(s_b.health, s_b.max_health), "un coup de taille n'atteint pas une cible à 3 m")
+	s_a.stamina = GameConfig.STAMINA_MAX
+	s_a.request_attack(D.DOWN)
+	await _seconds(1.0)
+	_check(s_b.health < s_b.max_health, "l'estoc l'atteint (portée plus grande)")
+	await _cleanup([s_a, s_b])
+	var off_a := _make(0, Vector3.ZERO, 0.0)
+	var off_b := _make(1, Vector3(1.6, 0, -1.6), PI)   # à 45° sur le côté
+	await physics_frame
+	off_a.request_attack(D.DOWN)
+	await _seconds(1.0)
+	_check(is_equal_approx(off_b.health, off_b.max_health), "l'estoc doit être visé : pas de touche à 45° sur le côté")
+	await _cleanup([off_a, off_b])
+
 	print("[Parade directionnelle]")
 	p = _pair()
 	a = p[0]

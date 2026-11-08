@@ -21,7 +21,7 @@ static func windup_pose(dir: int) -> Transform3D:
 	match dir:
 		Combatant.Dir.UP: return _pose(Vector3(0.30, 1.95, 0.05), Vector3(40, 0, -5))
 		Combatant.Dir.RIGHT: return _pose(Vector3(0.65, 1.30, -0.10), Vector3(-90, -75, 0))
-		Combatant.Dir.DOWN: return _pose(Vector3(0.30, 0.55, -0.15), Vector3(-125, 0, 0))
+		Combatant.Dir.DOWN: return _pose(Vector3(0.30, 1.15, 0.40), Vector3(-90, 8, 0))
 	return _pose(Vector3(-0.45, 1.30, -0.10), Vector3(-90, 75, 0))
 
 
@@ -29,7 +29,7 @@ static func strike_pose(dir: int) -> Transform3D:
 	match dir:
 		Combatant.Dir.UP: return _pose(Vector3(0.15, 1.05, -0.95), Vector3(-105, 0, 0))
 		Combatant.Dir.RIGHT: return _pose(Vector3(-0.25, 1.30, -0.55), Vector3(-90, 75, 0))
-		Combatant.Dir.DOWN: return _pose(Vector3(0.15, 1.80, -0.90), Vector3(-35, 0, 0))
+		Combatant.Dir.DOWN: return _pose(Vector3(0.15, 1.15, -0.75), Vector3(-90, 0, 0))
 	return _pose(Vector3(0.55, 1.30, -0.55), Vector3(-90, -75, 0))
 
 
