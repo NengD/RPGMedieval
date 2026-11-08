@@ -222,3 +222,15 @@ const ANIM_CONTACT_OFFSET := 0.05       # l'épée touche un peu après la vites
 const ANIM_WINDUP_CURVE := 1.8          # > 1 : la préparation est lente puis le geste accélère juste avant le coup (plus lisible)
 const ANIM_FOLLOW_THROUGH := 0.25       # durée (s d'animation) du geste qui suit le contact
 const ATTACK_FULLBODY_SPEED := 1.2      # sous cette vitesse (m/s), l'attaque joue sur tout le corps (plus naturel) ; au-dessus, seul le haut du corps attaque
+
+# Coups d'en haut et estoc : la main est dirigée par cinématique inverse (positions de la main, en mètres,
+# dans le repère du personnage : +X = sa droite, +Y = haut, -Z = devant).
+const IK_REST        := Vector3(0.35, 1.05, -0.30)   # main au repos
+const IK_UP_RAISED   := Vector3(0.22, 2.00, 0.10)    # coup d'en haut : main levée au-dessus de la tête
+const IK_UP_CONTACT  := Vector3(0.12, 1.00, -0.85)   # ... et abattue devant, à hauteur de poitrine
+const IK_UP_FOLLOW   := Vector3(0.12, 0.80, -0.90)   # ... fin du geste
+const IK_STAB_COCKED := Vector3(0.30, 1.25, 0.10)    # estoc : main ramenée en arrière
+const IK_STAB_CONTACT:= Vector3(0.10, 1.32, -1.00)   # ... bras tendu droit devant
+const IK_STAB_FOLLOW := Vector3(0.10, 1.32, -1.05)
+const IK_POLE        := Vector3(0.90, 1.30, 0.60)    # direction du coude (vers l'extérieur et l'arrière)
+const IK_RAISE_SHARE := 0.72                         # part de la préparation passée à lever / armer ; le reste = le geste rapide

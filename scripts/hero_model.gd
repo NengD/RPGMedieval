@@ -33,6 +33,10 @@ var _dead := false
 var _was_dodging := false
 var _was_airborne := false
 var _last_speed := 0.0
+var ik: TwoBoneIK3D
+var ik_target: Node3D
+var ik_pole: Node3D
+var _ik_amount := 0.0
 var _attack_full_body := false
 
 
@@ -52,6 +56,7 @@ func _ready() -> void:
 	anim_player.add_animation_library("", _library)
 	_build_tree()
 	_build_attachments()
+	_build_ik()
 
 
 func bind(c: Combatant) -> void:
@@ -213,6 +218,58 @@ func _upper_body_paths() -> Array:
 	return paths
 
 
+## Cinématique inverse du bras d'épée : sert à diriger la main pour le coup d'en haut et l'estoc.
+func _build_ik() -> void:
+	ik_target = Node3D.new()
+	ik_target.name = "IKTarget"
+	add_child(ik_target)
+	ik_pole = Node3D.new()
+	ik_pole.name = "IKPole"
+	add_child(ik_pole)
+	ik = TwoBoneIK3D.new()
+	ik.name = "ArmIK"
+	skeleton.add_child(ik)
+	ik.setting_count = 1
+	ik.set_root_bone_name(0, "mixamorig_RightArm")
+	ik.set_middle_bone_name(0, "mixamorig_RightForeArm")
+	ik.set_end_bone_name(0, "mixamorig_RightHand")
+	ik.set_target_node(0, ik.get_path_to(ik_target))
+	ik.set_pole_node(0, ik.get_path_to(ik_pole))
+	ik.influence = 0.0
+
+
+## Où doit être la main (repère du personnage) pendant le coup d'en haut / l'estoc.
+func _ik_hand_position(c: Combatant) -> Vector3:
+	var p := clampf(c.state_time / maxf(c.state_duration, 0.001), 0.0, 1.0)
+	var raised := GameConfig.IK_UP_RAISED
+	var contact := GameConfig.IK_UP_CONTACT
+	var follow := GameConfig.IK_UP_FOLLOW
+	if c.attack_dir == Combatant.Dir.DOWN:
+		raised = GameConfig.IK_STAB_COCKED
+		contact = GameConfig.IK_STAB_CONTACT
+		follow = GameConfig.IK_STAB_FOLLOW
+	match c.state:
+		Combatant.State.WINDUP:
+			var share := GameConfig.IK_RAISE_SHARE
+			if p < share:
+				return GameConfig.IK_REST.lerp(raised, ease(p / share, 0.4))   # lever / armer, en douceur
+			return raised.lerp(contact, ease((p - share) / (1.0 - share), 2.2))   # le geste rapide, juste avant le coup
+		Combatant.State.STRIKE:
+			return contact.lerp(follow, p)
+		_:
+			return follow.lerp(GameConfig.IK_REST, ease(p, 0.6))
+
+
+func _update_ik(delta: float, attacking: bool) -> void:
+	var directed: bool = attacking and (combatant.attack_dir == Combatant.Dir.UP or combatant.attack_dir == Combatant.Dir.DOWN)
+	_ik_amount = move_toward(_ik_amount, 1.0 if directed else 0.0, delta * 12.0)
+	ik.influence = _ik_amount
+	if _ik_amount > 0.0 or directed:
+		var local := _ik_hand_position(combatant) if directed else GameConfig.IK_REST
+		ik_target.global_position = global_transform * local
+		ik_pole.global_position = global_transform * GameConfig.IK_POLE
+
+
 func _build_attachments() -> void:
 	# Épée dans la main droite
 	sword_holder = BoneAttachment3D.new()
@@ -322,6 +379,7 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 	# --- corps entier
 	var full_target := 0.0
 	var attacking := c.state in [Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY]
+	_update_ik(delta, attacking and not _dead)
 	if _dead:
 		full_target = 1.0
 	elif _attack_full_body and attacking and not is_dodging:
