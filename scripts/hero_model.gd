@@ -36,6 +36,7 @@ var _last_speed := 0.0
 var ik: TwoBoneIK3D
 var ik_target: Node3D
 var ik_pole: Node3D
+var hand_aim: HandAimModifier
 var _ik_amount := 0.0
 var _attack_full_body := false
 
@@ -236,6 +237,10 @@ func _build_ik() -> void:
 	ik.set_target_node(0, ik.get_path_to(ik_target))
 	ik.set_pole_node(0, ik.get_path_to(ik_pole))
 	ik.influence = 0.0
+	hand_aim = HandAimModifier.new()   # APRÈS le TwoBoneIK3D : il oriente la lame une fois la main placée
+	hand_aim.name = "HandAim"
+	skeleton.add_child(hand_aim)
+	hand_aim.influence = 0.0
 
 
 ## Où doit être la main (repère du personnage) pendant le coup d'en haut / l'estoc.
@@ -260,14 +265,35 @@ func _ik_hand_position(c: Combatant) -> Vector3:
 			return follow.lerp(GameConfig.IK_REST, ease(p, 0.6))
 
 
+## Où doit pointer la lame (repère du personnage).
+func _ik_blade_direction(c: Combatant) -> Vector3:
+	if c.attack_dir == Combatant.Dir.DOWN:
+		return GameConfig.IK_BLADE_STAB
+	var p := clampf(c.state_time / maxf(c.state_duration, 0.001), 0.0, 1.0)
+	var raised := GameConfig.IK_BLADE_UP_RAISED.normalized()
+	var contact := GameConfig.IK_BLADE_UP_CONTACT.normalized()
+	match c.state:
+		Combatant.State.WINDUP:
+			var share := GameConfig.IK_RAISE_SHARE
+			if p < share:
+				return GameConfig.IK_REST_BLADE.normalized().slerp(raised, ease(p / share, 0.4))
+			return raised.slerp(contact, ease((p - share) / (1.0 - share), 2.2))
+		Combatant.State.STRIKE:
+			return contact
+		_:
+			return contact.slerp(GameConfig.IK_REST_BLADE.normalized(), ease(p, 0.6))
+
+
 func _update_ik(delta: float, attacking: bool) -> void:
 	var directed: bool = attacking and (combatant.attack_dir == Combatant.Dir.UP or combatant.attack_dir == Combatant.Dir.DOWN)
 	_ik_amount = move_toward(_ik_amount, 1.0 if directed else 0.0, delta * 12.0)
 	ik.influence = _ik_amount
+	hand_aim.influence = _ik_amount
 	if _ik_amount > 0.0 or directed:
 		var local := _ik_hand_position(combatant) if directed else GameConfig.IK_REST
 		ik_target.global_position = global_transform * local
 		ik_pole.global_position = global_transform * GameConfig.IK_POLE
+		hand_aim.target_direction_world = global_transform.basis * (_ik_blade_direction(combatant) if directed else GameConfig.IK_REST_BLADE)
 
 
 func _build_attachments() -> void:

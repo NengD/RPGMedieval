@@ -25,7 +25,7 @@ const MAP := {
 	&"dodge_l": ["sword_and_shield_strafe_3", true, false, false],
 	&"dodge_r": ["sword_and_shield_strafe_4", true, false, false],
 	&"dodge_b": ["sword_and_shield_run_2", true, false, false],
-	&"attack_up": ["axe_standing_melee_attack_backhand", true, false, true, 0.85, 1.9, [1.05, 1.38, 1.85]],   # coup de haut en bas au milieu du clip « backhand » (la main descend de 1,78 m à 0,88 m entre 1,19 s et 1,54 s) : instants réglés à la main [début, coup, fin]
+	&"attack_up": ["sword_and_shield_idle", true, false, true, 0.0, 1.4, [0.0, 0.7, 1.4]],   # posture calme : le bras est dirigé par cinématique inverse (voir HeroModel._update_ik)
 	&"attack_right": ["axe_standing_melee_attack_horizontal", true, false, true, 0.1, 2.2],   # balayage horizontal
 	&"attack_estoc": ["axe_standing_melee_combo_attack_ver__3", true, false, true, 0.55, 1.6],   # fente avec poussée (fin du combo 3)
 	&"attack_left": ["sword_and_shield_slash_3", true, false, true, 0.0, 1.5],   # coup venant de la gauche (le corps ne tourne que de ~108° ; attack_2 faisait un tourbillon de 400°)
