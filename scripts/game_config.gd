@@ -212,4 +212,4 @@ const AIM_SENSITIVITY_FACTOR := 0.5     # la souris / le stick sont moins sensib
 const AIM_MOVE_FACTOR := 0.4            # vitesse de déplacement en visée
 const AIM_SPREAD_FACTOR := 0.3          # imprécision multipliée par ça en visée (plus précis)
 const HIPFIRE_SPREAD_FACTOR := 1.6      # imprécision multipliée par ça quand on tire sans viser
-const AIM_SHOW_DROP_MARKER := true      # repère orange : où la flèche va réellement tomber
+const AIM_SHOW_DROP_MARKER := false     # true = affiche le repère orange (où le tir tombe vraiment) ; retiré par défaut
