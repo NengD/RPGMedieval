@@ -23,7 +23,9 @@ static func register_actions() -> void:
 	_add(&"look_down", [_axis(JOY_AXIS_RIGHT_Y, 1.0)])
 	_add(&"toggle_view", [_key(KEY_V), _btn(JOY_BUTTON_RIGHT_STICK)])
 	# Divers
-	_add(&"debug_hit", [_mouse(MOUSE_BUTTON_LEFT), _btn(JOY_BUTTON_X)])
+	_add(&"attack", [_mouse(MOUSE_BUTTON_LEFT), _btn(JOY_BUTTON_RIGHT_SHOULDER)])
+	_add(&"guard", [_mouse(MOUSE_BUTTON_RIGHT), _btn(JOY_BUTTON_LEFT_SHOULDER)])
+	_add(&"toggle_practice", [_key(KEY_T), _btn(JOY_BUTTON_Y)])
 	_add(&"reset_combat", [_key(KEY_R), _btn(JOY_BUTTON_START)])
 
 

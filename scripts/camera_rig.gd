@@ -14,6 +14,8 @@ var camera: Camera3D
 var _pivot: Node3D
 var _arm: SpringArm3D
 var _follow_pos := Vector3.ZERO
+var _shoulder := 0.0
+var _shoulder_goal := 0.0
 
 
 func _ready() -> void:
@@ -51,6 +53,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		pitch += dy if GameConfig.INVERT_Y else -dy
 
 
+## Décalage d'épaule : réduit s'il y a un mur à côté du héros (la caméra ne doit jamais finir dans un mur).
+func _physics_process(_delta: float) -> void:
+	var eye := target.global_position + Vector3(0.0, GameConfig.EYE_HEIGHT, 0.0)
+	var right := Vector3(cos(yaw), 0.0, -sin(yaw))
+	var want := GameConfig.TPS_SHOULDER
+	var query := PhysicsRayQueryParameters3D.create(eye, eye + right * (want + GameConfig.CAMERA_WALL_MARGIN + 0.1), GameConfig.LAYER_WORLD)
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit:
+		want = maxf(0.0, eye.distance_to(hit.position) - GameConfig.CAMERA_WALL_MARGIN - 0.1)
+	_shoulder_goal = want
+
+
 func _process(delta: float) -> void:
 	# Stick droit (avec courbe pour viser finement près du centre)
 	var look := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
@@ -75,7 +89,8 @@ func _process(delta: float) -> void:
 		_follow_pos = _follow_pos.lerp(target.global_position, 1.0 - exp(-GameConfig.CAMERA_FOLLOW_RATE * delta))
 	global_position = _follow_pos
 	rotation.y = yaw
-	_pivot.position.y = GameConfig.EYE_HEIGHT
+	_shoulder = lerpf(_shoulder, _shoulder_goal * k, 1.0 - exp(-14.0 * delta))
+	_pivot.position = Vector3(_shoulder, GameConfig.EYE_HEIGHT, 0.0)
 	_pivot.rotation.x = pitch
 	_arm.spring_length = GameConfig.TPS_DISTANCE * k
 	camera.fov = lerpf(GameConfig.FOV_FPS, GameConfig.FOV_TPS, k)

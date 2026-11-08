@@ -1,12 +1,17 @@
 class_name Player
 extends CharacterBody3D
-## Héros (capsule) : marche, course, saut, pas de côté (esquive). Caméra gérée par CameraRig.
+## Héros (capsule) : déplacement, pas de côté, et combat à l'épée (via Combatant).
 
 var spawn_yaw := 0.0
 var rig: CameraRig
+var combatant: Combatant
+var weapon: WeaponVisual
 var facing_yaw := 0.0
 var invulnerable := false
 var is_dodging := false
+## Direction choisie pour attaquer / parer : 0 haut, 1 droite, 2 bas, 3 gauche
+var aim_dir: int = Combatant.Dir.UP
+var aim_accum := Vector2.ZERO
 
 var _body_pivot: Node3D
 var _coyote := 0.0
@@ -14,6 +19,7 @@ var _jump_buffer := 0.0
 var _dodge_elapsed := 0.0
 var _dodge_cooldown := 0.0
 var _dodge_dir := Vector3.ZERO
+var _assist_yaw := NAN
 
 
 func _ready() -> void:
@@ -54,6 +60,16 @@ func _ready() -> void:
 	nose.position = Vector3(0, 0.55, -GameConfig.PLAYER_RADIUS)
 	_body_pivot.add_child(nose)
 
+	# Combat
+	combatant = Combatant.new()
+	combatant.body = self
+	combatant.team = 0
+	combatant.radius = GameConfig.PLAYER_RADIUS
+	add_child(combatant)
+	weapon = WeaponVisual.new()
+	add_child(weapon)
+	weapon.bind(combatant)
+
 	facing_yaw = spawn_yaw
 	rotation.y = facing_yaw
 	rig = CameraRig.new()
@@ -70,18 +86,98 @@ func facing_vector() -> Vector3:
 	return Vector3(-sin(facing_yaw), 0.0, -cos(facing_yaw))
 
 
+func reset_to(pos: Vector3, yaw: float) -> void:
+	position = pos
+	velocity = Vector3.ZERO
+	rig.yaw = yaw
+	facing_yaw = yaw
+	rotation.y = yaw
+	is_dodging = false
+	invulnerable = false
+	_body_pivot.rotation = Vector3.ZERO
+	combatant.reset()
+	rig.snap_to_target()
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	if event.is_action_pressed(&"toggle_view"):
 		toggle_view()
+	elif event is InputEventMouseMotion and captured:
+		aim_accum += (event as InputEventMouseMotion).screen_relative
+	elif event.is_action_pressed(&"attack") and captured:
+		try_attack()
 
 
 func _process(_delta: float) -> void:
 	_body_pivot.visible = rig.blend > 0.25   # le corps disparaît en 1re personne
 
 
+## Attaque dans la direction choisie (aim_dir).
+func try_attack() -> bool:
+	if combatant.dead or is_dodging:
+		return false
+	_assist_yaw = _find_assist_yaw()
+	return combatant.request_attack(aim_dir)
+
+
+func _find_assist_yaw() -> float:
+	if rig.first_person:
+		return NAN
+	var best := NAN
+	var best_angle := deg_to_rad(GameConfig.AIM_ASSIST_ANGLE_DEG)
+	var cam_forward := Vector3(-sin(rig.yaw), 0.0, -cos(rig.yaw))
+	for node in get_tree().get_nodes_in_group(&"combatants"):
+		var c := node as Combatant
+		if c == null or c.team == combatant.team or c.dead or c.body == null:
+			continue
+		var to := c.body.global_position - global_position
+		to.y = 0.0
+		if to.length() > GameConfig.AIM_ASSIST_RANGE or to.length() < 0.01:
+			continue
+		var angle := cam_forward.angle_to(to)
+		if angle < best_angle:
+			best_angle = angle
+			best = atan2(-to.x, -to.z)
+	return best
+
+
+func _update_aim(delta: float) -> void:
+	var look := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
+	aim_accum += look * GameConfig.STICK_AIM_GAIN * delta
+	aim_accum *= exp(-GameConfig.AIM_DECAY * delta)
+	if aim_accum.length() > GameConfig.AIM_THRESHOLD:
+		if absf(aim_accum.x) > absf(aim_accum.y):
+			aim_dir = Combatant.Dir.RIGHT if aim_accum.x > 0.0 else Combatant.Dir.LEFT
+		else:
+			aim_dir = Combatant.Dir.DOWN if aim_accum.y > 0.0 else Combatant.Dir.UP
+
+
+func _move_factor() -> float:
+	match combatant.state:
+		Combatant.State.STAGGER:
+			return 0.2
+		Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY:
+			return GameConfig.ATTACK_MOVE_FACTOR
+	if combatant.guard_held:
+		return GameConfig.GUARD_MOVE_FACTOR
+	return 1.0
+
+
 func _physics_process(delta: float) -> void:
 	_dodge_cooldown = maxf(0.0, _dodge_cooldown - delta)
-	var input := Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back")
+	_update_aim(delta)
+
+	# Garde / feinte (clic droit)
+	var alive := not combatant.dead
+	if alive and Input.is_action_just_pressed(&"guard") and combatant.state == Combatant.State.WINDUP:
+		combatant.request_feint()
+	combatant.set_guard(alive and Input.is_action_pressed(&"guard"), aim_dir)
+	combatant.invulnerable = invulnerable
+	if not combatant.is_attacking():
+		_assist_yaw = NAN
+
+	var input := Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back") if alive else Vector2.ZERO
 	var wish := Basis(Vector3.UP, rig.yaw) * Vector3(input.x, 0.0, input.y)
 	var on_floor := is_on_floor()
 
@@ -93,14 +189,17 @@ func _physics_process(delta: float) -> void:
 	elif velocity.y < 0.0:
 		velocity.y = 0.0
 
-	if Input.is_action_just_pressed(&"dodge") and not is_dodging and _dodge_cooldown <= 0.0 and on_floor:
+	if alive and Input.is_action_just_pressed(&"dodge") and _can_dodge(on_floor):
 		_start_dodge(wish)
 
 	if is_dodging:
 		_update_dodge(delta)
 	else:
-		var speed := GameConfig.RUN_SPEED if Input.is_action_pressed(&"sprint") else GameConfig.WALK_SPEED
-		var target := wish * speed
+		var factor := _move_factor()
+		var speed := GameConfig.WALK_SPEED
+		if Input.is_action_pressed(&"sprint") and factor >= 1.0:
+			speed = GameConfig.RUN_SPEED
+		var target := wish * speed * factor
 		var horizontal := Vector3(velocity.x, 0.0, velocity.z)
 		var rate := GameConfig.ACCELERATION if target.length() > 0.01 else GameConfig.DECELERATION
 		if not on_floor:
@@ -108,7 +207,7 @@ func _physics_process(delta: float) -> void:
 		horizontal = horizontal.move_toward(target, rate * delta)
 		velocity.x = horizontal.x
 		velocity.z = horizontal.z
-		if _jump_buffer > 0.0 and _coyote > 0.0:
+		if alive and _jump_buffer > 0.0 and _coyote > 0.0 and combatant.state != Combatant.State.STAGGER:
 			velocity.y = GameConfig.JUMP_VELOCITY
 			_jump_buffer = 0.0
 			_coyote = 0.0
@@ -116,22 +215,31 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_update_facing(wish, delta)
 
-	if Input.is_action_just_pressed(&"debug_hit"):
-		_debug_hit()
-
 
 func _update_facing(wish: Vector3, delta: float) -> void:
+	var in_combat := combatant.state in [Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY] or combatant.guard_held
 	if rig.first_person:
 		facing_yaw = rig.yaw
-	elif is_dodging:
-		pass   # orientation fixée au début du pas de côté
+	elif is_dodging or combatant.state == Combatant.State.STAGGER:
+		pass   # orientation figée
+	elif in_combat:
+		var target_yaw := rig.yaw if is_nan(_assist_yaw) else _assist_yaw
+		facing_yaw = lerp_angle(facing_yaw, target_yaw, 1.0 - exp(-GameConfig.COMBAT_TURN_SPEED * delta))
 	elif wish.length() > 0.1:
 		var target_yaw := atan2(-wish.x, -wish.z)
 		facing_yaw = lerp_angle(facing_yaw, target_yaw, 1.0 - exp(-GameConfig.TURN_SPEED * delta))
 	rotation.y = facing_yaw
 
 
+func _can_dodge(on_floor: bool) -> bool:
+	if is_dodging or _dodge_cooldown > 0.0 or not on_floor or combatant.exhausted:
+		return false
+	return combatant.state == Combatant.State.IDLE or combatant.state == Combatant.State.RECOVERY
+
+
 func _start_dodge(wish: Vector3) -> void:
+	combatant.cancel_recovery()
+	combatant.spend_stamina(GameConfig.DODGE_STAMINA)
 	is_dodging = true
 	_dodge_elapsed = 0.0
 	if wish.length() > 0.1:
@@ -155,13 +263,3 @@ func _update_dodge(delta: float) -> void:
 		invulnerable = false
 		_dodge_cooldown = GameConfig.DODGE_COOLDOWN
 		_body_pivot.rotation.z = 0.0
-
-
-## Coup de test (clic gauche) : touche le mannequin devant le héros.
-func _debug_hit() -> void:
-	var from := global_position + Vector3.UP * 1.0
-	var dir := facing_vector()
-	var query := PhysicsRayQueryParameters3D.create(from, from + dir * 3.0, GameConfig.LAYER_ENEMY)
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	if hit and hit.collider.has_method("take_damage"):
-		hit.collider.take_damage(10.0, dir)

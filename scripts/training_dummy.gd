@@ -1,13 +1,19 @@
 class_name TrainingDummy
 extends StaticBody3D
-## Mannequin d'entraînement immobile : affiche les dégâts reçus.
+## Mannequin d'entraînement. Immobile, il affiche les dégâts reçus.
+## En "mode agressif" (touche T) il frappe le héros à intervalles réguliers pour s'entraîner à parer.
 
+var combatant: Combatant
+var weapon: WeaponVisual
+var target_node: Node3D           # le héros (le mannequin se tourne vers lui)
+var practice := false
 var total_damage := 0.0
 var hit_count := 0
 
 var _pivot: Node3D
 var _mat: StandardMaterial3D
 var _total_label: Label3D
+var _practice_timer := 1.0
 const _BASE_COLOR := Color(0.85, 0.55, 0.2)
 
 
@@ -35,40 +41,95 @@ func _ready() -> void:
 	mesh.position.y = GameConfig.DUMMY_HEIGHT * 0.5
 	_pivot.add_child(mesh)
 
+	combatant = Combatant.new()
+	combatant.body = self
+	combatant.team = 1
+	combatant.radius = GameConfig.DUMMY_RADIUS
+	combatant.invincible = true
+	combatant.speed_scale = GameConfig.PRACTICE_SPEED_SCALE
+	combatant.damage_scale = GameConfig.PRACTICE_DAMAGE_SCALE
+	add_child(combatant)
+	weapon = WeaponVisual.new()
+	_pivot.add_child(weapon)
+	weapon.bind(combatant)
+	combatant.damaged.connect(_on_damaged)
+	combatant.hit_resolved.connect(_on_hit_resolved)
+
 	_total_label = _make_label(24, Color(1, 1, 1))
 	_total_label.position = Vector3(0, GameConfig.DUMMY_HEIGHT + 0.5, 0)
 	add_child(_total_label)
 	_refresh_total()
 
 
-func take_damage(amount: float, direction: Vector3 = Vector3.ZERO) -> void:
-	total_damage += amount
-	hit_count += 1
-	_refresh_total()
-	_spawn_floating_number(amount)
-	# Éclair blanc puis retour à la couleur normale
-	_mat.albedo_color = Color(1, 1, 1)
-	create_tween().tween_property(_mat, "albedo_color", _BASE_COLOR, 0.25)
-	# Petit balancement dans le sens du coup
-	var tilt := Vector3(direction.z, 0.0, -direction.x) * 0.3
-	var tw := create_tween()
-	tw.tween_property(_pivot, "rotation", tilt, 0.05)
-	tw.tween_property(_pivot, "rotation", Vector3.ZERO, 0.5).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+func _physics_process(delta: float) -> void:
+	# Le mannequin garde le regard sur le héros, et ne se fatigue jamais.
+	if target_node and combatant.state != Combatant.State.STAGGER:
+		var to := target_node.global_position - global_position
+		rotation.y = lerp_angle(rotation.y, atan2(-to.x, -to.z), 1.0 - exp(-8.0 * delta))
+	combatant.stamina = GameConfig.STAMINA_MAX
+	combatant.exhausted = false
+
+	if practice and combatant.state == Combatant.State.IDLE:
+		_practice_timer -= delta
+		if _practice_timer <= 0.0:
+			var dir: int = GameConfig.PRACTICE_DIRECTION
+			if dir < 0:
+				dir = randi() % 4
+			combatant.request_attack(dir)
+			_practice_timer = GameConfig.PRACTICE_INTERVAL
+
+
+func _process(_delta: float) -> void:
+	# Couleur selon l'état : rouge pendant l'attaque, bleu quand il est déséquilibré
+	var c := _BASE_COLOR
+	match combatant.state:
+		Combatant.State.WINDUP, Combatant.State.STRIKE:
+			c = Color(0.9, 0.2, 0.15)
+		Combatant.State.STAGGER:
+			c = Color(0.35, 0.55, 1.0)
+	_mat.albedo_color = _mat.albedo_color.lerp(c, 0.35)
+
+
+func set_practice(on: bool) -> void:
+	practice = on
+	_practice_timer = 1.0
+
+
+## Compatibilité : infliger des dégâts directs (tests).
+func take_damage(amount: float, _direction: Vector3 = Vector3.ZERO) -> void:
+	combatant.take_damage(amount)
 
 
 func reset_stats() -> void:
 	total_damage = 0.0
 	hit_count = 0
+	combatant.reset()
 	_refresh_total()
+
+
+func _on_damaged(amount: float, _attacker: Combatant) -> void:
+	total_damage += amount
+	hit_count += 1
+	_refresh_total()
+	_spawn_floating_number("-%d" % int(round(amount)), Color(1.0, 0.85, 0.2))
+	_mat.albedo_color = Color(1, 1, 1)   # éclair blanc
+	var tw := create_tween()
+	tw.tween_property(_pivot, "rotation:x", -0.25, 0.05)
+	tw.tween_property(_pivot, "rotation:x", 0.0, 0.5).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+
+func _on_hit_resolved(result: int, _dir: int, _amount: float, _attacker: Combatant) -> void:
+	if result == Combatant.Result.DODGED:
+		_spawn_floating_number("esquivé", Color(0.7, 0.7, 0.7))
 
 
 func _refresh_total() -> void:
 	_total_label.text = "Dégâts reçus : %d  (%d coups)" % [int(total_damage), hit_count]
 
 
-func _spawn_floating_number(amount: float) -> void:
-	var label := _make_label(64, Color(1.0, 0.85, 0.2))
-	label.text = "-%d" % int(amount)
+func _spawn_floating_number(text: String, color: Color) -> void:
+	var label := _make_label(64, color)
+	label.text = text
 	label.position = Vector3(randf_range(-0.3, 0.3), GameConfig.DUMMY_HEIGHT + 0.1, 0)
 	add_child(label)
 	var tw := label.create_tween().set_parallel(true)
