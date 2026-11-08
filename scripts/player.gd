@@ -11,6 +11,7 @@ var spawn_yaw := 0.0
 var rig: CameraRig
 var combatant: Combatant
 var weapon: WeaponVisual
+var model: HeroModel
 var ranged_visual: RangedVisual
 var facing_yaw := 0.0
 var invulnerable := false
@@ -76,6 +77,11 @@ func _ready() -> void:
 	nose.position = Vector3(0, 0.55, -GameConfig.PLAYER_RADIUS)
 	_body_pivot.add_child(nose)
 
+	# Personnage animé (la capsule reste invisible : elle ne sert plus que de collision)
+	_body_pivot.visible = false
+	model = HeroModel.new()
+	add_child(model)
+
 	# Combat
 	combatant = Combatant.new()
 	combatant.body = self
@@ -85,6 +91,8 @@ func _ready() -> void:
 	weapon = WeaponVisual.new()
 	add_child(weapon)
 	weapon.bind(combatant)
+	model.bind(combatant)
+	combatant.damaged.connect(func(_a: float, _by: Combatant): model.flash())
 	_ranged_pivot = Node3D.new()
 	_ranged_pivot.position = Vector3(0, 1.4, 0)   # à hauteur d'épaule : l'arme suit l'inclinaison de la visée
 	add_child(_ranged_pivot)
@@ -120,6 +128,7 @@ func reset_to(pos: Vector3, yaw: float) -> void:
 	crossbow_reload = 0.0
 	aim_blend = 0.0
 	is_aiming = false
+	model.reset()
 	_body_pivot.rotation = Vector3.ZERO
 	combatant.reset()
 	rig.snap_to_target()
@@ -142,8 +151,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
-	_body_pivot.visible = rig.blend > 0.25   # le corps disparaît en 1re personne
-	weapon.visible = weapon_kind == Weapon.SWORD
+	# 3e personne : le chevalier animé ; 1re personne : on ne voit que l'arme (poses par code)
+	var third_person := rig.blend > 0.25
+	model.visible = third_person
+	model.show_sword(weapon_kind == Weapon.SWORD)
+	weapon.visible = weapon_kind == Weapon.SWORD and not third_person
+	model.drive(_delta, velocity, global_basis, is_on_floor(), is_dodging, _dodge_dir)
 	_ranged_pivot.rotation.x = rig.pitch
 	ranged_visual.refresh(weapon_kind, bow_tension if drawing else 0.0, drawing, crossbow_reload, rig.first_person)
 

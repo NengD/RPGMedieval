@@ -127,10 +127,10 @@ func _run() -> void:
 	var fps_dist := player.rig.camera.global_position.distance_to(player.global_position + Vector3(0, GameConfig.EYE_HEIGHT, 0))
 	_check(player.rig.first_person and fps_dist < 0.3, "1re personne : caméra aux yeux (%.2f m)" % fps_dist)
 	_check(tps_dist > 2.5, "3e personne : caméra en retrait (%.2f m)" % tps_dist)
-	_check(not player._body_pivot.visible, "le corps est caché en 1re personne")
+	_check(not player.model.visible, "le corps est caché en 1re personne")
 	player.toggle_view()
 	await _frames(60)
-	_check(player._body_pivot.visible, "le corps est visible en 3e personne")
+	_check(player.model.visible, "le corps est visible en 3e personne")
 
 	print("[Regard à la souris]")
 	var can_capture := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
@@ -411,6 +411,80 @@ func _run() -> void:
 	await _frames(5)
 	_check(not player.drawing, "X annule la corde sans tirer")
 	player.switch_weapon(Player.Weapon.SWORD)
+
+	print("[Animations]")
+	player.switch_weapon(Player.Weapon.SWORD)
+	player.combatant.reset()
+	player.model.reset()
+	_teleport(Vector3(0, 0.05, 9), 0.0)
+	await _frames(60)
+	var model: HeroModel = player.model
+	_check(model.tree.active and model.skeleton.get_bone_count() == 67, "le chevalier est chargé (67 os) et l'AnimationTree est actif")
+	_check(model.anim_player.get_animation_list().size() >= 22, "bibliothèque d'animations chargée (%d animations)" % model.anim_player.get_animation_list().size())
+	# jambes qui marchent pendant que le haut du corps attaque
+	var leg := model.skeleton.find_bone("mixamorig_LeftUpLeg")
+	var arm := model.skeleton.find_bone("mixamorig_RightForeArm")
+	_hold([&"move_forward"])
+	await _frames(60)
+	player.aim_dir = Combatant.Dir.RIGHT
+	player.try_attack()
+	var leg_angle := 0.0
+	var arm_angle := 0.0
+	var leg_prev: Quaternion = model.skeleton.get_bone_pose_rotation(leg)
+	var arm_prev: Quaternion = model.skeleton.get_bone_pose_rotation(arm)
+	var upper_max := 0.0
+	var state_seen := ""
+	for i in 40:
+		await process_frame
+		var lq: Quaternion = model.skeleton.get_bone_pose_rotation(leg)
+		var aq: Quaternion = model.skeleton.get_bone_pose_rotation(arm)
+		leg_angle += lq.angle_to(leg_prev)
+		arm_angle += aq.angle_to(arm_prev)
+		leg_prev = lq
+		arm_prev = aq
+		upper_max = maxf(upper_max, model.tree.get("parameters/UpperBlend/blend_amount"))
+		if str(model.tree.get("parameters/Upper/current_state")) == "attack_right":
+			state_seen = "attack_right"
+	_release_all()
+	_check(upper_max > 0.9 and state_seen == "attack_right", "haut du corps : animation d'attaque jouée (%s, mélange %.1f)" % [state_seen, upper_max])
+	_check(leg_angle > 0.3, "les jambes continuent de marcher pendant l'attaque (%.2f rad)" % leg_angle)
+	_check(arm_angle > 0.5, "le bras d'épée bouge pendant l'attaque (%.2f rad)" % arm_angle)
+	await _frames(120)
+	# calage : au début du coup, l'animation est à l'instant du contact
+	var lib := model.anim_player.get_animation_library("")
+	var fake := Combatant.new()
+	fake.state = Combatant.State.STRIKE
+	fake.state_time = 0.0
+	fake.state_duration = 0.14
+	for d in 4:
+		fake.attack_dir = d
+		var anim := lib.get_animation(HeroModel.ATTACK_ANIMS[d])
+		var want: float = minf(float(anim.get_meta(&"peak_time")) + GameConfig.ANIM_CONTACT_OFFSET, anim.length * 0.95)
+		_check(absf(model._attack_time(fake) - want) < 0.01, "attaque %s : le contact visuel tombe au début du coup (%.2f s)" % [GameConfig.DIR_NAMES[d], want])
+	fake.free()
+	# esquive, mort, remise à zéro
+	player.try_attack()
+	player.combatant.reset()
+	player.model.reset()
+	_hold([&"move_right"])
+	Input.action_press(&"dodge")
+	await _frames(3)
+	Input.action_release(&"dodge")
+	await _frames(10)
+	_check(player.is_dodging and model.tree.get("parameters/Full/current_state") == "dodge_r", "pas de côté à droite : animation d'esquive à droite")
+	_release_all()
+	await _frames(120)
+	player.combatant.invincible = false
+	player.combatant.take_damage(9999.0)
+	await _frames(30)
+	_check(player.combatant.dead and model.tree.get("parameters/FullBlend/blend_amount") > 0.9 and model.tree.get("parameters/Full/current_state") == "death", "mort : animation de mort jouée")
+	player.combatant.invincible = true
+	player.reset_to(Vector3(0, 0.05, 9), 0.0)
+	await _frames(30)
+	_check(not player.combatant.dead and model.tree.get("parameters/FullBlend/blend_amount") < 0.1, "remise à zéro : le chevalier se relève")
+	var enemy_mesh: MeshInstance3D = enemy.model.model_root.find_children("*", "MeshInstance3D", true, false)[0]
+	var tint_mat := enemy_mesh.get_surface_override_material(0) as StandardMaterial3D
+	_check(tint_mat != null and tint_mat.albedo_color.r > tint_mat.albedo_color.g + 0.05, "l'ennemi est teinté en rouge sombre")
 
 	print("[Ennemi face aux tirs]")
 	# garde contre une flèche vue à temps (scène figée pour être déterministe)

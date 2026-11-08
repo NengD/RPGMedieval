@@ -8,10 +8,10 @@ extends CharacterBody3D
 
 enum Mode { APPROACH, CIRCLE, ATTACK, DEFEND, RETREAT, STAGGERED, DEAD, COVER, EVADE }
 const MODE_NAMES := ["s'approche", "tourne autour de toi", "attaque", "se défend", "RECULE (fatigué)", "déséquilibré", "vaincu", "se met à couvert", "charge en zigzag"]
-const _BASE_COLOR := Color(0.55, 0.15, 0.18)
+const ENEMY_TINT := Color(1.0, 0.45, 0.4)   # teinte du chevalier ennemi (rouge sombre)
 
 var combatant: Combatant
-var weapon: WeaponVisual
+var model: HeroModel
 var target: Player
 var difficulty := GameConfig.DEFAULT_DIFFICULTY
 var mode: int = Mode.APPROACH
@@ -19,7 +19,6 @@ var ai_enabled := GameConfig.ENEMY_AI_ENABLED_AT_START   # false = immobile, ne 
 var aggressive := true           # false = il ne lance jamais d'attaque (pour s'entraîner / tests)
 
 var _pivot: Node3D
-var _mat: StandardMaterial3D
 var _circle_sign := 1.0
 var _circle_timer := 2.0
 var _attack_cd := 1.5
@@ -60,34 +59,16 @@ func _ready() -> void:
 
 	_pivot = Node3D.new()
 	add_child(_pivot)
-	var capsule := CapsuleMesh.new()
-	capsule.radius = GameConfig.ENEMY_RADIUS
-	capsule.height = GameConfig.ENEMY_HEIGHT
-	_mat = StandardMaterial3D.new()
-	_mat.albedo_color = _BASE_COLOR
-	capsule.material = _mat
-	var mesh := MeshInstance3D.new()
-	mesh.mesh = capsule
-	mesh.position.y = GameConfig.ENEMY_HEIGHT * 0.5
-	_pivot.add_child(mesh)
-	var nose := MeshInstance3D.new()
-	var nose_mesh := BoxMesh.new()
-	nose_mesh.size = Vector3(0.18, 0.18, 0.3)
-	var nose_mat := StandardMaterial3D.new()
-	nose_mat.albedo_color = Color(0.2, 0.2, 0.2)
-	nose_mesh.material = nose_mat
-	nose.mesh = nose_mesh
-	nose.position = Vector3(0, GameConfig.ENEMY_HEIGHT * 0.5 + 0.55, -GameConfig.ENEMY_RADIUS)
-	_pivot.add_child(nose)
+	model = HeroModel.new()
+	add_child(model)
+	model.tint(ENEMY_TINT)
 
 	combatant = Combatant.new()
 	combatant.body = self
 	combatant.team = 1
 	combatant.radius = GameConfig.ENEMY_RADIUS
 	add_child(combatant)
-	weapon = WeaponVisual.new()
-	_pivot.add_child(weapon)
-	weapon.bind(combatant)
+	model.bind(combatant)
 	combatant.damaged.connect(_on_damaged)
 	combatant.hit_resolved.connect(_on_hit_resolved)
 	combatant.died.connect(_on_died)
@@ -109,7 +90,7 @@ func reset_to(pos: Vector3) -> void:
 	set_difficulty(difficulty)
 	_pivot.rotation = Vector3.ZERO
 	_pivot.position = Vector3.ZERO
-	_mat.albedo_color = _BASE_COLOR
+	model.reset()
 	_retreating = false
 	_seen_threat = false
 	_guard_wanted = false
@@ -413,21 +394,13 @@ func _check_arrows(delta: float) -> void:
 
 # ---------------------------------------------------------------- réactions
 
-func _process(_delta: float) -> void:
-	var col := _BASE_COLOR
-	match combatant.state:
-		Combatant.State.WINDUP, Combatant.State.STRIKE:
-			col = Color(0.95, 0.25, 0.1)
-		Combatant.State.STAGGER:
-			col = Color(0.35, 0.55, 1.0)
-	if combatant.dead:
-		col = Color(0.25, 0.25, 0.25)
-	_mat.albedo_color = _mat.albedo_color.lerp(col, 0.35)
+func _process(delta: float) -> void:
+	model.drive(delta, velocity, global_basis, is_on_floor(), false, Vector3.ZERO)
 
 
 func _on_damaged(amount: float, _attacker: Combatant) -> void:
 	FloatingText.spawn(self, "-%d" % int(round(amount)), Color(1.0, 0.85, 0.2), GameConfig.ENEMY_HEIGHT + 0.1)
-	_mat.albedo_color = Color(1, 1, 1)
+	model.flash()
 
 
 func _on_hit_resolved(result: int, _dir: int, _amount: float, _attacker: Combatant) -> void:
@@ -442,5 +415,3 @@ func _on_hit_resolved(result: int, _dir: int, _amount: float, _attacker: Combata
 
 func _on_died() -> void:
 	_guard_wanted = false
-	var tw := create_tween()
-	tw.tween_property(_pivot, "rotation:x", -PI * 0.5, 0.45).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)

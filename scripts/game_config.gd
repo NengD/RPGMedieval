@@ -213,3 +213,9 @@ const AIM_MOVE_FACTOR := 0.4            # vitesse de déplacement en visée
 const AIM_SPREAD_FACTOR := 0.3          # imprécision multipliée par ça en visée (plus précis)
 const HIPFIRE_SPREAD_FACTOR := 1.6      # imprécision multipliée par ça quand on tire sans viser
 const AIM_SHOW_DROP_MARKER := false     # true = affiche le repère orange (où le tir tombe vraiment) ; retiré par défaut
+
+# ============================================================
+# ANIMATIONS (étape 5)
+# ============================================================
+const ANIM_CONTACT_OFFSET := 0.05       # l'épée touche un peu après la vitesse maximale de la main (s d'animation)
+const ANIM_FOLLOW_THROUGH := 0.25       # durée (s d'animation) du geste qui suit le contact

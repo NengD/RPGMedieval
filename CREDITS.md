@@ -5,6 +5,7 @@ Toutes les ressources doivent être gratuites (CC0 ou licence libre) et notées 
 | Ressource | Auteur | Licence | Source | Utilisée pour |
 |-----------|--------|---------|--------|---------------|
 | *(étapes 1 à 4 : formes simples générées en code, aucune ressource externe)* | | | | |
-| Personnage + animations (étape 5) | Mixamo / Adobe | Gratuit (compte Adobe), usage libre dans un jeu | https://www.mixamo.com | héros et ennemi *(à compléter avec les noms exacts)* |
+| Personnage « Paladin J Nordstrom » | Mixamo / Adobe | Gratuit avec compte Adobe, usage libre dans un jeu | https://www.mixamo.com | héros et ennemi (`assets/hero/hero.fbx`) |
+| Animations « Pro Sword and Shield Pack » (51 animations, 22 utilisées) | Mixamo / Adobe | Gratuit avec compte Adobe, usage libre dans un jeu | https://www.mixamo.com | marche, course, attaques, parade, coups reçus, mort… (`assets/anims/`) |
 
 Moteur : [Godot Engine](https://godotengine.org) (licence MIT).
