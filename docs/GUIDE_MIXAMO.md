@@ -49,3 +49,15 @@ Cherche ces mots dans la barre de recherche de Mixamo, choisis l'animation qui c
 ## Si un nom n'existe pas
 Pas grave : prends l'animation la plus proche et dis-moi son nom exact. Je règle le reste dans le code
 (durées, correspondance des animations, miroir si un côté manque).
+
+
+## Attaques propres (à télécharger en plus du pack)
+Le « Pro Sword and Shield Pack » contient surtout des attaques acrobatiques (sauts, fentes accroupies). Pour de vraies attaques
+dans les 4 directions, télécharge ces animations Mixamo seules (Without Skin / No Character, **In Place** coché) :
+
+| Rôle | Mot à chercher | Remarque |
+|---|---|---|
+| Attaque haut (coup d'en haut) | `standing melee attack downward` | |
+| Attaque droite | `standing melee attack horizontal` | |
+| Attaque gauche | la même, avec **Mirror** coché | ajoute `_mirror` au nom du fichier |
+| Estoc (pointe en avant) | `stab` ou `thrust` ou `lunge` | prends celle qui pousse l'épée droit devant |

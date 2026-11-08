@@ -412,6 +412,35 @@ func _run() -> void:
 	_check(not player.drawing, "X annule la corde sans tirer")
 	player.switch_weapon(Player.Weapon.SWORD)
 
+	print("[Déplacement en regardant la caméra]")
+	player.switch_weapon(Player.Weapon.SWORD)
+	player.combatant.reset()
+	_teleport(Vector3(0, 0.05, 2), 0.0)
+	player.rig.pitch = 0.0
+	await _frames(60)
+	var m2: HeroModel = player.model
+	_hold([&"move_back"])
+	await _frames(90)
+	_check(absf(angle_difference(player.facing_yaw, player.rig.yaw)) < 0.1, "en reculant, le héros garde le regard vers l'avant (il ne se retourne pas)")
+	var back_blend: Vector2 = m2.tree.get("parameters/Loco/blend_position")
+	_check(back_blend.y < -0.7 and absf(back_blend.x) < 0.3, "en reculant, l'animation de marche arrière est jouée (%.1f, %.1f)" % [back_blend.x, back_blend.y])
+	_release_all()
+	await _frames(60)
+	_teleport(Vector3(0, 0.05, 2), 0.0)
+	_hold([&"move_right"])
+	await _frames(90)
+	_check(absf(angle_difference(player.facing_yaw, player.rig.yaw)) < 0.1, "sur le côté, le héros garde le regard vers l'avant")
+	var side_blend: Vector2 = m2.tree.get("parameters/Loco/blend_position")
+	_check(side_blend.x > 0.7 and absf(side_blend.y) < 0.3, "sur le côté, l'animation de pas de côté est jouée (%.1f, %.1f)" % [side_blend.x, side_blend.y])
+	_release_all()
+	await _frames(60)
+	_teleport(Vector3(0, 0.05, 6), 0.0)
+	player.rig.yaw = 2.0   # la caméra tourne : le corps suit
+	await _frames(60)
+	_check(absf(angle_difference(player.facing_yaw, 2.0)) < 0.15, "le corps suit la caméra quand elle tourne")
+	player.rig.yaw = 0.0
+	await _frames(60)
+
 	print("[Animations]")
 	player.switch_weapon(Player.Weapon.SWORD)
 	player.combatant.reset()

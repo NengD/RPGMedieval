@@ -219,3 +219,4 @@ const AIM_SHOW_DROP_MARKER := false     # true = affiche le repère orange (où 
 # ============================================================
 const ANIM_CONTACT_OFFSET := 0.05       # l'épée touche un peu après la vitesse maximale de la main (s d'animation)
 const ANIM_FOLLOW_THROUGH := 0.25       # durée (s d'animation) du geste qui suit le contact
+const ATTACK_FULLBODY_SPEED := 1.2      # sous cette vitesse (m/s), l'attaque joue sur tout le corps (plus naturel) ; au-dessus, seul le haut du corps attaque

@@ -438,19 +438,17 @@ func _physics_process(delta: float) -> void:
 	_update_facing(wish, delta)
 
 
-func _update_facing(wish: Vector3, delta: float) -> void:
-	var in_combat := combatant.state in [Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY] \
-		or combatant.guard_held or weapon_kind != Weapon.SWORD
+func _update_facing(_wish: Vector3, delta: float) -> void:
+	# Le héros regarde toujours là où regarde la caméra : en reculant il recule, sur les côtés il marche de côté.
 	if rig.first_person:
 		facing_yaw = rig.yaw
 	elif is_dodging or combatant.state == Combatant.State.STAGGER:
 		pass   # orientation figée
-	elif in_combat:
+	else:
+		var in_combat := combatant.state in [Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY] 			or combatant.guard_held or weapon_kind != Weapon.SWORD
 		var target_yaw := rig.yaw if is_nan(_assist_yaw) else _assist_yaw
-		facing_yaw = lerp_angle(facing_yaw, target_yaw, 1.0 - exp(-GameConfig.COMBAT_TURN_SPEED * delta))
-	elif wish.length() > 0.1:
-		var target_yaw := atan2(-wish.x, -wish.z)
-		facing_yaw = lerp_angle(facing_yaw, target_yaw, 1.0 - exp(-GameConfig.TURN_SPEED * delta))
+		var rate := GameConfig.COMBAT_TURN_SPEED if in_combat else GameConfig.TURN_SPEED
+		facing_yaw = lerp_angle(facing_yaw, target_yaw, 1.0 - exp(-rate * delta))
 	rotation.y = facing_yaw
 
 

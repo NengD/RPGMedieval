@@ -13,7 +13,7 @@ const MODEL := "res://assets/hero/hero.fbx"
 const LIBRARY := "res://assets/anims/hero_library.res"
 const ATTACK_ANIMS := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left"]
 const HIT_ANIMS := [&"hit_1", &"hit_2", &"hit_3"]
-const FULL_STATES := [&"dodge_l", &"dodge_r", &"dodge_b", &"jump", &"death"]
+const FULL_STATES := [&"dodge_l", &"dodge_r", &"dodge_b", &"jump", &"death", &"attack_up", &"attack_right", &"attack_estoc", &"attack_left"]
 const UPPER_STATES := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left", &"guard", &"hit_1", &"hit_2", &"hit_3"]
 
 var skeleton: Skeleton3D
@@ -32,6 +32,8 @@ var _full_amount := 0.0
 var _dead := false
 var _was_dodging := false
 var _was_airborne := false
+var _last_speed := 0.0
+var _attack_full_body := false
 
 
 func _ready() -> void:
@@ -176,10 +178,12 @@ func _build_tree() -> void:
 		bt.connect_node(&"Full", i, node_name)
 	bt.add_node(&"FullTS", AnimationNodeTimeScale.new(), Vector2(200, 700))
 	bt.connect_node(&"FullTS", 0, &"Full")
+	bt.add_node(&"FullSeek", AnimationNodeTimeSeek.new(), Vector2(400, 700))
+	bt.connect_node(&"FullSeek", 0, &"FullTS")
 	var full_blend := AnimationNodeBlend2.new()
 	bt.add_node(&"FullBlend", full_blend, Vector2(800, 100))
 	bt.connect_node(&"FullBlend", 0, &"UpperBlend")
-	bt.connect_node(&"FullBlend", 1, &"FullTS")
+	bt.connect_node(&"FullBlend", 1, &"FullSeek")
 	bt.connect_node(&"output", 0, &"FullBlend")
 
 	tree = AnimationTree.new()
@@ -247,7 +251,12 @@ func _add_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color, metalli
 # ---------------------------------------------------------------- réactions aux événements
 
 func _on_attack_started(dir: int) -> void:
-	_set_upper(ATTACK_ANIMS[dir])
+	_attack_full_body = _last_speed < GameConfig.ATTACK_FULLBODY_SPEED
+	if _attack_full_body:
+		_upper_mode = &""
+		_set_full(ATTACK_ANIMS[dir], 0.0)   # vitesse 0 : on pilote l'animation à la main
+	else:
+		_set_upper(ATTACK_ANIMS[dir])
 
 
 func _on_staggered(_perfect: bool) -> void:
@@ -285,6 +294,7 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 	var c := combatant
 	var local := body_basis.inverse() * velocity
 	var horizontal := Vector2(velocity.x, velocity.z).length()
+	_last_speed = horizontal
 	tree.set("parameters/Loco/blend_position", Vector2(local.x, -local.z) / GameConfig.WALK_SPEED)
 	tree.set("parameters/LocoTS/scale", clampf(horizontal / 2.0, 1.0, 1.9))
 
@@ -293,9 +303,12 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 	if not _dead:
 		match c.state:
 			Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY:
-				upper_target = 1.0
-				if str(_upper_mode).begins_with("attack"):
-					tree.set("parameters/UpperSeek/seek_request", _attack_time(c))
+				if _attack_full_body:
+					tree.set("parameters/FullSeek/seek_request", _attack_time(c))
+				else:
+					upper_target = 1.0
+					if str(_upper_mode).begins_with("attack"):
+						tree.set("parameters/UpperSeek/seek_request", _attack_time(c))
 			Combatant.State.STAGGER:
 				upper_target = 1.0
 			_:
@@ -308,7 +321,10 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 
 	# --- corps entier
 	var full_target := 0.0
+	var attacking := c.state in [Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY]
 	if _dead:
+		full_target = 1.0
+	elif _attack_full_body and attacking and not is_dodging:
 		full_target = 1.0
 	elif is_dodging:
 		if not _was_dodging:
@@ -320,7 +336,7 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 		full_target = 1.0
 	_was_dodging = is_dodging
 	_was_airborne = not on_floor
-	_full_amount = move_toward(_full_amount, full_target, delta * (20.0 if is_dodging else 10.0))
+	_full_amount = move_toward(_full_amount, full_target, delta * (20.0 if (is_dodging or _attack_full_body) else 10.0))
 	tree.set("parameters/FullBlend/blend_amount", _full_amount)
 
 
