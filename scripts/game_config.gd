@@ -246,8 +246,6 @@ const IK_GUARD_BLEND := 8.0    # vitesse à laquelle le bras passe de l'animatio
 # Arc tenu en main (3e personne) : l'arc est placé dans la main gauche, vertical, la flèche droit devant
 const BOW_GRIP_FORWARD := 0.05   # décalage de l'arc vers l'avant par rapport au poignet (m)
 
-# Arbalète tenue en main (3e personne) : placée sur la ligne main droite -> main gauche
-const XBOW_GRIP_UP := 0.03   # décalage vers le haut par rapport au poignet droit (m)
 
 # Enchaînement (combo) : plus de choix de direction, chaque clic enchaîne le coup suivant
 # (0 haut, 1 droite, 2 estoc, 3 gauche). Sans attaque pendant COMBO_RESET_TIME s, on repart du premier coup.
@@ -258,6 +256,11 @@ const GUARD_POSE := 1
 
 # Armes tenues (modèles .glb) : placement dans la main / sur l'avant-bras (3e personne)
 const MELEE_GRIP_OFFSET := Vector3(0.0, 0.07, 0.0)       # décalage de la prise par rapport au poignet (repère de l'os de la main)
-const SHIELD_ROTATION_DEG := Vector3(0.0, 180.0, -90.0)      # orientation de l'écu sur l'avant-bras gauche
-const SHIELD_OFFSET := Vector3(0.0, 0.12, 0.08)          # position de l'écu sur l'avant-bras gauche
+const SHIELD_ROTATION_DEG := Vector3(-37.5, -176.1, -107.4)   # orientation de l'écu sur l'avant-bras gauche (mesurée en posture de parade : face vers l'avant, pointe vers le bas)
+const SHIELD_OFFSET := Vector3(-0.19, 0.04, -0.075)          # position de l'écu sur l'avant-bras gauche
 const FIRST_PERSON_WEAPON_SCALE := 1.2                   # l'arme est un peu agrandie en 1re personne (lisibilité)
+
+# Arc porté dans le dos quand on ne vise pas
+const BOW_BACK_TILT := 0.5     # inclinaison de l'arc (0 = vertical, 1 = 45°)
+const BOW_BACK_DEPTH := 0.2    # distance derrière la colonne vertébrale (m)
+const BOW_BACK_SIDE := 0.05    # décalage latéral (m)

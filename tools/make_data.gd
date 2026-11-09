@@ -91,6 +91,8 @@ func _make_weapons() -> void:
 	for m in melee:
 		var w := WeaponData.derived_melee(m[0], m[1], cats[m[2]], _model(m[0]), m[3], m[4], m[5], m[6], m[7])
 		w.length = 1.0
+		if m[0] == "arme.hache_guerre":
+			w.held_rotation_deg = Vector3(0.0, 180.0, 0.0)   # le tranchant regarde devant
 		_save(w, "res://data/weapons/%s.tres" % m[0])
 	var shield := WeaponData.new()
 	shield.id = &"arme.ecu"

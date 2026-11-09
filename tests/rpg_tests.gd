@@ -439,7 +439,7 @@ func _test_weapons() -> void:
 	# repères de prise
 	var checks := {
 		&"arme.epee_deux_mains": ["Grip_L"], &"arme.lance": ["Grip_L"], &"arme.ecu": ["Grip_L"],
-		&"arme.arc_long": ["Nock_Top", "Nock_Bottom", "Arrow_Rest"], &"arme.arbalete": ["Grip_L", "Bolt_Rest", "Muzzle", "Nock_Left", "Nock_Right"],
+		&"arme.arc_long": ["Nock_Top", "Nock_Bottom", "Arrow_Rest"], &"arme.arbalete": ["Grip_R", "Grip_L", "Bolt_Rest", "Muzzle", "Nock_Left", "Nock_Right"],
 	}
 	for id in checks:
 		var inst := (Registry.get_data(id) as WeaponData).model.instantiate()
@@ -493,6 +493,7 @@ func _test_weapons() -> void:
 	_check(spear.attack_for(1).reach > sword.attack_for(1).reach + 0.4, "lance : plus de portée que l'épée")
 	_check(great.attack_for(0).damage > sword.attack_for(0).damage and great.attack_for(0).windup > sword.attack_for(0).windup, "deux mains : frappe plus fort mais plus lentement")
 	_check(short_sword.attack_for(0).windup < sword.attack_for(0).windup and short_sword.attack_for(0).stamina < sword.attack_for(0).stamina, "épée courte : plus rapide et moins fatigante")
+	_check(is_equal_approx(axe.held_rotation_deg.y, 180.0), "hache : tenue avec le tranchant vers l'avant (rotation de prise dans les données)")
 	_check(axe.damage_mix.has(T.CONTONDANT) and axe.damage_mix.has(T.TRANCHANT), "hache : tranchant et contondant mêlés")
 
 	# deux mains / bouclier

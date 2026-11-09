@@ -46,6 +46,7 @@ id = &"arme.hache_guerre"
 display_name = &"ARME_HACHE_GUERRE"
 category = ExtResource("2_onr37")
 model = ExtResource("3_o01vj")
+held_rotation_deg = Vector3(0, 180, 0)
 weight = 2.0
 damage_mix = {
 0: 0.8,

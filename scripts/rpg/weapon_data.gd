@@ -7,6 +7,8 @@ extends Resource
 @export var display_name: StringName = &""            # clé de traduction
 @export var category: WeaponCategory
 @export var model: PackedScene                        # .glb : origine = prise, repères Grip_L / Tip / Nock_*
+## Rotation (degrés) appliquée au modèle quand l'arme est tenue : pour une arme asymétrique (hache : le tranchant doit regarder devant).
+@export var held_rotation_deg := Vector3.ZERO
 @export var hands := 1                                # 1 ou 2 (la 2e main se pose sur le repère Grip_L)
 @export var length := 1.0                             # m (indicatif : le modèle fait foi)
 @export var weight := 1.5                             # kg

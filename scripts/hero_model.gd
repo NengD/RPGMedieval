@@ -51,6 +51,10 @@ var _xbow_model_holder: Node3D
 var _bow_top := Vector3(0.0, 0.52, 0.13)       # bouts de l'arc (repères Nock_Top / Nock_Bottom du modèle)
 var _bow_bottom := Vector3(0.0, -0.52, 0.13)
 var _ammo_length := 0.72
+var _xbow_grip := 0.3             # écart entre les deux mains sur l'arbalète (repères Grip_R / Grip_L)
+var _bow_in_hand := false
+var _aim_corr := 0.0              # rotation du corps (rad) pour que l'arme pointe là où le héros vise
+var _bow_hold := 0.0              # reste en main un instant après le tir
 var xbow_holder: BoneAttachment3D
 var _xbow_node: Node3D
 var _xbow_amount := 0.0
@@ -435,6 +439,8 @@ func apply_weapons(eq: EquipmentComponent) -> void:
 	var melee_scene: PackedScene = main.model if main != null else load("res://assets/weapons/arme_epee_longue.glb")
 	var melee := _instance(melee_scene)
 	if melee != null:
+		if main != null:
+			melee.rotation_degrees = main.held_rotation_deg
 		_melee_node.add_child(melee)
 	_free_children(_shield_node)
 	var off := eq.get_weapon(&"off_hand")
@@ -481,6 +487,10 @@ func _set_xbow_model(w: WeaponData) -> void:
 		var muzzle := _marker(model, "Muzzle")
 		if muzzle != null:
 			_xbow_bolt.position = muzzle.position
+		var gl := _marker(model, "Grip_L")
+		var gr := _marker(model, "Grip_R")
+		if gl != null and gr != null:
+			_xbow_grip = gl.position.distance_to(gr.position)
 		var nl := _marker(model, "Nock_Left")
 		var nr := _marker(model, "Nock_Right")
 		var rest := _marker(model, "Bolt_Rest")
@@ -580,18 +590,56 @@ func _place_props() -> void:
 	fwd.y = 0.0
 	fwd = fwd.normalized()
 	if bow_holder.visible:
-		var grip := _hand_world("mixamorig_LeftHand") + fwd * GameConfig.BOW_GRIP_FORWARD
-		bow_prop.global_transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), grip)
+		if _bow_in_hand:
+			var grip := _hand_world("mixamorig_LeftHand") + fwd * GameConfig.BOW_GRIP_FORWARD
+			bow_prop.global_transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), grip)
+		else:
+			# Arc porté dans le dos (en diagonale) : il ne traverse plus le corps quand on ne vise pas
+			var right := global_transform.basis.x.normalized()
+			var long_axis := (right * GameConfig.BOW_BACK_TILT + Vector3.UP).normalized()
+			var z_axis := (fwd - long_axis * fwd.dot(long_axis)).normalized()   # côté corde vers le dos
+			var x_axis := long_axis.cross(z_axis).normalized()
+			var spine := _hand_world("mixamorig_Spine2")
+			bow_prop.global_transform = Transform3D(Basis(x_axis, long_axis, z_axis), spine - fwd * GameConfig.BOW_BACK_DEPTH + right * GameConfig.BOW_BACK_SIDE)
 	if xbow_holder.visible:
+		# Les deux mains tiennent l'arbalète : poignée arrière (Grip_R) dans la main droite, avant du fût (Grip_L) dans la gauche
 		var r := _hand_world("mixamorig_RightHand")
 		var l := _hand_world("mixamorig_LeftHand")
 		var line := l - r
 		if line.length() > 0.05:
-			var up := Vector3.UP
-			_xbow_node.global_transform = Transform3D(Basis.looking_at(line.normalized(), up), r + up * GameConfig.XBOW_GRIP_UP)
+			var dir := line.normalized()
+			var mid := (r + l) * 0.5
+			_xbow_node.global_transform = Transform3D(Basis.looking_at(dir, Vector3.UP), mid - dir * (_xbow_grip * 0.5))
 
 
-func _update_bow_prop(delta: float, drawing: bool, _tension: float) -> void:
+## Les postures d'arc et de fusil sont de profil : la ligne main arrière -> main avant pointe de ~30 à 45° à côté
+## de la direction visée. On tourne le corps du personnage (pas son collisionneur) pour que cette ligne,
+## donc l'arme et la flèche, soit exactement dans l'axe du tir.
+func _update_aim_yaw(delta: float, active: bool) -> void:
+	var goal_step := 0.0
+	if active:
+		var line := _hand_world("mixamorig_LeftHand") - _hand_world("mixamorig_RightHand")
+		line.y = 0.0
+		var fwd := -global_transform.basis.z
+		fwd.y = 0.0
+		if line.length() > 0.05:
+			var ang := fwd.normalized().signed_angle_to(line.normalized(), Vector3.UP)
+			goal_step = -ang
+	if active:
+		_aim_corr = clampf(_aim_corr + goal_step * minf(1.0, delta * 12.0), -1.2, 1.2)
+	else:
+		_aim_corr = move_toward(_aim_corr, 0.0, delta * 6.0)
+	model_root.rotation.y = PI + _aim_corr
+
+
+func _update_bow_prop(delta: float, drawing: bool, _tension: float, aiming := false, weapon_kind_now := 0) -> void:
+	# En main tant qu'on vise, bande ou vient de tirer ; sinon dans le dos
+	if drawing or aiming or _bow_release_time > 0.0:
+		_bow_hold = 0.5
+	else:
+		_bow_hold = maxf(0.0, _bow_hold - delta)
+	_bow_in_hand = _bow_hold > 0.0
+	_update_aim_yaw(delta, (weapon_kind_now == 2 and xbow_holder.visible) or (weapon_kind_now == 1 and _bow_in_hand))
 	_place_props()
 	if not bow_holder.visible:
 		return
@@ -715,7 +763,7 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 				elif _bow_release_time > 0.0:
 					upper_target = 1.0   # relâchement de la corde
 	_upper_amount = move_toward(_upper_amount, upper_target, delta * 14.0)
-	_update_bow_prop(delta, bow_drawing and weapon_kind == 1, bow_tension)
+	_update_bow_prop(delta, bow_drawing and weapon_kind == 1, bow_tension, ranged_aiming and weapon_kind == 1, weapon_kind)
 	tree.set("parameters/UpperBlend/blend_amount", _upper_amount)
 
 	# --- corps entier

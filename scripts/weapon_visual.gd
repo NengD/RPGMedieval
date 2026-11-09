@@ -64,6 +64,8 @@ func set_weapon_model(data: WeaponData) -> void:
 	var scene: PackedScene = data.model if data != null and data.model != null else load("res://assets/weapons/arme_epee_longue.glb")
 	_model = scene.instantiate() as Node3D
 	_model.scale = Vector3.ONE * GameConfig.FIRST_PERSON_WEAPON_SCALE
+	if data != null:
+		_model.rotation_degrees = data.held_rotation_deg
 	add_child(_model)
 
 

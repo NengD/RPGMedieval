@@ -366,11 +366,20 @@ def build_crossbow(root):
     box(bm, (0.012, 0.03, 0.05), (0, 0.0, -0.075), (0.4, 0, 0))   # détente
     box(bm, (0.045, 0.1, 0.012), (0, 0.0, -0.062))
     part(root, "arbalete_detente", bm, iron())
-    marker(root, "Grip_L", (0, 0.3, -0.03))
     marker(root, "Bolt_Rest", (0, 0.0, 0.043))
     marker(root, "Nock_Left", (-0.33, 0.42 - 0.09, 0.0))
     marker(root, "Nock_Right", (0.33, 0.42 - 0.09, 0.0))
     marker(root, "Muzzle", (0, 0.5, 0.043))
+    # Le fût est remonté : l'origine (Grip_R) est la paume de la main arrière, SOUS le fût, sur une poignée.
+    # Grip_L est sous l'avant du fût, là où la main avant le soutient.
+    for ob in list(root.children):
+        ob.location.z += 0.045
+    bm = new_bm()
+    box(bm, (0.032, 0.035, 0.1), (0, -0.01, -0.005), (0.25, 0, 0))   # poignée
+    box(bm, (0.012, 0.09, 0.012), (0, 0.045, -0.045))                 # pontet
+    part(root, "arbalete_poignee", bm, wood_d())
+    marker(root, "Grip_R", (0, 0, 0))
+    marker(root, "Grip_L", (0, 0.30, 0.0))
 
 
 # ---- projectiles : pointe à l'origine, hampe vers -Y
