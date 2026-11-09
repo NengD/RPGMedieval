@@ -29,7 +29,7 @@ const MAP := {
 	&"attack_right": ["axe_standing_melee_attack_horizontal", true, false, true, 0.1, 2.2],   # balayage horizontal
 	&"attack_estoc": ["axe_standing_melee_combo_attack_ver__3", true, false, true, 0.55, 1.6],   # fente avec poussée (fin du combo 3)
 	&"attack_left": ["sword_and_shield_slash_3", true, false, true, 0.0, 1.5],   # coup venant de la gauche (le corps ne tourne que de ~108° ; attack_2 faisait un tourbillon de 400°)
-	&"guard": ["sword_and_shield_block_idle", true, true, false],
+	&"guard": ["axe_standing_block_idle", true, true, false],   # parade sans bouclier (pack hache)
 	&"hit_1": ["sword_and_shield_impact", true, false, false],
 	&"hit_2": ["sword_and_shield_impact_2", true, false, false],
 	&"hit_3": ["sword_and_shield_impact_3", true, false, false],
