@@ -447,7 +447,7 @@ func _run() -> void:
 	_teleport(Vector3(0, 0.05, 9), 0.0)
 	await _frames(60)
 	var model: HeroModel = player.model
-	_check(model.tree.active and model.skeleton.get_bone_count() == 67, "le chevalier est chargé (67 os) et l'AnimationTree est actif")
+	_check(model.tree.active and model.skeleton.get_bone_count() == 65, "le corps de base est chargé (65 os) et l'AnimationTree est actif")
 	_check(model.anim_player.get_animation_list().size() >= 22, "bibliothèque d'animations chargée (%d animations)" % model.anim_player.get_animation_list().size())
 	# jambes qui marchent pendant que le haut du corps attaque
 	var leg := model.skeleton.find_bone("mixamorig_LeftUpLeg")

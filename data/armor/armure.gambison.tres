@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ArmorData" format=3]
+
+[ext_resource type="Resource" path="res://data/materials/materiau.gambison.tres" id="1_bc6mr"]
+[ext_resource type="PackedScene" path="res://assets/armor/armure_gambison.glb" id="2_1xy5s"]
+[ext_resource type="Script" path="res://scripts/rpg/armor_data.gd" id="3_7is78"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="4_1b7o6"]
+
+[resource]
+script = ExtResource("3_7is78")
+id = &"armure.gambison"
+display_name = &"ARMURE_GAMBISON"
+layer = 1
+material = ExtResource("1_bc6mr")
+weight = 3.0
+hidden_body_regions = Array[StringName]([&"torso", &"upper_arm", &"forearm"])
+model = ExtResource("2_1xy5s")
+color_variants = Array[Color]([Color(1, 1, 1, 1), Color(0.55, 0.4, 0.3, 1)])

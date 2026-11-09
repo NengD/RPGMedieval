@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ArmorData" format=3]
+
+[ext_resource type="Resource" path="res://data/materials/materiau.plaques.tres" id="1_8ars1"]
+[ext_resource type="PackedScene" path="res://assets/armor/armure_bassinet.glb" id="2_pqggx"]
+[ext_resource type="Script" path="res://scripts/rpg/armor_data.gd" id="3_aps8j"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="4_e4k1c"]
+
+[resource]
+script = ExtResource("3_aps8j")
+id = &"armure.bassinet"
+display_name = &"ARMURE_BASSINET"
+slot = 0
+layer = 3
+material = ExtResource("1_8ars1")
+weight = 2.0
+model = ExtResource("2_pqggx")

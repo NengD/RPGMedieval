@@ -61,6 +61,7 @@ func _run() -> void:
 	await _test_save()
 	await _test_weapons()
 	await _test_arm_ik()
+	await _test_outfits()
 	_test_translation()
 	print("")
 	print("RÉSULTAT RPG : %s (%d échec(s))" % ["SUCCÈS" if failures == 0 else "ÉCHEC", failures])
@@ -278,6 +279,7 @@ func _test_save() -> void:
 	_check(p.instance_id == "hero#1" and e.instance_id == "ennemi#1", "le héros et l'ennemi ont un identifiant d'instance")
 	var piece := _armor("armure.test_plaque_save", ArmorData.Slot.TORSE, ArmorData.Layer.PLAQUES, "materiau.plaques", 6.0)
 	Registry.register_data(piece)
+	var pieces_before := p.combatant.equipment.pieces().size()   # le héros porte déjà sa tenue de départ
 	p.combatant.equipment.equip(piece)
 	p.combatant.stats.add_modifier(StatModifier.make(&"force", 3.0, 0.0, "effet:test"))
 	p.combatant.health = 61.0
@@ -300,7 +302,7 @@ func _test_save() -> void:
 	_check(is_equal_approx(p.combatant.health, 61.0) and is_equal_approx(p.combatant.stamina, 33.0), "vie et endurance restaurées")
 	_check(p.global_position.distance_to(Vector3(2.5, 0.05, 4.0)) < 0.01, "position restaurée")
 	_check(is_equal_approx(p.combatant.stats.get_attribute(&"force"), 13.0), "modificateurs de stats restaurés")
-	_check(p.combatant.equipment.pieces().size() == 1 and p.combatant.protection[T.TRANCHANT] > 0.0, "équipement et protection restaurés")
+	_check(p.combatant.equipment.pieces().size() == pieces_before and p.combatant.protection[T.TRANCHANT] > 0.0, "équipement et protection restaurés")
 	_check(is_equal_approx(e.combatant.health, 12.0), "l'ennemi aussi est restauré")
 
 	# écriture atomique + copie de secours
@@ -595,3 +597,123 @@ func _reach_ok(p: Player, side: String, point: Vector3) -> bool:
 	var wrist := m._hand_world("mixamorig_%sHand" % side)
 	var length := shoulder.distance_to(elbow) + elbow.distance_to(wrist)
 	return shoulder.distance_to(point) <= length + 0.02
+
+# ---------------------------------------------------------------- tenues et pièces modulaires
+
+func _mesh_vertices(inst: Node) -> PackedVector3Array:
+	var out := PackedVector3Array()
+	for mi in inst.find_children("*", "MeshInstance3D", true, false):
+		var mesh := (mi as MeshInstance3D).mesh
+		for s in mesh.get_surface_count():
+			out.append_array(mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX])
+	return out
+
+
+func _test_outfits() -> void:
+	print("[Personnage modulaire]")
+	Registry.scan(true)
+	var rig := (load("res://assets/base/base_rig.tscn") as PackedScene).instantiate()
+	root.add_child(rig)
+	var sk: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
+	_check(sk.get_bone_count() == 65 and sk.find_bone("mixamorig_Hips") >= 0 and sk.find_bone("mixamorig1_Hips") < 0, "squelette de base : 65 os nommés mixamorig_*")
+	var body_scene := load("res://assets/base/body.glb") as PackedScene
+	var body_nodes := RigMesh.attach(sk, body_scene, sk)
+	var regions: Array[String] = []
+	for n in body_nodes:
+		regions.append(String(n.name).trim_prefix("corps_"))
+	regions.sort()
+	_check(regions == ["foot", "forearm", "hand", "head", "hips", "shin", "thigh", "torso", "upper_arm"], "corps de base en 9 régions : %s" % ", ".join(regions))
+	var body_verts := _mesh_vertices(body_scene.instantiate())
+	var pieces: Array[ArmorData] = []
+	for id in Registry.all_ids():
+		var piece := Registry.get_data(id) as ArmorData
+		if piece != null and piece.model != null:
+			pieces.append(piece)
+	_check(pieces.size() == 17, "17 pièces d'armure et d'habit avec modèle : %d" % pieces.size())
+	var bones_ok := true
+	var budget_ok := true
+	var inside := 0
+	var checked := 0
+	for piece in pieces:
+		var inst := piece.model.instantiate()
+		for mi in inst.find_children("*", "MeshInstance3D", true, false):
+			var skin := (mi as MeshInstance3D).skin
+			if skin == null:
+				bones_ok = false
+				continue
+			for i in skin.get_bind_count():
+				if sk.find_bone(String(skin.get_bind_name(i))) < 0:
+					bones_ok = false
+		if _triangles(inst) > 12000:
+			budget_ok = false
+		var verts := _mesh_vertices(inst)
+		var step := maxi(1, verts.size() / 60)
+		for vi in range(0, verts.size(), step):
+			var nearest := 1e9
+			for bi in range(0, body_verts.size(), 5):
+				nearest = minf(nearest, verts[vi].distance_squared_to(body_verts[bi]))
+			checked += 1
+			if sqrt(nearest) < 0.004:
+				inside += 1
+		inst.free()
+	_check(bones_ok, "tous les os utilisés par les pièces existent dans le squelette du jeu")
+	_check(budget_ok, "chaque pièce fait moins de 12 000 triangles")
+	_check(inside <= checked / 100, "les pièces ne traversent pas la peau en pose de repos (%d sommets contrôlés, %d trop près : bords des coques, tolérance 1 %%)" % [checked, inside])
+	var t_plates := Registry.get_data(&"tenue.chevalier_plates") as OutfitData
+	var t_mail := Registry.get_data(&"tenue.homme_armes") as OutfitData
+	var t_light := Registry.get_data(&"tenue.archer_leger") as OutfitData
+	_check(t_plates != null and t_mail != null and t_light != null, "trois tenues complètes en données")
+	var a := _make(0, Vector3.ZERO, 0.0)
+	var prot := {}
+	for pair in [["plates", t_plates], ["mailles", t_mail], ["leger", t_light]]:
+		a.equipment.equip_outfit(pair[1])
+		prot[pair[0]] = a.protection.duplicate()
+		_check(a.equipment.pieces().size() == pair[1].pieces.size(), "tenue %s : %d pièces portées" % [pair[0], a.equipment.pieces().size()])
+	_check(prot["plates"][T.TRANCHANT] > prot["mailles"][T.TRANCHANT] and prot["mailles"][T.TRANCHANT] > prot["leger"][T.TRANCHANT], "protection au tranchant : plates > mailles > cuir et tissu")
+	_check(prot["mailles"][T.TRANCHANT] > prot["mailles"][T.CONTONDANT] and prot["mailles"][T.TRANCHANT] > prot["mailles"][T.PERFORANT], "tenue de mailles : mieux protégée contre le tranchant que contre le contondant et le perforant")
+	_check(prot["plates"][T.PERFORANT] > prot["mailles"][T.PERFORANT] and prot["plates"][T.CONTONDANT] < prot["plates"][T.TRANCHANT], "plates : perforant mieux arrêté que par les mailles, contondant en partie transmis")
+	a.equipment.equip_outfit(t_plates)
+	_check(a.equipment.hidden_regions().has(&"torso") and a.equipment.hidden_regions().has(&"hand") and a.equipment.hidden_regions().has(&"foot"), "la tenue de plates cache torse, mains et pieds du corps")
+	var w_plates: float = a.stats.carried_weight
+	a.equipment.equip_outfit(t_light)
+	_check(a.stats.carried_weight < w_plates * 0.6, "la tenue légère pèse nettement moins que les plates (%.1f kg contre %.1f kg)" % [a.stats.carried_weight, w_plates])
+	a.equipment.clear_armor()
+	_check(a.equipment.pieces().is_empty() and a.protection.get(T.TRANCHANT, 0.0) < 0.001 and is_equal_approx(a.stats.carried_weight, 0.0), "sans tenue : plus de protection, plus de poids")
+	a.body.queue_free()
+
+	# affichage dans le jeu
+	Registry.clear_instances()
+	var main = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await _frames(5)
+	var p: Player = main.player
+	var m: HeroModel = p.model
+	_check(m._armor_holder.get_child_count() >= 13, "le héros affiche sa tenue de chevalier (%d maillages)" % m._armor_holder.get_child_count())
+	_check(not (m._body_nodes["torso"] as Node3D).visible and not (m._body_nodes["hand"] as Node3D).visible and (m._body_nodes["head"] as Node3D).visible, "torse et mains cachés sous l'armure, tête visible")
+	_check(main.enemy.model._armor_holder.get_child_count() >= 8, "l'ennemi porte sa tenue d'homme d'armes (%d maillages)" % main.enemy.model._armor_holder.get_child_count())
+	var plate_count := m._armor_holder.get_child_count()
+	p.cycle_outfit()
+	await _frames(2)
+	_check(m._armor_holder.get_child_count() != plate_count and m._armor_holder.get_child_count() > 0, "tenue suivante : l'affichage change (%d maillages)" % m._armor_holder.get_child_count())
+	p.combatant.equipment.clear_armor()
+	await _frames(2)
+	_check(m._armor_holder.get_child_count() == 0 and (m._body_nodes["torso"] as Node3D).visible, "sans tenue : le corps nu réapparaît")
+	var tabard := Registry.get_data(&"armure.tabard") as ArmorData
+	p.combatant.equipment.equip(tabard, 0)
+	await _frames(2)
+	var color0 := _first_tint(m)
+	p.combatant.equipment.set_variant(tabard, 1)
+	await _frames(2)
+	var color1 := _first_tint(m)
+	_check(tabard.color_variants.size() == 4 and color0 != color1, "le tabard change de couleur (4 variantes)")
+	main.queue_free()
+	rig.queue_free()
+	await physics_frame
+
+
+func _first_tint(m: HeroModel) -> Color:
+	for mi in m._armor_holder.find_children("*", "MeshInstance3D", true, false):
+		var mat := (mi as MeshInstance3D).get_surface_override_material(0)
+		if mat is StandardMaterial3D:
+			return mat.albedo_color
+	return Color(0, 0, 0)

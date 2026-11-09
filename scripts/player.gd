@@ -102,6 +102,9 @@ func _ready() -> void:
 		var wd := Registry.get_data(wid) as WeaponData
 		if wd != null:
 			combatant.equipment.equip_weapon(wd)
+	var outfit := Registry.get_data(&"tenue.chevalier_plates") as OutfitData
+	if outfit != null:
+		combatant.equipment.equip_outfit(outfit)
 	combatant.equipment.changed.connect(_refresh_weapon_visuals)
 	_refresh_weapon_visuals()
 
@@ -521,7 +524,7 @@ func restore_state(d: Dictionary) -> void:
 
 func _refresh_weapon_visuals() -> void:
 	var eq := combatant.equipment
-	model.apply_weapons(eq)
+	model.apply_equipment(eq)
 	weapon.set_weapon_model(eq.get_weapon(&"main_hand"))
 	ranged_visual.set_weapons(eq.get_weapon(&"bow"), eq.get_weapon(&"crossbow"))
 
@@ -572,3 +575,32 @@ func current_weapon_name_key() -> StringName:
 		slot = &"crossbow"
 	var w := combatant.equipment.get_weapon(slot)
 	return w.display_name if w != null else StringName(GameConfig.WEAPON_NAMES[weapon_kind])
+
+
+# ---------------------------------------------------------------- tenues (sélecteur de test)
+
+const OUTFIT_IDS: Array[StringName] = [&"", &"tenue.chevalier_plates", &"tenue.homme_armes", &"tenue.archer_leger"]
+var _outfit_index := 1
+
+
+## Tenue suivante (touche K) : aucune, chevalier en plates, homme d'armes, archer léger. Retourne la clé de nom.
+func cycle_outfit() -> StringName:
+	if combatant.dead:
+		return &""
+	_outfit_index = (_outfit_index + 1) % OUTFIT_IDS.size()
+	var id := OUTFIT_IDS[_outfit_index]
+	if id == &"":
+		combatant.equipment.clear_armor()
+		return &"TENUE_AUCUNE"
+	var outfit := Registry.get_data(id) as OutfitData
+	combatant.equipment.equip_outfit(outfit)
+	return outfit.display_name
+
+
+## Couleur suivante du tabard (touche L).
+func cycle_tabard_color() -> void:
+	var piece := Registry.get_data(&"armure.tabard") as ArmorData
+	var eq := combatant.equipment
+	if piece == null or eq.get_piece(piece.slot, piece.layer) != piece or piece.color_variants.is_empty():
+		return
+	eq.set_variant(piece, (eq.get_variant(piece) + 1) % piece.color_variants.size())

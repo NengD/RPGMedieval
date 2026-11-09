@@ -72,7 +72,10 @@ func _ready() -> void:
 	var sword := Registry.get_data(&"arme.epee_longue") as WeaponData
 	if sword != null:
 		combatant.equipment.equip_weapon(sword)
-	model.apply_weapons(combatant.equipment)
+	var outfit := Registry.get_data(&"tenue.homme_armes") as OutfitData
+	if outfit != null:
+		combatant.equipment.equip_outfit(outfit)
+	model.apply_equipment(combatant.equipment)
 	combatant.damaged.connect(_on_damaged)
 	combatant.hit_resolved.connect(_on_hit_resolved)
 	combatant.died.connect(_on_died)

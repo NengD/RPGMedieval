@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ArmorData" format=3]
+
+[ext_resource type="Resource" path="res://data/materials/materiau.tissu.tres" id="1_060vg"]
+[ext_resource type="PackedScene" path="res://assets/armor/armure_tabard.glb" id="2_xsul4"]
+[ext_resource type="Script" path="res://scripts/rpg/armor_data.gd" id="3_bfqaw"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="4_3lkuk"]
+
+[resource]
+script = ExtResource("3_bfqaw")
+id = &"armure.tabard"
+display_name = &"ARMURE_TABARD"
+layer = 4
+material = ExtResource("1_060vg")
+weight = 0.8
+model = ExtResource("2_xsul4")
+color_variants = Array[Color]([Color(0.62, 0.09, 0.09, 1), Color(0.15, 0.25, 0.62, 1), Color(0.2, 0.45, 0.25, 1), Color(0.13, 0.13, 0.14, 1)])

@@ -26,6 +26,7 @@ func _initialize() -> void:
 		var path := "res://data/materials/%s.tres" % id
 		print(path, " -> ", "OK" if ResourceSaver.save(m, path) == OK else "ERREUR")
 	_make_weapons()
+	_make_armor()
 	var f := StatsFormulas.new()
 	print("res://data/stats_formulas.tres -> ", "OK" if ResourceSaver.save(f, "res://data/stats_formulas.tres") == OK else "ERREUR")
 	quit()
@@ -114,3 +115,70 @@ func _make_weapons() -> void:
 		r.ammo = ammo[spec[3]]
 		r.damage_mix = {T.PERFORANT: 1.0}
 		_save(r, "res://data/weapons/%s.tres" % spec[0])
+
+
+# ------------------------------------------------------------------ armures et tenues (étape 4)
+
+const S := ArmorData.Slot
+const L := ArmorData.Layer
+# id, clé, emplacement, couche, matière, poids (kg), régions du corps cachées, variantes de couleur
+func _armor_table() -> Array:
+	var cloth := [Color(1, 1, 1), Color(0.85, 0.85, 0.95), Color(0.9, 0.8, 0.7)]
+	var tabard := [Color(0.62, 0.09, 0.09), Color(0.15, 0.25, 0.62), Color(0.2, 0.45, 0.25), Color(0.13, 0.13, 0.14)]   # rouge, bleu, vert, noir
+	return [
+		["armure.chemise", "ARMURE_CHEMISE", S.TORSE, L.VETEMENT, "materiau.tissu", 0.6, ["torso", "upper_arm", "forearm"], cloth],
+		["armure.braies", "ARMURE_BRAIES", S.JAMBES, L.VETEMENT, "materiau.tissu", 0.4, ["hips", "thigh"], cloth],
+		["armure.gants_cuir", "ARMURE_GANTS_CUIR", S.MAINS, L.VETEMENT, "materiau.cuir", 0.2, ["hand"], []],
+		["armure.bottes_cuir", "ARMURE_BOTTES_CUIR", S.PIEDS, L.VETEMENT, "materiau.cuir", 0.9, ["foot"], []],
+		["armure.gambison", "ARMURE_GAMBISON", S.TORSE, L.GAMBISON, "materiau.gambison", 3.0, ["torso", "upper_arm", "forearm"], [Color(1, 1, 1), Color(0.55, 0.4, 0.3)]],
+		["armure.haubert_mailles", "ARMURE_HAUBERT_MAILLES", S.TORSE, L.MAILLES, "materiau.mailles", 9.0, ["torso", "upper_arm", "forearm", "hips"], []],
+		["armure.capuchon_mailles", "ARMURE_CAPUCHON_MAILLES", S.TETE, L.MAILLES, "materiau.mailles", 1.0, [], []],
+		["armure.cuirasse_plates", "ARMURE_CUIRASSE_PLATES", S.TORSE, L.PLAQUES, "materiau.plaques", 6.0, ["torso"], []],
+		["armure.spalieres", "ARMURE_SPALIERES", S.EPAULES, L.PLAQUES, "materiau.plaques", 2.0, [], []],
+		["armure.canons_cubitieres", "ARMURE_CANONS_CUBITIERES", S.BRAS, L.PLAQUES, "materiau.plaques", 2.5, ["forearm"], []],
+		["armure.gantelets_plates", "ARMURE_GANTELETS_PLATES", S.MAINS, L.PLAQUES, "materiau.plaques", 1.2, ["hand"], []],
+		["armure.tassettes", "ARMURE_TASSETTES", S.TAILLE, L.PLAQUES, "materiau.plaques", 2.0, ["hips"], []],
+		["armure.greves_genouilleres", "ARMURE_GREVES_GENOUILLERES", S.JAMBES, L.PLAQUES, "materiau.plaques", 4.0, ["shin"], []],
+		["armure.solerets", "ARMURE_SOLERETS", S.PIEDS, L.PLAQUES, "materiau.plaques", 1.4, ["foot"], []],
+		["armure.bassinet", "ARMURE_BASSINET", S.TETE, L.PLAQUES, "materiau.plaques", 2.0, [], []],
+		["armure.heaume", "ARMURE_HEAUME", S.TETE, L.PLAQUES, "materiau.plaques", 3.0, [], []],
+		["armure.tabard", "ARMURE_TABARD", S.TORSE, L.SURCOT, "materiau.tissu", 0.8, [], tabard],
+	]
+
+
+func _make_armor() -> void:
+	for d in ["armor", "outfits"]:
+		DirAccess.make_dir_recursive_absolute("res://data/" + d)
+	for row in _armor_table():
+		var a := ArmorData.new()
+		a.id = StringName(row[0])
+		a.display_name = StringName(row[1])
+		a.slot = row[2]
+		a.layer = row[3]
+		a.material = load("res://data/materials/%s.tres" % row[4]) as MaterialData
+		a.weight = row[5]
+		var regions: Array[StringName] = []
+		for r in row[6]:
+			regions.append(StringName(r))
+		a.hidden_body_regions = regions
+		var variants: Array[Color] = []
+		for c in row[7]:
+			variants.append(c)
+		a.color_variants = variants
+		a.model = load("res://assets/armor/%s.glb" % str(row[0]).replace(".", "_")) as PackedScene
+		_save(a, "res://data/armor/%s.tres" % row[0])
+	var outfits := [
+		["tenue.chevalier_plates", "TENUE_CHEVALIER_PLATES", ["armure.chemise", "armure.braies", "armure.gambison", "armure.capuchon_mailles", "armure.cuirasse_plates", "armure.spalieres", "armure.canons_cubitieres", "armure.gantelets_plates", "armure.tassettes", "armure.greves_genouilleres", "armure.solerets", "armure.bassinet", "armure.tabard"], {}],
+		["tenue.homme_armes", "TENUE_HOMME_ARMES", ["armure.chemise", "armure.braies", "armure.gambison", "armure.haubert_mailles", "armure.capuchon_mailles", "armure.gants_cuir", "armure.bottes_cuir", "armure.tabard"], {"armure.tabard": 0}],
+		["tenue.archer_leger", "TENUE_ARCHER_LEGER", ["armure.chemise", "armure.braies", "armure.gambison", "armure.gants_cuir", "armure.bottes_cuir"], {"armure.gambison": 1}],
+	]
+	for o in outfits:
+		var t := OutfitData.new()
+		t.id = StringName(o[0])
+		t.display_name = StringName(o[1])
+		var ids: Array[StringName] = []
+		for pid in o[2]:
+			ids.append(StringName(pid))
+		t.pieces = ids
+		t.variants = o[3]
+		_save(t, "res://data/outfits/%s.tres" % o[0])

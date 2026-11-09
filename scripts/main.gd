@@ -68,6 +68,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"toggle_shield"):
 		var res := player.toggle_shield()
 		hud.show_message(tr("MSG_SHIELD_ON") if res == 1 else (tr("MSG_SHIELD_OFF") if res == 0 else tr("MSG_SHIELD_BLOCKED")), Color(1, 0.9, 0.5), 1.2)
+	elif event.is_action_pressed(&"next_outfit"):
+		hud.show_message(tr("MSG_OUTFIT") % tr(player.cycle_outfit()), Color(1, 0.9, 0.5), 1.4)
+	elif event.is_action_pressed(&"next_tabard_color"):
+		player.cycle_tabard_color()
 	elif event.is_action_pressed(&"quick_save"):
 		quick_save()
 	elif event.is_action_pressed(&"quick_load"):

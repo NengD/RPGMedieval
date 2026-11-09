@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ArmorData" format=3]
+
+[ext_resource type="Resource" path="res://data/materials/materiau.cuir.tres" id="1_0067f"]
+[ext_resource type="PackedScene" path="res://assets/armor/armure_bottes_cuir.glb" id="2_ginwh"]
+[ext_resource type="Script" path="res://scripts/rpg/armor_data.gd" id="3_ji5qc"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="4_usweu"]
+
+[resource]
+script = ExtResource("3_ji5qc")
+id = &"armure.bottes_cuir"
+display_name = &"ARMURE_BOTTES_CUIR"
+slot = 8
+material = ExtResource("1_0067f")
+weight = 0.9
+hidden_body_regions = Array[StringName]([&"foot"])
+model = ExtResource("2_ginwh")

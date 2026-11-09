@@ -87,3 +87,11 @@ Keyframe Reduction `none` · **In Place** coché pour les déplacements et les a
 | Lance | non | `spear idle`, `spear walk`, `spear run`, `spear stab`, `spear attack`, `spear block` (ou « pike ») |
 
 Dès que tu as téléchargé un lot, dis-moi lequel : j'ajoute ses clips à `tools/bake_animations.gd` (en m'appuyant sur `WeaponCategory.anim_set`) et je les branche.
+
+
+## Corps de base (étape 4)
+
+Le personnage de base est le **Mannequin** (Characters → Mannequin → Download → FBX Binary, T-pose). Les os s'appellent `mixamorig1_*`
+dans ce fichier : `tools/make_base_rig.gd` les renomme en `mixamorig_*` pour que `hero_library.res` fonctionne sans changement.
+Le FBX (35 Mo avec ses textures 4K) est rangé hors du projet. Pour changer de corps de base : télécharger un autre personnage Mixamo
+(squelette identique), refaire `make_base_rig.gd`, puis `tools/blender/make_armor.py` (les pièces sont recalculées à sa taille).

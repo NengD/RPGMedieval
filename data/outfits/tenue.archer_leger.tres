@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="OutfitData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/outfit_data.gd" id="1_ja55w"]
+
+[resource]
+script = ExtResource("1_ja55w")
+id = &"tenue.archer_leger"
+display_name = &"TENUE_ARCHER_LEGER"
+pieces = Array[StringName]([&"armure.chemise", &"armure.braies", &"armure.gambison", &"armure.gants_cuir", &"armure.bottes_cuir"])
+variants = {
+"armure.gambison": 1
+}

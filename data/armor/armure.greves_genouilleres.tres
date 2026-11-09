@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ArmorData" format=3]
+
+[ext_resource type="Resource" path="res://data/materials/materiau.plaques.tres" id="1_bgktj"]
+[ext_resource type="PackedScene" path="res://assets/armor/armure_greves_genouilleres.glb" id="2_7u7e2"]
+[ext_resource type="Script" path="res://scripts/rpg/armor_data.gd" id="3_y3wgs"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="4_xnefm"]
+
+[resource]
+script = ExtResource("3_y3wgs")
+id = &"armure.greves_genouilleres"
+display_name = &"ARMURE_GREVES_GENOUILLERES"
+slot = 7
+layer = 3
+material = ExtResource("1_bgktj")
+weight = 4.0
+hidden_body_regions = Array[StringName]([&"shin"])
+model = ExtResource("2_7u7e2")

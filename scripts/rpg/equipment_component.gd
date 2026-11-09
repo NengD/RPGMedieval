@@ -18,6 +18,8 @@ const MAX_PROTECTION := 0.9
 var stats: Stats
 var combatant: Combatant
 var items: Dictionary = {}   # "slot:couche" -> ArmorData
+var variants: Dictionary = {}   # "slot:couche" -> numéro de variante de couleur
+var _batch := 0
 ## Armes tenues : emplacement -> WeaponData. Emplacements : main_hand (mêlée), off_hand (bouclier), bow, crossbow.
 var weapons: Dictionary = {}
 const REQUIREMENT_PENALTY := 0.03   # ralentissement des attaques par point d'attribut manquant
@@ -32,9 +34,10 @@ static func _key(slot: int, layer: int) -> String:
 	return "%d:%d" % [slot, layer]
 
 
-func equip(piece: ArmorData) -> void:
+func equip(piece: ArmorData, variant := 0) -> void:
 	unequip(piece.slot, piece.layer)
 	items[_key(piece.slot, piece.layer)] = piece
+	variants[_key(piece.slot, piece.layer)] = variant
 	_refresh_after(piece, true)
 
 
@@ -43,8 +46,45 @@ func unequip(slot: int, layer: int) -> ArmorData:
 	var old: ArmorData = items.get(k)
 	if old != null:
 		items.erase(k)
+		variants.erase(k)
 		_refresh_after(old, false)
 	return old
+
+
+func get_variant(piece: ArmorData) -> int:
+	return int(variants.get(_key(piece.slot, piece.layer), 0))
+
+
+## Change la couleur d'une pièce déjà portée.
+func set_variant(piece: ArmorData, variant: int) -> void:
+	var k := _key(piece.slot, piece.layer)
+	if items.has(k):
+		variants[k] = variant
+		changed.emit()
+
+
+## Retire toute l'armure (les armes ne bougent pas).
+func clear_armor() -> void:
+	_batch += 1
+	for p in pieces():
+		unequip(p.slot, p.layer)
+	_batch -= 1
+	changed.emit()
+
+
+## Équipe une tenue complète (un seul signal `changed` à la fin).
+func equip_outfit(outfit: OutfitData) -> void:
+	_batch += 1
+	for p in pieces():
+		unequip(p.slot, p.layer)
+	for pid in outfit.pieces:
+		var piece := Registry.get_data(pid) as ArmorData
+		if piece != null:
+			equip(piece, int(outfit.variants.get(str(pid), 0)))
+		else:
+			push_warning("Pièce de tenue inconnue : %s" % pid)
+	_batch -= 1
+	changed.emit()
 
 
 func get_piece(slot: int, layer: int) -> ArmorData:
@@ -193,7 +233,8 @@ func _refresh_after(piece: ArmorData, added: bool) -> void:
 		stats.carried_weight = total_weight()
 	if combatant != null:
 		combatant.protection = get_protection()
-	changed.emit()
+	if _batch == 0:
+		changed.emit()
 
 
 # ------------------------------------------------------------------ sauvegarde
@@ -205,16 +246,23 @@ func capture_state() -> Dictionary:
 	var weapon_ids := {}
 	for slot in weapons:
 		weapon_ids[str(slot)] = str((weapons[slot] as WeaponData).id)
-	return {"armure": ids, "armes": weapon_ids}
+	var variant_ids := {}
+	for p in pieces():
+		var v := get_variant(p)
+		if v != 0:
+			variant_ids[str(p.id)] = v
+	return {"armure": ids, "armes": weapon_ids, "variantes": variant_ids}
 
 
 func restore_state(d: Dictionary) -> void:
+	_batch += 1
 	for p in pieces():
 		unequip(p.slot, p.layer)
+	var saved_variants: Dictionary = d.get("variantes", {})
 	for id in d.get("armure", []):
 		var piece := Registry.get_data(StringName(id)) as ArmorData
 		if piece != null:
-			equip(piece)
+			equip(piece, int(saved_variants.get(id, 0)))
 		else:
 			push_warning("Pièce d'équipement inconnue à la restauration : %s" % id)
 	for slot in weapons.keys():
@@ -226,3 +274,5 @@ func restore_state(d: Dictionary) -> void:
 			equip_weapon(w)
 		else:
 			push_warning("Arme inconnue à la restauration : %s" % saved[slot])
+	_batch -= 1
+	changed.emit()

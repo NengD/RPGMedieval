@@ -19,7 +19,7 @@ const _STATE_NAMES := ["STATE_IDLE", "STATE_WINDUP", "STATE_STRIKE", "STATE_RECO
 func _ready() -> void:
 	_help = _make_label()
 	_help.position = Vector2(16, 12)
-	_help.text = "\n".join([tr("HELP_TITLE"), tr("HELP_MOVE"), tr("HELP_WEAPON"), tr("HELP_SWORD"), tr("HELP_RANGED"), tr("HELP_KEYS"), tr("HELP_SAVE"), tr("HELP_WEAPONS")])
+	_help.text = "\n".join([tr("HELP_TITLE"), tr("HELP_MOVE"), tr("HELP_WEAPON"), tr("HELP_SWORD"), tr("HELP_RANGED"), tr("HELP_KEYS"), tr("HELP_SAVE"), tr("HELP_WEAPONS"), tr("HELP_OUTFIT")])
 	add_child(_help)
 
 	_status = _make_label()
@@ -104,6 +104,7 @@ func _process(_delta: float) -> void:
 		tr("HUD_LINE_DUMMY") % (tr("HUD_YES") if dummy.practice else tr("HUD_NO")),
 		tr("HUD_LINE_DIFFICULTY") % [tr(GameConfig.DIFFICULTY_NAMES[enemy.difficulty]), tr(Enemy.MODE_NAMES[enemy.mode]) if enemy.ai_enabled else tr("HUD_AI_OFF")],
 		tr("HUD_LINE_WEAPON") % [tr(player.current_weapon_name_key()), target_score],
+		_protection_line(c),
 	]
 	_status.text = "\n".join(lines)
 	_status.position.y = _help.position.y + _help.get_minimum_size().y + 14.0   # toujours sous l'aide, quel que soit son nombre de lignes
@@ -133,6 +134,18 @@ func _process(_delta: float) -> void:
 	_canvas.enemy_exhausted = enemy.combatant.exhausted
 	_canvas.enemy_title = tr("HUD_ENEMY_TITLE") % tr(GameConfig.DIFFICULTY_NAMES[enemy.difficulty])
 	_canvas.queue_redraw()
+
+
+## Protection de la tenue (par type de dégâts), poids porté et vitesse d'attaque.
+func _protection_line(c: Combatant) -> String:
+	var prot := c.protection
+	return tr("HUD_LINE_PROTECTION") % [
+		int(round(100.0 * float(prot.get(DamageType.Type.TRANCHANT, 0.0)))),
+		int(round(100.0 * float(prot.get(DamageType.Type.CONTONDANT, 0.0)))),
+		int(round(100.0 * float(prot.get(DamageType.Type.PERFORANT, 0.0)))),
+		c.stats.carried_weight, c.stats.get_derived(&"charge_max"),
+		int(round(100.0 * c.stats.get_derived(&"vitesse_attaque"))),
+	]
 
 
 func _make_label() -> Label:

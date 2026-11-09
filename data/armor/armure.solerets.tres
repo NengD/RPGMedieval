@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ArmorData" format=3]
+
+[ext_resource type="Resource" path="res://data/materials/materiau.plaques.tres" id="1_18nmr"]
+[ext_resource type="PackedScene" path="res://assets/armor/armure_solerets.glb" id="2_noi0l"]
+[ext_resource type="Script" path="res://scripts/rpg/armor_data.gd" id="3_wnikx"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="4_k8ukq"]
+
+[resource]
+script = ExtResource("3_wnikx")
+id = &"armure.solerets"
+display_name = &"ARMURE_SOLERETS"
+slot = 8
+layer = 3
+material = ExtResource("1_18nmr")
+weight = 1.4
+hidden_body_regions = Array[StringName]([&"foot"])
+model = ExtResource("2_noi0l")

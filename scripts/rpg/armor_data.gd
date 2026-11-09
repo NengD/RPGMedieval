@@ -15,7 +15,9 @@ enum Layer { VETEMENT, GAMBISON, MAILLES, PLAQUES, SURCOT }
 @export var weight := 0.0                         # kg
 @export var stat_modifiers: Array[StatModifier] = []
 @export var hidden_body_regions: Array[StringName] = []
-@export var model: PackedScene
+@export var model: PackedScene                    # .glb de assets/armor/ (coque skinnée sur le squelette de base)
+## Variantes de couleur du tissu (matériaux « teinte_* » du modèle) ; vide = couleur d'origine.
+@export var color_variants: Array[Color] = []
 
 
 func protection() -> Dictionary:

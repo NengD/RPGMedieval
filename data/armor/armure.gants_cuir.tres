@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ArmorData" format=3]
+
+[ext_resource type="Resource" path="res://data/materials/materiau.cuir.tres" id="1_3qxrc"]
+[ext_resource type="PackedScene" path="res://assets/armor/armure_gants_cuir.glb" id="2_4vllm"]
+[ext_resource type="Script" path="res://scripts/rpg/armor_data.gd" id="3_n00uy"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="4_w6fa4"]
+
+[resource]
+script = ExtResource("3_n00uy")
+id = &"armure.gants_cuir"
+display_name = &"ARMURE_GANTS_CUIR"
+slot = 5
+material = ExtResource("1_3qxrc")
+weight = 0.2
+hidden_body_regions = Array[StringName]([&"hand"])
+model = ExtResource("2_4vllm")

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ArmorData" format=3]
+
+[ext_resource type="Resource" path="res://data/materials/materiau.mailles.tres" id="1_4appy"]
+[ext_resource type="PackedScene" path="res://assets/armor/armure_capuchon_mailles.glb" id="2_7flnn"]
+[ext_resource type="Script" path="res://scripts/rpg/armor_data.gd" id="3_qll0m"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="4_ht57r"]
+
+[resource]
+script = ExtResource("3_qll0m")
+id = &"armure.capuchon_mailles"
+display_name = &"ARMURE_CAPUCHON_MAILLES"
+slot = 0
+layer = 2
+material = ExtResource("1_4appy")
+weight = 1.0
+model = ExtResource("2_7flnn")

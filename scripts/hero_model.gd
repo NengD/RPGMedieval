@@ -9,7 +9,8 @@ extends Node3D
 ## Les attaques sont "scrubbées" : l'animation avance au rythme du Combatant (préparation / coup /
 ## récupération), donc le coup visuel tombe exactement quand le coup réel touche.
 
-const MODEL := "res://assets/hero/hero.fbx"
+const MODEL := "res://assets/base/base_rig.tscn"          # squelette Mixamo du corps de base (Mannequin)
+const BODY := "res://assets/base/body.glb"                 # corps en régions (tête, torse, bras…)
 const LIBRARY := "res://assets/anims/hero_library.res"
 const ATTACK_ANIMS := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left"]
 const HIT_ANIMS := [&"hit_1", &"hit_2", &"hit_3"]
@@ -61,6 +62,9 @@ var _xbow_model_holder: Node3D
 var _bow_top := Vector3(0.0, 0.52, 0.13)       # bouts de l'arc (repères Nock_Top / Nock_Bottom du modèle)
 var _bow_bottom := Vector3(0.0, -0.52, 0.13)
 var _ammo_length := 0.72
+var _armor_holder: Node3D
+var _body_nodes: Dictionary = {}   # région -> MeshInstance3D du corps
+var _tint_color := Color(1, 1, 1)
 var _xbow_grip := 0.3             # écart entre les deux mains sur l'arbalète (repères Grip_R / Grip_L)
 var _bow_in_hand := false
 var _aim_corr := 0.0              # rotation du corps (rad) pour que l'arme pointe là où le héros vise
@@ -84,6 +88,12 @@ func _ready() -> void:
 		n.get_parent().remove_child(n)
 		n.free()
 	skeleton = model_root.find_children("*", "Skeleton3D", true, false)[0]
+	# corps de base (régions) et support des pièces d'armure, rattachés au squelette par nom d'os
+	_armor_holder = Node3D.new()
+	_armor_holder.name = "Armor"
+	skeleton.add_child(_armor_holder)
+	for n in RigMesh.attach(skeleton, load(BODY), skeleton):
+		_body_nodes[String(n.name).trim_prefix("corps_")] = n
 	_library = load(LIBRARY)
 	anim_player = AnimationPlayer.new()
 	anim_player.name = "AnimationPlayer"
@@ -117,18 +127,29 @@ func reset() -> void:
 
 
 ## Donne une teinte au modèle (ennemi rouge sombre).
+## Teinte les tissus (matériaux « teinte_* ») : l'ennemi est vêtu de rouge sombre.
 func tint(color: Color) -> void:
-	for mi in model_root.find_children("*", "MeshInstance3D", true, false):
-		var mesh := mi as MeshInstance3D
-		for s in mesh.mesh.get_surface_count():
-			var base := mesh.get_active_material(s)
-			var mat: StandardMaterial3D
-			if base is StandardMaterial3D:
-				mat = base.duplicate()
-			else:
-				mat = StandardMaterial3D.new()
-			mat.albedo_color = mat.albedo_color * color
-			mesh.set_surface_override_material(s, mat)
+	_tint_color = color
+	_retint()
+
+
+func _retint() -> void:
+	for mi in _armor_holder.find_children("*", "MeshInstance3D", true, false):
+		_tint_mesh(mi as MeshInstance3D, _variant_of(mi))
+
+
+func _variant_of(mi: Node) -> Color:
+	return mi.get_meta(&"couleur") if mi.has_meta(&"couleur") else Color(1, 1, 1)
+
+
+func _tint_mesh(mi: MeshInstance3D, variant: Color) -> void:
+	mi.set_meta(&"couleur", variant)
+	for s in mi.mesh.get_surface_count():
+		var base := mi.mesh.surface_get_material(s)
+		if base is StandardMaterial3D and String(base.resource_name).begins_with("teinte_"):
+			var mat: StandardMaterial3D = base.duplicate()
+			mat.albedo_color = base.albedo_color * variant * _tint_color
+			mi.set_surface_override_material(s, mat)
 
 
 ## Éclair blanc très court quand le personnage est touché.
@@ -481,7 +502,30 @@ static func _instance(scene: PackedScene) -> Node3D:
 	return scene.instantiate() as Node3D if scene != null else null
 
 
-## Met à jour tous les modèles d'après ce que le personnage porte (appelé à chaque changement d'équipement).
+## Met à jour armes ET armures d'après l'équipement (appelé à chaque changement).
+func apply_equipment(eq: EquipmentComponent) -> void:
+	apply_armor(eq)
+	apply_weapons(eq)
+
+
+## Pièces d'armure : on recrée leurs maillages (rattachés au squelette) et on cache les parties du corps recouvertes.
+func apply_armor(eq: EquipmentComponent) -> void:
+	_free_children(_armor_holder)
+	var hidden := eq.hidden_regions()
+	for r in _body_nodes:
+		(_body_nodes[r] as MeshInstance3D).visible = not hidden.has(StringName(r))
+	for piece in eq.pieces():
+		if piece.model == null:
+			continue
+		var color := Color(1, 1, 1)
+		var v := eq.get_variant(piece)
+		if v >= 0 and v < piece.color_variants.size():
+			color = piece.color_variants[v]
+		for mi in RigMesh.attach(skeleton, piece.model, _armor_holder):
+			_tint_mesh(mi, color)
+
+
+## Met à jour tous les modèles d'armes d'après ce que le personnage porte.
 func apply_weapons(eq: EquipmentComponent) -> void:
 	var main := eq.get_weapon(&"main_hand")
 	_free_children(_melee_node)

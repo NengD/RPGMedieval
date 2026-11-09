@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ArmorData" format=3]
+
+[ext_resource type="Resource" path="res://data/materials/materiau.tissu.tres" id="1_6tnpf"]
+[ext_resource type="PackedScene" path="res://assets/armor/armure_braies.glb" id="2_jroox"]
+[ext_resource type="Script" path="res://scripts/rpg/armor_data.gd" id="3_1unvx"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="4_vanwa"]
+
+[resource]
+script = ExtResource("3_1unvx")
+id = &"armure.braies"
+display_name = &"ARMURE_BRAIES"
+slot = 7
+material = ExtResource("1_6tnpf")
+weight = 0.4
+hidden_body_regions = Array[StringName]([&"hips", &"thigh"])
+model = ExtResource("2_jroox")
+color_variants = Array[Color]([Color(1, 1, 1, 1), Color(0.85, 0.85, 0.95, 1), Color(0.9, 0.8, 0.7, 1)])

@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="OutfitData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/outfit_data.gd" id="1_jpilc"]
+
+[resource]
+script = ExtResource("1_jpilc")
+id = &"tenue.chevalier_plates"
+display_name = &"TENUE_CHEVALIER_PLATES"
+pieces = Array[StringName]([&"armure.chemise", &"armure.braies", &"armure.gambison", &"armure.capuchon_mailles", &"armure.cuirasse_plates", &"armure.spalieres", &"armure.canons_cubitieres", &"armure.gantelets_plates", &"armure.tassettes", &"armure.greves_genouilleres", &"armure.solerets", &"armure.bassinet", &"armure.tabard"])

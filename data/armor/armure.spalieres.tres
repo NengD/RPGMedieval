@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ArmorData" format=3]
+
+[ext_resource type="Resource" path="res://data/materials/materiau.plaques.tres" id="1_s46hj"]
+[ext_resource type="PackedScene" path="res://assets/armor/armure_spalieres.glb" id="2_dgs0h"]
+[ext_resource type="Script" path="res://scripts/rpg/armor_data.gd" id="3_r5vla"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="4_wiigl"]
+
+[resource]
+script = ExtResource("3_r5vla")
+id = &"armure.spalieres"
+display_name = &"ARMURE_SPALIERES"
+slot = 3
+layer = 3
+material = ExtResource("1_s46hj")
+weight = 2.0
+model = ExtResource("2_dgs0h")
