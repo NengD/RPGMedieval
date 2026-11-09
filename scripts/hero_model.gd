@@ -15,7 +15,7 @@ const LIBRARY := "res://assets/anims/hero_library.res"
 const ATTACK_ANIMS := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left"]
 const HIT_ANIMS := [&"hit_1", &"hit_2", &"hit_3"]
 const FULL_STATES := [&"dodge_l", &"dodge_r", &"dodge_b", &"jump", &"death", &"attack_up", &"attack_right", &"attack_estoc", &"attack_left"]
-const UPPER_STATES := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left", &"guard", &"hit_1", &"hit_2", &"hit_3", &"bow_draw", &"bow_release", &"xbow_aim"]
+const UPPER_STATES := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left", &"guard", &"hit_1", &"hit_2", &"hit_3", &"bow_draw", &"bow_release", &"xbow_aim", &"hit_left", &"hit_right", &"hit_gut", &"hit_front_light", &"hit_head"]
 
 var skeleton: Skeleton3D
 var anim_player: AnimationPlayer
@@ -63,6 +63,20 @@ var _bow_top := Vector3(0.0, 0.52, 0.13)       # bouts de l'arc (repères Nock_T
 var _bow_bottom := Vector3(0.0, -0.52, 0.13)
 var _ammo_length := 0.72
 var _armor_holder: Node3D
+var foot_ik: FootIK
+var ragdoll_sim: PhysicalBoneSimulator3D
+var _ragdoll_on := false
+var _refs: Dictionary = {}          # jeu d'animations -> [vitesse de marche, vitesse de course] d'origine (m/s)
+var _blend_pos := Vector2.ZERO      # position lissée dans les espaces de mélange de locomotion
+var _look_head: LookAtModifier3D
+var _look_spine: LookAtModifier3D
+var _look_target: Node3D
+var _look_amount := 0.0
+var _look_timer := 0.0
+var _look_point := Vector3.ZERO
+var _look_has := false
+var _main_weapon: WeaponData
+var _grip_l_marker: Node3D          # repère Grip_L de l'arme de mêlée à deux mains
 var _body_nodes: Dictionary = {}   # région -> MeshInstance3D du corps
 var _tint_color := Color(1, 1, 1)
 var _xbow_grip := 0.3             # écart entre les deux mains sur l'arbalète (repères Grip_R / Grip_L)
@@ -99,11 +113,113 @@ func _ready() -> void:
 	anim_player.name = "AnimationPlayer"
 	model_root.add_child(anim_player)
 	anim_player.add_animation_library("", _library)
+	_compute_refs()   # vitesses d'origine des clips : elles placent les points de marche et de course dans les espaces de mélange
 	_build_tree()
 	_build_attachments()
 	_build_ik()
 	_build_bow_prop()
 	_build_xbow_prop()
+	_build_polish()
+
+
+## Vitesses de déplacement d'origine des animations (mesurées au bake) : sert à caler la cadence sur la vitesse réelle.
+func _compute_refs() -> void:
+	var sets := {
+		&"loco": [[&"walk_f", &"walk_b", &"strafe_r", &"strafe_l"], [&"run_f", &"run_b", &"strafe_r_run", &"strafe_l_run"]],
+		&"bow": [[&"bow_walk_f", &"bow_walk_b", &"bow_walk_r", &"bow_walk_l"], [&"bow_run_f", &"bow_run_b", &"bow_run_r", &"bow_run_l"]],
+		&"xbow": [[&"xbow_walk_f", &"xbow_walk_b", &"xbow_walk_r", &"xbow_walk_l"], [&"xbow_run_f", &"xbow_run_b", &"xbow_run_r", &"xbow_run_l"]],
+	}
+	for key in sets:
+		var pair: Array = []
+		for group in sets[key]:
+			var total := 0.0
+			var n := 0
+			for anim_name in group:
+				var a := _library.get_animation(anim_name)
+				var s := float(a.get_meta(&"root_speed", 0.0)) if a != null else 0.0
+				if s > 0.1:
+					total += s
+					n += 1
+			pair.append(total / maxf(n, 1))
+		_refs[key] = pair
+
+
+## Cadence d'animation pour la vitesse réelle `h` (m/s) : la vitesse de déplacement d'origine du clip est celle du pas.
+func stride_scale(set_key: StringName, h: float) -> float:
+	if not GameConfig.ANIM_STRIDE_MATCH or not _refs.has(set_key):
+		return clampf(h / 2.0, 1.0, 1.9)
+	var pair: Array = _refs[set_key]
+	var w := float(pair[0])
+	var r := float(pair[1])
+	var ref := lerpf(w, r, clampf((h - w) / maxf(r - w, 0.01), 0.0, 1.0))   # entre la vitesse de marche et de course des clips : cadence naturelle
+	var scale := clampf(h / maxf(ref, 0.1), 0.6, GameConfig.ANIM_STRIDE_MAX)
+	if GameConfig.ANIM_WEIGHT_AFFECTS_SPEED and combatant != null:
+		var load_ratio := clampf(combatant.stats.carried_weight / maxf(combatant.stats.get_derived(&"charge_max"), 1.0), 0.0, 1.5)
+		scale *= 1.0 - GameConfig.ANIM_WEIGHT_EFFECT * load_ratio
+	return scale
+
+
+## Pieds sur le terrain, tête qui suit la cible, ragdoll.
+func _build_polish() -> void:
+	foot_ik = FootIK.new()
+	foot_ik.name = "FootIK"
+	add_child(foot_ik)
+	foot_ik.setup(self, skeleton)
+	_look_target = Node3D.new()
+	_look_target.name = "LookTarget"
+	add_child(_look_target)
+	_look_head = _make_look("mixamorig_Head", 70.0, 40.0)
+	_look_spine = _make_look("mixamorig_Spine2", 35.0, 20.0)
+	ragdoll_sim = Ragdoll.build(skeleton)
+
+
+func _make_look(bone: String, yaw_limit: float, pitch_limit: float) -> LookAtModifier3D:
+	var look := LookAtModifier3D.new()
+	look.name = "Look_" + bone.trim_prefix("mixamorig_")
+	skeleton.add_child(look)
+	look.bone_name = bone
+	look.target_node = look.get_path_to(_look_target)
+	look.forward_axis = SkeletonModifier3D.BONE_AXIS_PLUS_Z
+	look.primary_rotation_axis = Vector3.AXIS_Y
+	look.use_secondary_rotation = true
+	look.use_angle_limitation = true
+	look.symmetry_limitation = true
+	look.primary_limit_angle = deg_to_rad(yaw_limit)
+	look.secondary_limit_angle = deg_to_rad(pitch_limit)
+	look.duration = 0.2
+	look.influence = 0.0
+	return look
+
+
+## Tête et buste suivent l'adversaire le plus proche devant nous, sinon le point visé (arc / arbalète).
+func _update_look(delta: float) -> void:
+	if not GameConfig.LOOK_AT_ENABLED or combatant == null:
+		return
+	_look_timer -= delta
+	if _look_timer <= 0.0:
+		_look_timer = 0.1
+		_look_has = false
+		if not _dead and combatant.body != null:
+			var best := GameConfig.LOOK_RANGE
+			var fwd := -global_transform.basis.z
+			for node in get_tree().get_nodes_in_group(&"combatants"):
+				var other := node as Combatant
+				if other == null or other == combatant or other.team == combatant.team or other.dead or other.body == null:
+					continue
+				var to := other.body.global_position - global_position
+				var d := to.length()
+				if d < best and absf(fwd.signed_angle_to(Vector3(to.x, 0.0, to.z), Vector3.UP)) < deg_to_rad(110.0):
+					best = d
+					_look_point = other.body.global_position + Vector3(0, 1.5, 0)
+					_look_has = true
+			if not _look_has and aim_point_valid:
+				_look_point = aim_point
+				_look_has = true
+	var goal := 1.0 if (_look_has and not _dead and not _ragdoll_on) else 0.0
+	_look_amount = move_toward(_look_amount, goal, delta * 3.0)
+	_look_target.global_position = _look_point
+	_look_head.influence = _look_amount * GameConfig.LOOK_HEAD_INFLUENCE
+	_look_spine.influence = _look_amount * GameConfig.LOOK_SPINE_INFLUENCE
 
 
 func bind(c: Combatant) -> void:
@@ -115,6 +231,7 @@ func bind(c: Combatant) -> void:
 
 ## Remet le personnage debout, au repos.
 func reset() -> void:
+	_stop_ragdoll()
 	_dead = false
 	_upper_mode = &""
 	_full_mode = &""
@@ -207,21 +324,27 @@ func _transition(states: Array, xfade: float) -> AnimationNodeTransition:
 func _build_tree() -> void:
 	var bt := AnimationNodeBlendTree.new()
 	var walk := GameConfig.WALK_SPEED
-	var run_k := GameConfig.RUN_SPEED / walk
 
+	# Les points de marche et de course sont placés à la VRAIE vitesse des clips (en multiples de WALK_SPEED) : le mélange suit la cadence naturelle
+	var wk_l := float(_refs[&"loco"][0]) / walk
+	var rk_l := float(_refs[&"loco"][1]) / walk
+	var wk_b := float(_refs[&"bow"][0]) / walk
+	var rk_b := float(_refs[&"bow"][1]) / walk
+	var wk_x := float(_refs[&"xbow"][0]) / walk
+	var rk_x := float(_refs[&"xbow"][1]) / walk
 	# Locomotion : x = vers la droite, y = vers l'avant (en multiples de la vitesse de marche)
 	var loco := AnimationNodeBlendSpace2D.new()
 	loco.min_space = Vector2(-2.5, -2.5)
 	loco.max_space = Vector2(2.5, 2.5)
 	loco.add_blend_point(_anim_node(&"idle"), Vector2(0, 0), -1, &"idle")
-	loco.add_blend_point(_anim_node(&"walk_f"), Vector2(0, 1), -1, &"walk_f")
-	loco.add_blend_point(_anim_node(&"run_f"), Vector2(0, run_k), -1, &"run_f")
-	loco.add_blend_point(_anim_node(&"walk_b"), Vector2(0, -1), -1, &"walk_b")
-	loco.add_blend_point(_anim_node(&"run_b"), Vector2(0, -run_k), -1, &"run_b")
-	loco.add_blend_point(_anim_node(&"strafe_r"), Vector2(1, 0), -1, &"strafe_r")
-	loco.add_blend_point(_anim_node(&"strafe_r_run"), Vector2(run_k, 0), -1, &"strafe_r_run")
-	loco.add_blend_point(_anim_node(&"strafe_l"), Vector2(-1, 0), -1, &"strafe_l")
-	loco.add_blend_point(_anim_node(&"strafe_l_run"), Vector2(-run_k, 0), -1, &"strafe_l_run")
+	loco.add_blend_point(_anim_node(&"walk_f"), Vector2(0, wk_l), -1, &"walk_f")
+	loco.add_blend_point(_anim_node(&"run_f"), Vector2(0, rk_l), -1, &"run_f")
+	loco.add_blend_point(_anim_node(&"walk_b"), Vector2(0, -wk_l), -1, &"walk_b")
+	loco.add_blend_point(_anim_node(&"run_b"), Vector2(0, -rk_l), -1, &"run_b")
+	loco.add_blend_point(_anim_node(&"strafe_r"), Vector2(wk_l, 0), -1, &"strafe_r")
+	loco.add_blend_point(_anim_node(&"strafe_r_run"), Vector2(rk_l, 0), -1, &"strafe_r_run")
+	loco.add_blend_point(_anim_node(&"strafe_l"), Vector2(-wk_l, 0), -1, &"strafe_l")
+	loco.add_blend_point(_anim_node(&"strafe_l_run"), Vector2(-rk_l, 0), -1, &"strafe_l_run")
 	bt.add_node(&"Loco", loco, Vector2(0, 0))
 	var loco_ts := AnimationNodeTimeScale.new()
 	bt.add_node(&"LocoTS", loco_ts, Vector2(200, 0))
@@ -232,14 +355,14 @@ func _build_tree() -> void:
 	loco_bow.min_space = Vector2(-2.5, -2.5)
 	loco_bow.max_space = Vector2(2.5, 2.5)
 	loco_bow.add_blend_point(_anim_node(&"bow_idle"), Vector2(0, 0), -1, &"bow_idle")
-	loco_bow.add_blend_point(_anim_node(&"bow_walk_f"), Vector2(0, 1), -1, &"bow_walk_f")
-	loco_bow.add_blend_point(_anim_node(&"bow_run_f"), Vector2(0, run_k), -1, &"bow_run_f")
-	loco_bow.add_blend_point(_anim_node(&"bow_walk_b"), Vector2(0, -1), -1, &"bow_walk_b")
-	loco_bow.add_blend_point(_anim_node(&"bow_run_b"), Vector2(0, -run_k), -1, &"bow_run_b")
-	loco_bow.add_blend_point(_anim_node(&"bow_walk_r"), Vector2(1, 0), -1, &"bow_walk_r")
-	loco_bow.add_blend_point(_anim_node(&"bow_run_r"), Vector2(run_k, 0), -1, &"bow_run_r")
-	loco_bow.add_blend_point(_anim_node(&"bow_walk_l"), Vector2(-1, 0), -1, &"bow_walk_l")
-	loco_bow.add_blend_point(_anim_node(&"bow_run_l"), Vector2(-run_k, 0), -1, &"bow_run_l")
+	loco_bow.add_blend_point(_anim_node(&"bow_walk_f"), Vector2(0, wk_b), -1, &"bow_walk_f")
+	loco_bow.add_blend_point(_anim_node(&"bow_run_f"), Vector2(0, rk_b), -1, &"bow_run_f")
+	loco_bow.add_blend_point(_anim_node(&"bow_walk_b"), Vector2(0, -wk_b), -1, &"bow_walk_b")
+	loco_bow.add_blend_point(_anim_node(&"bow_run_b"), Vector2(0, -rk_b), -1, &"bow_run_b")
+	loco_bow.add_blend_point(_anim_node(&"bow_walk_r"), Vector2(wk_b, 0), -1, &"bow_walk_r")
+	loco_bow.add_blend_point(_anim_node(&"bow_run_r"), Vector2(rk_b, 0), -1, &"bow_run_r")
+	loco_bow.add_blend_point(_anim_node(&"bow_walk_l"), Vector2(-wk_b, 0), -1, &"bow_walk_l")
+	loco_bow.add_blend_point(_anim_node(&"bow_run_l"), Vector2(-rk_b, 0), -1, &"bow_run_l")
 	bt.add_node(&"LocoBow", loco_bow, Vector2(0, -200))
 	bt.add_node(&"LocoBowTS", AnimationNodeTimeScale.new(), Vector2(200, -200))
 	bt.connect_node(&"LocoBowTS", 0, &"LocoBow")
@@ -252,14 +375,14 @@ func _build_tree() -> void:
 	loco_x.min_space = Vector2(-2.5, -2.5)
 	loco_x.max_space = Vector2(2.5, 2.5)
 	loco_x.add_blend_point(_anim_node(&"xbow_idle"), Vector2(0, 0), -1, &"xbow_idle")
-	loco_x.add_blend_point(_anim_node(&"xbow_walk_f"), Vector2(0, 1), -1, &"xbow_walk_f")
-	loco_x.add_blend_point(_anim_node(&"xbow_run_f"), Vector2(0, run_k), -1, &"xbow_run_f")
-	loco_x.add_blend_point(_anim_node(&"xbow_walk_b"), Vector2(0, -1), -1, &"xbow_walk_b")
-	loco_x.add_blend_point(_anim_node(&"xbow_run_b"), Vector2(0, -run_k), -1, &"xbow_run_b")
-	loco_x.add_blend_point(_anim_node(&"xbow_walk_r"), Vector2(1, 0), -1, &"xbow_walk_r")
-	loco_x.add_blend_point(_anim_node(&"xbow_run_r"), Vector2(run_k, 0), -1, &"xbow_run_r")
-	loco_x.add_blend_point(_anim_node(&"xbow_walk_l"), Vector2(-1, 0), -1, &"xbow_walk_l")
-	loco_x.add_blend_point(_anim_node(&"xbow_run_l"), Vector2(-run_k, 0), -1, &"xbow_run_l")
+	loco_x.add_blend_point(_anim_node(&"xbow_walk_f"), Vector2(0, wk_x), -1, &"xbow_walk_f")
+	loco_x.add_blend_point(_anim_node(&"xbow_run_f"), Vector2(0, rk_x), -1, &"xbow_run_f")
+	loco_x.add_blend_point(_anim_node(&"xbow_walk_b"), Vector2(0, -wk_x), -1, &"xbow_walk_b")
+	loco_x.add_blend_point(_anim_node(&"xbow_run_b"), Vector2(0, -rk_x), -1, &"xbow_run_b")
+	loco_x.add_blend_point(_anim_node(&"xbow_walk_r"), Vector2(wk_x, 0), -1, &"xbow_walk_r")
+	loco_x.add_blend_point(_anim_node(&"xbow_run_r"), Vector2(rk_x, 0), -1, &"xbow_run_r")
+	loco_x.add_blend_point(_anim_node(&"xbow_walk_l"), Vector2(-wk_x, 0), -1, &"xbow_walk_l")
+	loco_x.add_blend_point(_anim_node(&"xbow_run_l"), Vector2(-rk_x, 0), -1, &"xbow_run_l")
 	bt.add_node(&"LocoX", loco_x, Vector2(0, -400))
 	bt.add_node(&"LocoXTS", AnimationNodeTimeScale.new(), Vector2(200, -400))
 	bt.connect_node(&"LocoXTS", 0, &"LocoX")
@@ -413,6 +536,21 @@ func _ik_blade_direction(c: Combatant) -> Vector3:
 			return contact.slerp(GameConfig.IK_REST_BLADE.normalized(), ease(p, 0.6))
 
 
+## Petit pas en avant visuel pendant l'attaque (le corps réel ne bouge pas : la portée du coup est inchangée).
+func _update_lunge(attacking: bool) -> void:
+	var lunge := 0.0
+	if attacking and GameConfig.ATTACK_LUNGE > 0.0:
+		var c := combatant
+		var p := clampf(c.state_time / maxf(c.state_duration, 0.001), 0.0, 1.0)
+		match c.state:
+			Combatant.State.WINDUP: lunge = 0.75 * ease(p, 2.0)
+			Combatant.State.STRIKE: lunge = lerpf(0.75, 1.0, p)
+			Combatant.State.RECOVERY: lunge = 1.0 - ease(p, 0.6)
+	if not _ragdoll_on:
+		var pelvis_y := foot_ik.pelvis if foot_ik != null else 0.0
+		model_root.position = Vector3(0.0, pelvis_y, -GameConfig.ATTACK_LUNGE * lunge)
+
+
 func _update_ik(delta: float, attacking: bool) -> void:
 	var has_shield := _shield_node.get_child_count() > 0
 	var directed: bool = attacking and (combatant.attack_dir == Combatant.Dir.UP or combatant.attack_dir == Combatant.Dir.DOWN)
@@ -450,12 +588,16 @@ func _update_ik(delta: float, attacking: bool) -> void:
 			ik_pole.global_position = global_transform * GameConfig.IK_POLE
 			hand_aim.target_direction_world = global_transform.basis * _ik_blade
 	# bras gauche
-	var free_guard: bool = guarding           # parade sans écu : le bras libre reste bas
-	var left_on := bow_on or xbow_on or shield_guard or free_guard
+	var two_hand: bool = _grip_l_marker != null and not bow_on and not xbow_on and not _dead   # arme à deux mains : la main gauche tient le repère Grip_L
+	var free_guard: bool = guarding and not two_hand           # parade sans écu : le bras libre reste bas
+	var left_on := bow_on or xbow_on or shield_guard or free_guard or two_hand
 	_ikl_amount = move_toward(_ikl_amount, 1.0 if left_on else 0.0, delta * 10.0)
 	ik_l.influence = _ikl_amount
 	if left_on:
-		if free_guard:
+		if two_hand:
+			ik_target_l.global_position = _grip_l_marker.global_position
+			ik_pole_l.global_position = _grip_l_marker.global_position - global_transform.basis.x * 0.6 + Vector3.DOWN * 0.4
+		elif free_guard:
 			ik_target_l.global_position = global_transform * GameConfig.FREE_GUARD_HAND
 			ik_pole_l.global_position = global_transform * Vector3(-0.9, 0.9, 0.3)
 		elif shield_guard:
@@ -528,6 +670,8 @@ func apply_armor(eq: EquipmentComponent) -> void:
 ## Met à jour tous les modèles d'armes d'après ce que le personnage porte.
 func apply_weapons(eq: EquipmentComponent) -> void:
 	var main := eq.get_weapon(&"main_hand")
+	_main_weapon = main
+	_grip_l_marker = null
 	_free_children(_melee_node)
 	var melee_scene: PackedScene = main.model if main != null else load("res://assets/weapons/arme_epee_longue.glb")
 	var melee := _instance(melee_scene)
@@ -535,6 +679,8 @@ func apply_weapons(eq: EquipmentComponent) -> void:
 		if main != null:
 			melee.rotation_degrees = main.held_rotation_deg
 		_melee_node.add_child(melee)
+		if main != null and main.is_two_handed():
+			_grip_l_marker = _marker(melee, "Grip_L")
 	_free_children(_shield_node)
 	var off := eq.get_weapon(&"off_hand")
 	var shield := _instance(off.model) if off != null else null
@@ -793,17 +939,62 @@ func _on_attack_started(dir: int) -> void:
 		_set_upper(ATTACK_ANIMS[dir])
 
 
-func _on_staggered(_perfect: bool) -> void:
+func _on_staggered(perfect: bool) -> void:
 	if _dead:
 		return
-	_set_upper(HIT_ANIMS[randi() % HIT_ANIMS.size()])
+	_set_upper(_pick_hit_anim(perfect))
+
+
+## Réaction selon d'où vient le coup (gauche, droite, face) et sa force ; tir à la tête = secousse de la tête.
+func _pick_hit_anim(perfect: bool) -> StringName:
+	var c := combatant
+	if perfect or c.last_attacker == null or c.last_attacker.body == null:
+		return HIT_ANIMS[randi() % HIT_ANIMS.size()]
+	if c.last_hit_head:
+		return &"hit_head"
+	var local := global_basis.inverse() * (c.last_attacker.body.global_position - global_position)
+	if local.x > 0.7:
+		return &"hit_right"
+	if local.x < -0.7:
+		return &"hit_left"
+	return &"hit_gut" if c.last_hit_amount >= GameConfig.KNOCKBACK_BIG_HIT else &"hit_front_light"
+
 
 
 func _on_died() -> void:
 	_dead = true
+	if GameConfig.RAGDOLL_ON_DEATH and ragdoll_sim != null:
+		var push := Vector3.ZERO
+		if combatant.last_attacker != null and combatant.last_attacker.body != null and combatant.body != null:
+			push = (combatant.body.global_position - combatant.last_attacker.body.global_position)
+			push.y = 0.0
+			push = push.normalized() * GameConfig.RAGDOLL_PUSH
+		_start_ragdoll(push)
+		return
 	_full_mode = &"death"
 	tree.set("parameters/Full/transition_request", "death")
 	tree.set("parameters/FullTS/scale", 1.0)
+
+
+func _start_ragdoll(push: Vector3) -> void:
+	_ragdoll_on = true
+	tree.active = false
+	Ragdoll.start(ragdoll_sim, push)
+
+
+func _stop_ragdoll() -> void:
+	if _ragdoll_on:
+		_ragdoll_on = false
+		Ragdoll.stop(ragdoll_sim)
+		skeleton.reset_bone_poses()
+		if tree != null:
+			tree.active = true
+	if model_root != null:
+		model_root.position = Vector3.ZERO
+
+
+func is_ragdoll() -> bool:
+	return _ragdoll_on
 
 
 func _set_upper(mode: StringName) -> void:
@@ -829,12 +1020,14 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 	var local := body_basis.inverse() * velocity
 	var horizontal := Vector2(velocity.x, velocity.z).length()
 	_last_speed = horizontal
-	tree.set("parameters/Loco/blend_position", Vector2(local.x, -local.z) / GameConfig.WALK_SPEED)
-	tree.set("parameters/LocoTS/scale", clampf(horizontal / 2.0, 1.0, 1.9))
-	tree.set("parameters/LocoBow/blend_position", Vector2(local.x, -local.z) / GameConfig.WALK_SPEED)
-	tree.set("parameters/LocoBowTS/scale", clampf(horizontal / 1.5, 1.0, 2.2))
-	tree.set("parameters/LocoX/blend_position", Vector2(local.x, -local.z) / GameConfig.WALK_SPEED)
-	tree.set("parameters/LocoXTS/scale", clampf(horizontal / 1.5, 1.0, 2.2))
+	var blend_goal := Vector2(local.x, -local.z) / GameConfig.WALK_SPEED
+	_blend_pos = _blend_pos.lerp(blend_goal, 1.0 - exp(-GameConfig.ANIM_LOCO_SMOOTH * delta))   # départs, arrêts et demi-tours plus doux
+	tree.set("parameters/Loco/blend_position", _blend_pos)
+	tree.set("parameters/LocoTS/scale", stride_scale(&"loco", horizontal))
+	tree.set("parameters/LocoBow/blend_position", _blend_pos)
+	tree.set("parameters/LocoBowTS/scale", stride_scale(&"bow", horizontal))
+	tree.set("parameters/LocoX/blend_position", _blend_pos)
+	tree.set("parameters/LocoXTS/scale", stride_scale(&"xbow", horizontal))
 	_xbow_amount = move_toward(_xbow_amount, 1.0 if weapon_kind == 2 else 0.0, delta * 8.0)
 	tree.set("parameters/WeaponBlend2/blend_amount", _xbow_amount)
 	_weapon_amount = move_toward(_weapon_amount, 1.0 if weapon_kind == 1 else 0.0, delta * 8.0)
@@ -880,6 +1073,10 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 	var full_target := 0.0
 	var attacking := c.state in [Combatant.State.WINDUP, Combatant.State.STRIKE, Combatant.State.RECOVERY]
 	_update_ik(delta, attacking and not _dead)
+	if foot_ik != null:
+		foot_ik.update(delta, on_floor and not is_dodging and not _dead and not _ragdoll_on)
+	_update_look(delta)
+	_update_lunge(attacking and not _dead)
 	if _dead:
 		full_target = 1.0
 	elif _attack_full_body and attacking and not is_dodging:

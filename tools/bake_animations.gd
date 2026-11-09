@@ -25,6 +25,12 @@ const MAP := {
 	&"dodge_l": ["sword_and_shield_strafe_3", true, false, false],
 	&"dodge_r": ["sword_and_shield_strafe_4", true, false, false],
 	&"dodge_b": ["sword_and_shield_run_2", true, false, false],
+	# --- Coups reçus selon la direction (Pro Melee Axe Pack) et réactions de l'arc
+	&"hit_left": ["axe_standing_react_large_from_left", true, false, false],
+	&"hit_right": ["axe_standing_react_large_from_right", true, false, false],
+	&"hit_gut": ["axe_standing_react_large_gut", true, false, false],
+	&"hit_front_light": ["bow_standing_react_small_from_front", true, false, false],
+	&"hit_head": ["bow_standing_react_small_from_headshot", true, false, false],
 	&"attack_up": ["sword_and_shield_idle", true, false, true, 0.0, 1.4, [0.0, 0.7, 1.4]],   # posture calme : le bras est dirigé par cinématique inverse (voir HeroModel._update_ik)
 	&"attack_right": ["axe_standing_melee_attack_horizontal", true, false, true, 0.1, 2.2],   # balayage horizontal
 	&"attack_estoc": ["axe_standing_melee_combo_attack_ver__3", true, false, true, 0.55, 1.6],   # fente avec poussée (fin du combo 3)
@@ -79,6 +85,7 @@ func _run() -> void:
 		var ap: AnimationPlayer = inst.find_children("*", "AnimationPlayer", true, false)[0]
 		var sk: Skeleton3D = inst.find_children("*", "Skeleton3D", true, false)[0]
 		var anim: Animation = ap.get_animation(ap.get_animation_list()[0]).duplicate(true)
+		anim.set_meta(&"root_speed", _root_speed(anim))   # vitesse de déplacement d'origine (m/s) : sert à caler la cadence sur la vitesse réelle
 		if spec[1]:
 			_make_in_place(anim)
 		anim.loop_mode = Animation.LOOP_LINEAR if spec[2] else Animation.LOOP_NONE
@@ -92,11 +99,24 @@ func _run() -> void:
 			anim.set_meta(&"peak_time", prof[1])
 			anim.set_meta(&"end_time", prof[2])
 		lib.add_animation(key, anim)
-		print("%-14s %-30s %.2fs%s" % [key, spec[0], anim.length, ("  début %.2f  coup %.2f  fin %.2f" % [anim.get_meta(&"start_time"), anim.get_meta(&"peak_time"), anim.get_meta(&"end_time")]) if anim.has_meta(&"peak_time") else ""])
+		print("%-14s %-30s %.2fs  vitesse_racine=%.2f%s" % [key, spec[0], anim.length, float(anim.get_meta(&"root_speed", 0.0)), ("  début %.2f  coup %.2f  fin %.2f" % [anim.get_meta(&"start_time"), anim.get_meta(&"peak_time"), anim.get_meta(&"end_time")]) if anim.has_meta(&"peak_time") else ""])
 		inst.queue_free()
 	var err := ResourceSaver.save(lib, "res://assets/anims/hero_library.res")
 	print("SAUVEGARDE : ", "OK" if err == OK else "ERREUR %d" % err)
 	quit(0 if err == OK else 1)
+
+
+## Vitesse horizontale de la racine dans l'animation d'origine (m/s).
+func _root_speed(anim: Animation) -> float:
+	for i in anim.get_track_count():
+		if anim.track_get_type(i) == Animation.TYPE_POSITION_3D and str(anim.track_get_path(i)) == HIPS_TRACK:
+			var n := anim.track_get_key_count(i)
+			if n < 2:
+				return 0.0
+			var first: Vector3 = anim.track_get_key_value(i, 0)
+			var last: Vector3 = anim.track_get_key_value(i, n - 1)
+			return Vector2(last.x - first.x, last.z - first.z).length() / maxf(anim.length, 0.01)
+	return 0.0
 
 
 ## La racine (hanches) ne doit plus avancer : on fige X et Z à la valeur de départ, on garde la hauteur.

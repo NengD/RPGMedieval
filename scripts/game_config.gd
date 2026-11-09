@@ -281,3 +281,23 @@ const AIM_CAMERA_SIDE_XBOW := 0.30    # arbalète : par-dessus l'épaule droite 
 # --- Parade sans écu : le bras libre reste bas devant le ventre (sinon l'animation lève le bras comme pour tenir un écu) ---
 const FREE_GUARD_HAND := Vector3(-0.22, 1.02, -0.30)
 const AIM_CAMERA_RAISE := 0.0        # en visée à l'arc / arbalète la caméra monte un peu : on voit le dessus de l'arme et les mains (m)
+
+# === Animations plus naturelles (étape 6) ===
+# Toutes ces options sont indépendantes ; les passer à false redonne le comportement d'avant.
+const ANIM_STRIDE_MATCH := true       # cadence de marche/course calée sur la vitesse réelle (les pieds ne glissent plus)
+const ANIM_STRIDE_MAX := 2.8          # accélération maximale de l'animation de marche (x)
+const ANIM_LOCO_SMOOTH := 14.0        # douceur des départs, arrêts et demi-tours (plus haut = plus réactif)
+const ANIM_WEIGHT_AFFECTS_SPEED := true   # le poids porté ralentit un peu la cadence des animations (pas le déplacement)
+const ANIM_WEIGHT_EFFECT := 0.25      # ralentissement maximal à pleine charge (0,25 = -25 %)
+const ATTACK_LUNGE := 0.30            # petit pas en avant visuel pendant une attaque (m) ; ne change PAS la portée du coup
+const FOOT_IK_ENABLED := true         # pieds posés sur le terrain (pente, rampe)
+const FOOT_IK_MAX_OFFSET := 0.35      # correction maximale de hauteur d'un pied (m)
+const LOOK_AT_ENABLED := true         # la tête (et un peu le buste) suivent l'adversaire ou le point visé
+const LOOK_RANGE := 14.0              # distance maximale à laquelle on regarde l'adversaire (m)
+const LOOK_HEAD_INFLUENCE := 0.9
+const LOOK_SPINE_INFLUENCE := 0.3
+const KNOCKBACK_SPEED := 3.2          # recul de départ quand on est touché (m/s), selon la force et le type du coup
+const KNOCKBACK_DECAY := 14.0         # décélération du recul (m/s²)
+const KNOCKBACK_BIG_HIT := 26.0       # à partir de ces dégâts on joue la grande réaction (« ventre »)
+const RAGDOLL_ON_DEATH := true        # mort en ragdoll (false = animation de mort)
+const RAGDOLL_PUSH := 3.0             # vitesse donnée au corps par le coup fatal (m/s)

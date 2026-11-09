@@ -105,6 +105,7 @@ func _ready() -> void:
 	var outfit := Registry.get_data(&"tenue.chevalier_plates") as OutfitData
 	if outfit != null:
 		combatant.equipment.equip_outfit(outfit)
+	combatant.knockback.connect(_on_knockback)
 	combatant.equipment.changed.connect(_refresh_weapon_visuals)
 	_refresh_weapon_visuals()
 
@@ -166,6 +167,7 @@ func _process(_delta: float) -> void:
 	model.show_bow(third_person and weapon_kind == Weapon.BOW)
 	model.show_crossbow(third_person and weapon_kind == Weapon.CROSSBOW, crossbow_reload <= 0.0)
 	ranged_visual.visible = not (third_person and weapon_kind != Weapon.SWORD)   # en 3e personne l'arc est celui du chevalier
+	_apply_knockback(_delta)
 	model.drive(_delta, velocity, global_basis, is_on_floor(), is_dodging, _dodge_dir, weapon_kind, bow_tension, drawing, is_aiming)
 	_ranged_pivot.rotation.x = rig.pitch
 	ranged_visual.refresh(weapon_kind, bow_tension if drawing else 0.0, drawing, crossbow_reload, rig.first_person)
@@ -604,3 +606,18 @@ func cycle_tabard_color() -> void:
 	if piece == null or eq.get_piece(piece.slot, piece.layer) != piece or piece.color_variants.is_empty():
 		return
 	eq.set_variant(piece, (eq.get_variant(piece) + 1) % piece.color_variants.size())
+
+
+# ---------------------------------------------------------------- recul quand on est touché
+
+var _knock := Vector3.ZERO
+
+
+func _on_knockback(v: Vector3) -> void:
+	_knock = v
+
+
+func _apply_knockback(delta: float) -> void:
+	if _knock.length() > 0.05:
+		move_and_collide(_knock * delta)
+		_knock = _knock.move_toward(Vector3.ZERO, GameConfig.KNOCKBACK_DECAY * delta)

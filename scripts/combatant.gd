@@ -12,6 +12,8 @@ signal hit_resolved(result: int, dir: int, amount: float, attacker: Combatant)
 ## Côté attaquant : son coup a touché quelqu'un (result = ce qui est arrivé à la victime).
 signal strike_result(result: int, victim: Combatant)
 signal died
+## Un coup vient de nous toucher : vitesse de recul à appliquer au corps (monde, horizontale).
+signal knockback(velocity: Vector3)
 ## Côté tireur : son tir a touché (result = Result.*, amount = dégâts, head = tir à la tête).
 signal projectile_result(result: int, victim: Combatant, amount: float, head: bool)
 
@@ -31,6 +33,10 @@ var protection: Dictionary = {}
 ## Type de dégâts du dernier coup reçu (pour la couleur des chiffres flottants).
 var last_damage_type: int = DamageType.Type.TRANCHANT
 var instance_id := ""
+## Dernier coup reçu (lu par l'animation de réaction avant le signal damaged) : agresseur, dégâts, tir à la tête.
+var last_attacker: Combatant
+var last_hit_amount := 0.0
+var last_hit_head := false
 ## Arme de mêlée tenue (null = épée longue d'origine, construite avec les valeurs de game_config.gd).
 var weapon: WeaponData
 
@@ -214,7 +220,11 @@ func receive_hit(attacker: Combatant, dir: int, damage_in: Variant) -> int:
 
 	# Pas de garde : le coup passe
 	var dealt := packet.after_protection(protection) * (GameConfig.STAGGER_DAMAGE_BONUS if state == State.STAGGER else 1.0)
+	last_attacker = attacker
+	last_hit_amount = dealt
+	last_hit_head = false
 	stagger(GameConfig.HIT_STUN)
+	_emit_knockback(attacker, dealt)
 	take_damage(dealt, attacker)
 	hit_resolved.emit(Result.HIT, dir, dealt, attacker)
 	return Result.HIT
@@ -251,6 +261,9 @@ func receive_projectile(attacker: Combatant, damage_in: Variant, dir: Vector3, h
 		hit_resolved.emit(Result.GUARD_BROKEN, -1, broken, attacker)
 		return Result.GUARD_BROKEN
 	var dealt := packet.after_protection(protection) * (GameConfig.STAGGER_DAMAGE_BONUS if state == State.STAGGER else 1.0)
+	last_attacker = attacker
+	last_hit_amount = dealt
+	last_hit_head = head
 	if state != State.STAGGER:
 		stagger(GameConfig.PROJECTILE_STUN)
 	take_damage(dealt, attacker)
@@ -352,3 +365,20 @@ func restore_state(d: Dictionary) -> void:
 	state_time = 0.0
 	guard_held = false
 	_queued_dir = -1
+
+
+## Recul selon la force du coup et son type (le contondant pousse plus, le perforant moins), freiné par le poids porté.
+func _emit_knockback(attacker: Combatant, dealt: float) -> void:
+	if attacker == null or attacker.body == null or body == null or dealt <= 0.0:
+		return
+	var away := body.global_position - attacker.body.global_position
+	away.y = 0.0
+	if away.length() < 0.01:
+		return
+	var type_factor := 1.0
+	match last_damage_type:
+		DamageType.Type.CONTONDANT: type_factor = 1.5
+		DamageType.Type.PERFORANT: type_factor = 0.7
+	var heavy := clampf(stats.carried_weight / maxf(stats.get_derived(&"charge_max"), 1.0), 0.0, 1.5)
+	var speed := GameConfig.KNOCKBACK_SPEED * clampf(dealt / 20.0, 0.5, 2.0) * type_factor * (1.0 - 0.4 * minf(heavy, 1.0))
+	knockback.emit(away.normalized() * speed)

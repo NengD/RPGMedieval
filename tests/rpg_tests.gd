@@ -63,6 +63,7 @@ func _run() -> void:
 	await _test_arm_ik()
 	await _test_outfits()
 	await _test_arena()
+	await _test_polish()
 	_test_translation()
 	print("")
 	print("RÉSULTAT RPG : %s (%d échec(s))" % ["SUCCÈS" if failures == 0 else "ÉCHEC", failures])
@@ -780,5 +781,138 @@ func _test_arena() -> void:
 			all_files = false
 	_check(all_files, "toutes les textures, le ciel et les accessoires sont présents")
 	_check(credits.contains("polyhaven.com/a/cobblestone_floor_01") and credits.contains("polyhaven.com/a/rustic_stone_wall") and credits.contains("polyhaven.com/a/rough_wood") and credits.contains("kloofendal_48d_partly_cloudy_puresky"), "chaque ressource Poly Haven est créditée dans CREDITS.md")
+	main.queue_free()
+	await physics_frame
+
+# ---------------------------------------------------------------- animations plus naturelles (étape 6)
+
+func _test_polish() -> void:
+	print("[Animations plus naturelles]")
+	Registry.clear_instances()
+	var main = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await _frames(5)
+	var p: Player = main.player
+	var m: HeroModel = p.model
+	var e: Enemy = main.enemy
+	e.ai_enabled = false
+	# --- cadence = vitesse réelle
+	var walk := GameConfig.WALK_SPEED
+	var run := GameConfig.RUN_SPEED
+	var load_ratio := clampf(p.combatant.stats.carried_weight / p.combatant.stats.get_derived(&"charge_max"), 0.0, 1.5)
+	var weight_k := 1.0 - GameConfig.ANIM_WEIGHT_EFFECT * load_ratio
+	var walk_ref: float = m._refs[&"loco"][0]
+	var run_ref: float = m._refs[&"loco"][1]
+	_check(walk_ref > 0.8 and run_ref > 3.0 and run_ref > walk_ref * 2.0, "vitesses d'origine des animations mesurées (marche %.2f m/s, course %.2f m/s)" % [walk_ref, run_ref])
+	var foot_ok := true
+	var last_scale := 0.0
+	var monotonic := true
+	for h in [0.8, 1.2, 2.0, 3.0, 4.5, 6.0]:
+		var sc := m.stride_scale(&"loco", h)
+		var t := clampf((h - walk_ref) / (run_ref - walk_ref), 0.0, 1.0)
+		var ref := lerpf(walk_ref, run_ref, t)
+		if h >= walk_ref and absf(sc / weight_k * ref - h) > h * 0.06 and sc < GameConfig.ANIM_STRIDE_MAX - 0.01:
+			foot_ok = false
+		if sc < last_scale - 0.35:
+			monotonic = false
+		last_scale = sc
+	_check(foot_ok, "la cadence suit la vitesse réelle : les pieds ne glissent pas (de 0,8 à 6 m/s)")
+	_check(monotonic and m.stride_scale(&"loco", run) <= GameConfig.ANIM_STRIDE_MAX, "la cadence reste progressive, plafonnée à %.1f x" % GameConfig.ANIM_STRIDE_MAX)
+	var s_walk := m.stride_scale(&"loco", walk)
+	var s_heavy := m.stride_scale(&"loco", walk)
+	p.combatant.equipment.clear_armor()
+	var s_light := m.stride_scale(&"loco", walk)
+	_check(s_light > s_heavy, "le poids de la tenue ralentit un peu la cadence (%.2f x en plates, %.2f x sans tenue)" % [s_heavy, s_light])
+	p.combatant.equipment.equip_outfit(Registry.get_data(&"tenue.chevalier_plates"))
+	# --- pieds
+	_check(FootIK.ground_offset(0.3, 0.0, 0.35) == 0.3 and FootIK.ground_offset(1.0, 0.0, 0.35) == 0.35 and FootIK.ground_offset(-1.0, 0.0, 0.35) == -0.35, "pieds : correction de hauteur limitée")
+	_check(FootIK.plant_weight(0.0) > 0.99 and FootIK.plant_weight(0.3) < 0.01 and FootIK.plant_weight(0.1) > 0.1 and FootIK.plant_weight(0.1) < 0.9, "pieds : un pied posé suit le terrain, un pied en l'air presque pas")
+	_check(m.foot_ik != null and m.foot_ik._legs.size() == 2, "deux jambes pilotées par cinématique inverse")
+	# --- coups reçus selon la direction
+	var c: Combatant = p.combatant
+	var attacker: Combatant = e.combatant
+	var base_pos: Vector3 = p.global_position
+	var cases := [
+		["de la gauche", Vector3(-1.5, 0, 0), 20.0, false, &"hit_left"],
+		["de la droite", Vector3(1.5, 0, 0), 20.0, false, &"hit_right"],
+		["de face, léger", Vector3(0, 0, -1.5), 10.0, false, &"hit_front_light"],
+		["de face, fort", Vector3(0, 0, -1.5), 40.0, false, &"hit_gut"],
+	]
+	for cs in cases:
+		e.global_position = base_pos + p.global_basis * cs[1]
+		c.last_attacker = attacker
+		c.last_hit_amount = cs[2]
+		c.last_hit_head = cs[3]
+		_check(m._pick_hit_anim(false) == cs[4], "coup %s (%.0f dégâts) : réaction %s" % [cs[0], cs[2], cs[4]])
+	c.last_hit_head = true
+	_check(m._pick_hit_anim(false) == &"hit_head", "tir à la tête : secousse de la tête")
+	c.last_hit_head = false
+	var lib := m.anim_player.get_animation_library("")
+	var all_there := true
+	for a in [&"hit_left", &"hit_right", &"hit_gut", &"hit_front_light", &"hit_head"]:
+		if not lib.has_animation(a) or not HeroModel.UPPER_STATES.has(a):
+			all_there = false
+	_check(all_there, "les cinq réactions directionnelles sont dans la bibliothèque et le graphe d'animation")
+	# --- recul physique
+	var pushes := {}
+	var victim := _make(0, Vector3(20, 0, 20), 0.0)
+	var striker := _make(1, Vector3(20, 0, 18), 0.0)
+	var got: Array[Vector3] = []
+	victim.knockback.connect(func(v: Vector3): got.append(v))
+	for t in [T.TRANCHANT, T.CONTONDANT, T.PERFORANT]:
+		victim.reset()
+		victim.receive_hit(striker, 0, DamagePacket.of(20.0, t))
+		pushes[t] = got[-1]
+	_check(pushes[T.CONTONDANT].length() > pushes[T.TRANCHANT].length() and pushes[T.TRANCHANT].length() > pushes[T.PERFORANT].length(), "recul : contondant > tranchant > perforant (%.1f, %.1f, %.1f m/s)" % [pushes[T.CONTONDANT].length(), pushes[T.TRANCHANT].length(), pushes[T.PERFORANT].length()])
+	_check(pushes[T.TRANCHANT].z > 0.0 and absf(pushes[T.TRANCHANT].x) < 0.01, "le recul éloigne la victime de l'agresseur")
+	victim.reset()
+	victim.receive_hit(striker, 0, DamagePacket.of(40.0, T.TRANCHANT))
+	_check(got[-1].length() > pushes[T.TRANCHANT].length(), "un coup plus fort fait plus reculer")
+	victim.reset()
+	victim.equipment.equip_outfit(Registry.get_data(&"tenue.chevalier_plates"))
+	victim.receive_hit(striker, 0, DamagePacket.of(20.0, T.TRANCHANT))
+	_check(got[-1].length() < pushes[T.TRANCHANT].length(), "les plates, plus lourdes, font moins reculer")
+	victim.body.queue_free()
+	striker.body.queue_free()
+	# --- petit pas en avant visuel : le corps réel et la portée ne bougent pas
+	e.global_position = Vector3(30, 0, 30)
+	p.combatant.reset()
+	p.combatant.stamina = 100.0
+	var body_before: Vector3 = p.global_position
+	var reach_before := c.attack_step(1).reach
+	p.try_attack()
+	var max_lunge := 0.0
+	for i in 120:
+		await physics_frame
+		max_lunge = maxf(max_lunge, -m.model_root.position.z)
+	_check(max_lunge > GameConfig.ATTACK_LUNGE * 0.9, "pendant l'attaque le personnage fait un petit pas en avant (%.2f m)" % max_lunge)
+	_check(Vector2(p.global_position.x - body_before.x, p.global_position.z - body_before.z).length() < 0.01 and is_equal_approx(c.attack_step(1).reach, reach_before), "le corps réel et la portée du coup ne changent pas")
+	await _frames(120)
+	_check(absf(m.model_root.position.z) < 0.01, "retour en position après l'attaque")
+	# --- regard
+	e.global_position = p.global_position + Vector3(0, 0, -5)
+	await _frames(40)
+	_check(m._look_amount > 0.8 and m._look_head.influence > 0.5, "la tête suit l'adversaire proche (%.0f %%)" % (m._look_amount * 100.0))
+	e.global_position = p.global_position + Vector3(0, 0, -40)
+	await _frames(120)
+	_check(m._look_amount < 0.1, "adversaire lointain : le regard revient droit devant")
+	# --- deux mains
+	e.global_position = Vector3(30, 0, 30)
+	p.combatant.equipment.equip_weapon(Registry.get_data(&"arme.lance"))
+	await _frames(60)
+	_check(m._grip_l_marker != null and m.ik_l.influence > 0.9, "lance : la main gauche tient la hampe (repère Grip_L)")
+	p.combatant.equipment.equip_weapon(Registry.get_data(&"arme.epee_longue"))
+	await _frames(60)
+	_check(m._grip_l_marker == null and m.ik_l.influence < 0.1, "épée à une main : le bras gauche est libre")
+	# --- ragdoll
+	var meshes_before := m._armor_holder.get_child_count()
+	p.combatant.invincible = false
+	c.take_damage(9999.0, attacker)
+	await _frames(30)
+	_check(m.is_ragdoll() and m.ragdoll_sim.get_child_count() == 16, "mort en ragdoll : 16 os physiques")
+	_check(m._armor_holder.get_child_count() == meshes_before and m.sword_holder.visible, "l'équipement suit le corps (même maillages, arme en main)")
+	p.reset_to(Vector3(0, 0.05, 9), 0.0)
+	await _frames(30)
+	_check(not m.is_ragdoll() and m.tree.active and not c.dead, "remise à zéro : plus de ragdoll, animations réactivées")
 	main.queue_free()
 	await physics_frame

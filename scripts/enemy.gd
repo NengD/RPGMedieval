@@ -77,6 +77,7 @@ func _ready() -> void:
 		combatant.equipment.equip_outfit(outfit)
 	model.apply_equipment(combatant.equipment)
 	combatant.damaged.connect(_on_damaged)
+	combatant.knockback.connect(_on_knockback)
 	combatant.hit_resolved.connect(_on_hit_resolved)
 	combatant.died.connect(_on_died)
 	set_difficulty(difficulty)
@@ -406,6 +407,7 @@ func _check_arrows(delta: float) -> void:
 # ---------------------------------------------------------------- réactions
 
 func _process(delta: float) -> void:
+	_apply_knockback(delta)
 	model.drive(delta, velocity, global_basis, is_on_floor(), false, Vector3.ZERO)
 
 
@@ -426,3 +428,18 @@ func _on_hit_resolved(result: int, _dir: int, _amount: float, _attacker: Combata
 
 func _on_died() -> void:
 	_guard_wanted = false
+
+
+# ---------------------------------------------------------------- recul quand on est touché
+
+var _knock := Vector3.ZERO
+
+
+func _on_knockback(v: Vector3) -> void:
+	_knock = v
+
+
+func _apply_knockback(delta: float) -> void:
+	if _knock.length() > 0.05:
+		move_and_collide(_knock * delta)
+		_knock = _knock.move_toward(Vector3.ZERO, GameConfig.KNOCKBACK_DECAY * delta)

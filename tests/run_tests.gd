@@ -504,7 +504,7 @@ func _run() -> void:
 	player.combatant.invincible = false
 	player.combatant.take_damage(9999.0)
 	await _frames(30)
-	_check(player.combatant.dead and model.tree.get("parameters/FullBlend/blend_amount") > 0.9 and model.tree.get("parameters/Full/current_state") == "death", "mort : animation de mort jouée")
+	_check(player.combatant.dead and (model.is_ragdoll() or (model.tree.get("parameters/FullBlend/blend_amount") > 0.9 and model.tree.get("parameters/Full/current_state") == "death")), "mort : ragdoll lancé (ou animation de mort si le ragdoll est désactivé)")
 	player.combatant.invincible = true
 	player.reset_to(Vector3(0, 0.05, 9), 0.0)
 	await _frames(30)
