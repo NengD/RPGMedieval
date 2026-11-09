@@ -515,6 +515,29 @@ func _run() -> void:
 	var tint_mat := enemy_mesh.get_surface_override_material(0) as StandardMaterial3D
 	_check(tint_mat != null and tint_mat.albedo_color.r > tint_mat.albedo_color.g + 0.05, "l'ennemi est teinté en rouge sombre")
 
+	print("[Parade par direction]")
+	player.combatant.invincible = true
+	player.combatant.reset()
+	player.model.reset()
+	_teleport(Vector3(0, 0.05, 9), 0.0)
+	await _frames(60)
+	var hands := {}
+	for d in 4:
+		player.aim_dir = d
+		player.aim_accum = Vector2.ZERO
+		Input.action_press(&"guard")
+		await _frames(120)
+		var hp: Vector3 = player.model.to_local(player.model.ik_target.global_position)   # où l'on demande à la main d'aller (repère du personnage)
+		hands[d] = hp
+		_check(player.combatant.is_guarding() and player.combatant.guard_dir == d and player.model.ik.influence > 0.9, "garde %s : le bras est dirigé (%.0f %%)" % [GameConfig.DIR_NAMES[d], player.model.ik.influence * 100.0])
+		Input.action_release(&"guard")
+		await _frames(60)
+	_check(hands[Combatant.Dir.UP].y > hands[Combatant.Dir.RIGHT].y + 0.3, "garde haute : la main est demandée nettement plus haut qu'en garde latérale")
+	_check(hands[Combatant.Dir.DOWN].y < hands[Combatant.Dir.RIGHT].y - 0.2, "garde basse : la main est plus bas")
+	_check(hands[Combatant.Dir.RIGHT].x - hands[Combatant.Dir.LEFT].x > 0.25 or hands[Combatant.Dir.LEFT].x - hands[Combatant.Dir.RIGHT].x > 0.25, "gardes gauche et droite : la main change de côté")
+	_check(player.model.ik.influence < 0.1, "garde relâchée : le bras reprend l'animation")
+	player.combatant.invincible = false
+
 	print("[Ennemi face aux tirs]")
 	# garde contre une flèche vue à temps (scène figée pour être déterministe)
 	enemy.process_mode = Node.PROCESS_MODE_INHERIT

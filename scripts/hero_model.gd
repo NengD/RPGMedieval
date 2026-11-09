@@ -38,6 +38,8 @@ var ik_target: Node3D
 var ik_pole: Node3D
 var hand_aim: HandAimModifier
 var _ik_amount := 0.0
+var _ik_pos := Vector3.ZERO      # position lissée de la main (repère du personnage)
+var _ik_blade := Vector3.ZERO    # direction lissée de la lame
 var _attack_full_body := false
 
 
@@ -287,14 +289,31 @@ func _ik_blade_direction(c: Combatant) -> Vector3:
 
 func _update_ik(delta: float, attacking: bool) -> void:
 	var directed: bool = attacking and (combatant.attack_dir == Combatant.Dir.UP or combatant.attack_dir == Combatant.Dir.DOWN)
-	_ik_amount = move_toward(_ik_amount, 1.0 if directed else 0.0, delta * 12.0)
+	var guarding: bool = not attacking and not _dead and combatant.is_guarding()
+	var active := directed or guarding
+	_ik_amount = move_toward(_ik_amount, 1.0 if active else 0.0, delta * 12.0)
 	ik.influence = _ik_amount
 	hand_aim.influence = _ik_amount
-	if _ik_amount > 0.0 or directed:
-		var local := _ik_hand_position(combatant) if directed else GameConfig.IK_REST
-		ik_target.global_position = global_transform * local
+	if _ik_pos == Vector3.ZERO:
+		_ik_pos = GameConfig.IK_REST
+		_ik_blade = GameConfig.IK_REST_BLADE.normalized()
+	if directed:
+		_ik_pos = _ik_hand_position(combatant)
+		_ik_blade = _ik_blade_direction(combatant).normalized()
+	else:
+		# Parade : pose selon la direction de garde ; sinon retour au repos (en douceur)
+		var goal_pos: Vector3 = GameConfig.IK_REST
+		var goal_blade: Vector3 = GameConfig.IK_REST_BLADE
+		if guarding:
+			goal_pos = GameConfig.IK_GUARD_HAND[combatant.guard_dir]
+			goal_blade = GameConfig.IK_GUARD_BLADE[combatant.guard_dir]
+		var k := 1.0 - exp(-GameConfig.IK_GUARD_SPEED * delta)
+		_ik_pos = _ik_pos.lerp(goal_pos, k)
+		_ik_blade = _ik_blade.lerp(goal_blade.normalized(), k).normalized()
+	if _ik_amount > 0.0 or active:
+		ik_target.global_position = global_transform * _ik_pos
 		ik_pole.global_position = global_transform * GameConfig.IK_POLE
-		hand_aim.target_direction_world = global_transform.basis * (_ik_blade_direction(combatant) if directed else GameConfig.IK_REST_BLADE)
+		hand_aim.target_direction_world = global_transform.basis * _ik_blade
 
 
 func _build_attachments() -> void:
