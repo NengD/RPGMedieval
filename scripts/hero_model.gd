@@ -45,6 +45,7 @@ var _weapon_amount := 0.0        # 0 = épée en main, 1 = arc en main (fondu de
 var _bow_release_time := 0.0
 var bow_holder: BoneAttachment3D
 var xbow_holder: BoneAttachment3D
+var _xbow_node: Node3D
 var _xbow_amount := 0.0
 var _xbow_bolt: Node3D
 var bow_prop: Node3D
@@ -412,8 +413,7 @@ func _build_bow_prop() -> void:
 	bow_prop = Node3D.new()
 	bow_prop.name = "Bow"
 	bow_holder.add_child(bow_prop)
-	bow_prop.rotation = GameConfig.BOW_HAND_ROTATION
-	bow_prop.position = GameConfig.BOW_HAND_OFFSET
+	bow_prop.top_level = true   # placé chaque image à partir des mains (voir _place_props)
 	var wood := Color(0.45, 0.30, 0.15)
 	_add_part(bow_prop, Vector3(0.04, 0.2, 0.04), Vector3(0, 0, 0), Vector3.ZERO, wood)
 	_add_part(bow_prop, Vector3(0.028, 0.5, 0.028), Vector3(0, 0.32, 0.075), Vector3(20, 0, 0), wood)
@@ -444,8 +444,8 @@ func _build_xbow_prop() -> void:
 	var x := Node3D.new()
 	x.name = "Crossbow"
 	xbow_holder.add_child(x)
-	x.rotation = GameConfig.XBOW_HAND_ROTATION
-	x.position = GameConfig.XBOW_HAND_OFFSET
+	x.top_level = true
+	_xbow_node = x
 	var wood := Color(0.40, 0.27, 0.14)
 	var iron := Color(0.3, 0.3, 0.33)
 	_add_part(x, Vector3(0.06, 0.08, 0.7), Vector3(0, 0, -0.25), Vector3.ZERO, wood)
@@ -482,7 +482,31 @@ func _set_segment(mi: MeshInstance3D, a: Vector3, b: Vector3) -> void:
 
 
 ## La corde suit la main droite ; la flèche est encochée tant qu'on bande.
+## L'arc et l'arbalète sont placés à partir de la position réelle des mains (et pas de l'orientation de l'os,
+## qui varie selon l'animation) : l'arc est vertical dans la main gauche, la flèche part droit devant ;
+## l'arbalète suit la ligne main droite -> main gauche.
+func _hand_world(bone: String) -> Vector3:
+	return skeleton.global_transform * skeleton.get_bone_global_pose(skeleton.find_bone(bone)).origin
+
+
+func _place_props() -> void:
+	var fwd := -global_transform.basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	if bow_holder.visible:
+		var grip := _hand_world("mixamorig_LeftHand") + fwd * GameConfig.BOW_GRIP_FORWARD
+		bow_prop.global_transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), grip)
+	if xbow_holder.visible:
+		var r := _hand_world("mixamorig_RightHand")
+		var l := _hand_world("mixamorig_LeftHand")
+		var line := l - r
+		if line.length() > 0.05:
+			var up := Vector3.UP
+			_xbow_node.global_transform = Transform3D(Basis.looking_at(line.normalized(), up), r + up * GameConfig.XBOW_GRIP_UP)
+
+
 func _update_bow_prop(delta: float, drawing: bool, _tension: float) -> void:
+	_place_props()
 	if not bow_holder.visible:
 		return
 	var rest := Vector3(0.0, 0.0, 0.15)

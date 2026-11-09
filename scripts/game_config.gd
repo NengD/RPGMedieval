@@ -237,19 +237,16 @@ const IK_REST_BLADE := Vector3(0.0, 0.8, -0.6)       # direction de la lame au r
 
 # Parade : la main et la lame prennent une pose par direction (comme en 1re personne).
 # Ordre : 0 haut, 1 droite, 2 bas, 3 gauche. Repère du personnage : +X = sa droite, +Y = haut, -Z = devant.
-const IK_GUARD_HAND  := [Vector3(0.22, 1.88, -0.38), Vector3(0.52, 1.38, -0.50), Vector3(0.28, 0.98, -0.52), Vector3(-0.08, 1.38, -0.58)]
-const IK_GUARD_BLADE := [Vector3(-1.0, 0.10, 0.0), Vector3(-0.12, 1.0, -0.25), Vector3(-0.75, -0.65, -0.15), Vector3(0.12, 1.0, -0.25)]
+const IK_GUARD_HAND  := [Vector3(0.22, 1.88, -0.38), Vector3(0.16, 1.32, -0.55), Vector3(0.28, 0.98, -0.52), Vector3(-0.08, 1.38, -0.58)]
+const IK_GUARD_BLADE := [Vector3(-1.0, 0.10, 0.0), Vector3(-0.35, 0.90, -0.30), Vector3(-0.75, -0.65, -0.15), Vector3(0.12, 1.0, -0.25)]
 const IK_GUARD_SPEED := 10.0    # vitesse à laquelle la main rejoint la pose de garde (plus bas = geste plus doux, plus haut = plus vif)
 const IK_GUARD_BLEND := 8.0    # vitesse à laquelle le bras passe de l'animation à la pose de garde
 
-# Arc tenu en main (3e personne) : orientation et décalage de l'arc dans la main gauche
-# (mesurés avec tools/bow_hand_axes.gd à pleine tension : l'arc est alors vertical, la corde vers l'archer).
-const BOW_HAND_ROTATION := Vector3(1.258, -0.749, 1.110)   # radians
-const BOW_HAND_OFFSET := Vector3(0.0, 0.08, 0.0)
+# Arc tenu en main (3e personne) : l'arc est placé dans la main gauche, vertical, la flèche droit devant
+const BOW_GRIP_FORWARD := 0.05   # décalage de l'arc vers l'avant par rapport au poignet (m)
 
-# Arbalète tenue en main (3e personne) : orientation dans la main droite (tools/xbow_hand_axes.gd : l'avant de l'arme va vers la main gauche)
-const XBOW_HAND_ROTATION := Vector3(1.053, 2.569, 1.060)   # radians
-const XBOW_HAND_OFFSET := Vector3(0.0, 0.0, 0.0)
+# Arbalète tenue en main (3e personne) : placée sur la ligne main droite -> main gauche
+const XBOW_GRIP_UP := 0.03   # décalage vers le haut par rapport au poignet droit (m)
 
 # Enchaînement (combo) : plus de choix de direction, chaque clic enchaîne le coup suivant
 # (0 haut, 1 droite, 2 estoc, 3 gauche). Sans attaque pendant COMBO_RESET_TIME s, on repart du premier coup.
