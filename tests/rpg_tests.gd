@@ -60,6 +60,7 @@ func _run() -> void:
 	await _test_equipment()
 	await _test_save()
 	await _test_weapons()
+	await _test_arm_ik()
 	_test_translation()
 	print("")
 	print("RÉSULTAT RPG : %s (%d échec(s))" % ["SUCCÈS" if failures == 0 else "ÉCHEC", failures])
@@ -535,3 +536,54 @@ func _test_weapons() -> void:
 	b.body.queue_free()
 	c2.body.queue_free()
 	await physics_frame
+
+
+# ---------------------------------------------------------------- bras : écu, arc, arbalète
+
+func _test_arm_ik() -> void:
+	print("[Bras : prises des armes]")
+	Registry.clear_instances()
+	var main = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await _frames(5)
+	var p: Player = main.player
+	p.combatant.invincible = true
+	_check(p.toggle_shield() == 1, "écu équipé")
+	Input.action_press(&"guard")
+	await _frames(120)
+	_check(p.combatant.is_guarding() and p.model.ik_l.influence > 0.9, "parade avec écu : le bras gauche amène l'écu (%.0f %%)" % (p.model.ik_l.influence * 100.0))
+	_check(p.model.ik.influence < 0.1, "parade avec écu : le bras de l'épée ne se tend plus (%.0f %%)" % (p.model.ik.influence * 100.0))
+	var shield_pos: Vector3 = p.model._shield_node.global_position
+	var fwd: Vector3 = -p.global_basis.z
+	_check((shield_pos - p.global_position).dot(fwd) > 0.2, "l'écu est devant le héros en parade")
+	Input.action_release(&"guard")
+	p.toggle_shield()
+	await _frames(60)
+	_check(p.model.ik_l.influence < 0.1, "écu retiré / garde relâchée : le bras gauche reprend l'animation")
+	p.switch_weapon(Player.Weapon.CROSSBOW)
+	await _frames(90)
+	_check(p.model.ik.influence > 0.9 and p.model.ik_l.influence > 0.9, "arbalète : les deux bras tiennent les poignées")
+	# les positions demandées aux mains sont à portée des bras (les os animés par IK ne se lisent pas en mode sans fenêtre)
+	_check(_reach_ok(p, "Right", p.model._grip_r) and _reach_ok(p, "Left", p.model._grip_l), "arbalète : les poignées sont à portée des deux bras")
+	p.switch_weapon(Player.Weapon.BOW)
+	Input.action_press(&"attack")
+	p.start_draw()
+	await _frames(60)
+	_check(p.model.ik_l.influence > 0.9, "arc bandé : le bras de l'arc est tendu par cinématique inverse")
+	_check(_reach_ok(p, "Left", p.model._grip_l), "arc : la poignée est à portée du bras gauche (bras tendu)")
+	Input.action_release(&"attack")
+	p.cancel_draw()
+	await _frames(120)
+	_check(p.model.ik_l.influence < 0.1 and not p.model._bow_in_hand, "arc relâché : retour dans le dos, bras libre")
+	main.queue_free()
+	await physics_frame
+
+
+## Le point est-il à la portée du bras (longueur épaule-coude-poignet) ?
+func _reach_ok(p: Player, side: String, point: Vector3) -> bool:
+	var m: HeroModel = p.model
+	var shoulder := m._hand_world("mixamorig_%sArm" % side)
+	var elbow := m._hand_world("mixamorig_%sForeArm" % side)
+	var wrist := m._hand_world("mixamorig_%sHand" % side)
+	var length := shoulder.distance_to(elbow) + elbow.distance_to(wrist)
+	return shoulder.distance_to(point) <= length + 0.02

@@ -38,6 +38,13 @@ var ik_target: Node3D
 var ik_pole: Node3D
 var hand_aim: HandAimModifier
 var _ik_amount := 0.0
+var ik_l: TwoBoneIK3D            # bras gauche : arc, arbalète, écu en parade
+var ik_target_l: Node3D
+var ik_pole_l: Node3D
+var _ikl_amount := 0.0
+var _grip_mode := 0              # 0 rien, 1 arc en main, 2 arbalète
+var _grip_r := Vector3.ZERO      # où doivent être les mains (monde)
+var _grip_l := Vector3.ZERO
 var _ik_pos := Vector3.ZERO      # position lissée de la main (repère du personnage)
 var _ik_blade := Vector3.ZERO    # direction lissée de la lame
 var _attack_full_body := false
@@ -318,6 +325,22 @@ func _build_ik() -> void:
 	ik.set_target_node(0, ik.get_path_to(ik_target))
 	ik.set_pole_node(0, ik.get_path_to(ik_pole))
 	ik.influence = 0.0
+	ik_target_l = Node3D.new()
+	ik_target_l.name = "IKTargetL"
+	add_child(ik_target_l)
+	ik_pole_l = Node3D.new()
+	ik_pole_l.name = "IKPoleL"
+	add_child(ik_pole_l)
+	ik_l = TwoBoneIK3D.new()
+	ik_l.name = "ArmIKLeft"
+	skeleton.add_child(ik_l)
+	ik_l.setting_count = 1
+	ik_l.set_root_bone_name(0, "mixamorig_LeftArm")
+	ik_l.set_middle_bone_name(0, "mixamorig_LeftForeArm")
+	ik_l.set_end_bone_name(0, "mixamorig_LeftHand")
+	ik_l.set_target_node(0, ik_l.get_path_to(ik_target_l))
+	ik_l.set_pole_node(0, ik_l.get_path_to(ik_pole_l))
+	ik_l.influence = 0.0
 	hand_aim = HandAimModifier.new()   # APRÈS le TwoBoneIK3D : il oriente la lame une fois la main placée
 	hand_aim.name = "HandAim"
 	skeleton.add_child(hand_aim)
@@ -367,32 +390,52 @@ func _ik_blade_direction(c: Combatant) -> Vector3:
 
 
 func _update_ik(delta: float, attacking: bool) -> void:
+	var has_shield := _shield_node.get_child_count() > 0
 	var directed: bool = attacking and (combatant.attack_dir == Combatant.Dir.UP or combatant.attack_dir == Combatant.Dir.DOWN)
-	var guarding: bool = not attacking and not _dead and combatant.is_guarding()
+	var guarding_now: bool = not attacking and not _dead and combatant.is_guarding()
+	var guarding: bool = guarding_now and not has_shield          # sans écu : l'épée fait la parade
+	var shield_guard: bool = guarding_now and has_shield          # avec écu : c'est l'écu qui pare, l'épée reste basse
+	var xbow_on := _grip_mode == 2
+	var bow_on := _grip_mode == 1
 	var active := directed or guarding
-	_ik_amount = move_toward(_ik_amount, 1.0 if active else 0.0, delta * (12.0 if directed else GameConfig.IK_GUARD_BLEND))
+	_ik_amount = move_toward(_ik_amount, 1.0 if (active or xbow_on) else 0.0, delta * (12.0 if (directed or xbow_on) else GameConfig.IK_GUARD_BLEND))
 	ik.influence = _ik_amount
-	hand_aim.influence = _ik_amount
+	hand_aim.influence = 0.0 if xbow_on else _ik_amount
 	if _ik_pos == Vector3.ZERO:
 		_ik_pos = GameConfig.IK_REST
 		_ik_blade = GameConfig.IK_REST_BLADE.normalized()
-	if directed:
-		_ik_pos = _ik_hand_position(combatant)
-		_ik_blade = _ik_blade_direction(combatant).normalized()
+	if xbow_on:
+		ik_target.global_position = _grip_r
+		ik_pole.global_position = _grip_r + global_transform.basis.x * 0.6 + Vector3.DOWN * 0.5
 	else:
-		# Parade : pose selon la direction de garde ; sinon retour au repos (en douceur)
-		var goal_pos: Vector3 = GameConfig.IK_REST
-		var goal_blade: Vector3 = GameConfig.IK_REST_BLADE
-		if guarding:
-			goal_pos = GameConfig.IK_GUARD_HAND[combatant.guard_dir]
-			goal_blade = GameConfig.IK_GUARD_BLADE[combatant.guard_dir]
-		var k := 1.0 - exp(-GameConfig.IK_GUARD_SPEED * delta)
-		_ik_pos = _ik_pos.lerp(goal_pos, k)
-		_ik_blade = _ik_blade.lerp(goal_blade.normalized(), k).normalized()
-	if _ik_amount > 0.0 or active:
-		ik_target.global_position = global_transform * _ik_pos
-		ik_pole.global_position = global_transform * GameConfig.IK_POLE
-		hand_aim.target_direction_world = global_transform.basis * _ik_blade
+		if directed:
+			_ik_pos = _ik_hand_position(combatant)
+			_ik_blade = _ik_blade_direction(combatant).normalized()
+		else:
+			# Parade : pose selon la direction de garde ; sinon retour au repos (en douceur)
+			var goal_pos: Vector3 = GameConfig.IK_REST
+			var goal_blade: Vector3 = GameConfig.IK_REST_BLADE
+			if guarding:
+				goal_pos = GameConfig.IK_GUARD_HAND[combatant.guard_dir]
+				goal_blade = GameConfig.IK_GUARD_BLADE[combatant.guard_dir]
+			var k := 1.0 - exp(-GameConfig.IK_GUARD_SPEED * delta)
+			_ik_pos = _ik_pos.lerp(goal_pos, k)
+			_ik_blade = _ik_blade.lerp(goal_blade.normalized(), k).normalized()
+		if _ik_amount > 0.0 or active:
+			ik_target.global_position = global_transform * _ik_pos
+			ik_pole.global_position = global_transform * GameConfig.IK_POLE
+			hand_aim.target_direction_world = global_transform.basis * _ik_blade
+	# bras gauche
+	var left_on := bow_on or xbow_on or shield_guard
+	_ikl_amount = move_toward(_ikl_amount, 1.0 if left_on else 0.0, delta * 10.0)
+	ik_l.influence = _ikl_amount
+	if left_on:
+		if shield_guard:
+			ik_target_l.global_position = global_transform * GameConfig.SHIELD_GUARD_HAND
+			ik_pole_l.global_position = global_transform * Vector3(-0.9, 1.0, 0.3)
+		else:
+			ik_target_l.global_position = _grip_l
+			ik_pole_l.global_position = _grip_l - global_transform.basis.x * 0.6 + Vector3.DOWN * 0.4
 
 
 func _build_attachments() -> void:
@@ -416,8 +459,7 @@ func _build_attachments() -> void:
 	_shield_node = Node3D.new()
 	_shield_node.name = "Shield"
 	shield_holder.add_child(_shield_node)
-	_shield_node.rotation_degrees = GameConfig.SHIELD_ROTATION_DEG
-	_shield_node.position = GameConfig.SHIELD_OFFSET
+	_shield_node.top_level = true   # posé à chaque image devant l'avant-bras gauche (voir _place_props)
 
 
 # ---------------------------------------------------------------- modèles d'armes
@@ -589,46 +631,51 @@ func _place_props() -> void:
 	var fwd := -global_transform.basis.z
 	fwd.y = 0.0
 	fwd = fwd.normalized()
+	var right := global_transform.basis.x.normalized()
+	if _shield_node.get_child_count() > 0:
+		# L'écu est posé devant l'avant-bras gauche, face vers l'avant, pointe vers le bas : toujours « au niveau du bras »
+		var mid := (_hand_world("mixamorig_LeftForeArm") + _hand_world("mixamorig_LeftHand")) * 0.5
+		_shield_node.global_transform = Transform3D(Basis.looking_at(-fwd, Vector3.UP), mid + fwd * GameConfig.SHIELD_FORWARD - right * GameConfig.SHIELD_SIDE)
 	if bow_holder.visible:
 		if _bow_in_hand:
-			var grip := _hand_world("mixamorig_LeftHand") + fwd * GameConfig.BOW_GRIP_FORWARD
-			bow_prop.global_transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), grip)
+			# Arc : la main gauche (placée par cinématique inverse) tient la poignée, bras tendu vers l'avant
+			bow_prop.global_transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), _grip_l)
 		else:
 			# Arc porté dans le dos (en diagonale) : il ne traverse plus le corps quand on ne vise pas
-			var right := global_transform.basis.x.normalized()
 			var long_axis := (right * GameConfig.BOW_BACK_TILT + Vector3.UP).normalized()
 			var z_axis := (fwd - long_axis * fwd.dot(long_axis)).normalized()   # côté corde vers le dos
 			var x_axis := long_axis.cross(z_axis).normalized()
 			var spine := _hand_world("mixamorig_Spine2")
 			bow_prop.global_transform = Transform3D(Basis(x_axis, long_axis, z_axis), spine - fwd * GameConfig.BOW_BACK_DEPTH + right * GameConfig.BOW_BACK_SIDE)
 	if xbow_holder.visible:
-		# Les deux mains tiennent l'arbalète : poignée arrière (Grip_R) dans la main droite, avant du fût (Grip_L) dans la gauche
-		var r := _hand_world("mixamorig_RightHand")
-		var l := _hand_world("mixamorig_LeftHand")
-		var line := l - r
-		if line.length() > 0.05:
-			var dir := line.normalized()
-			var mid := (r + l) * 0.5
-			_xbow_node.global_transform = Transform3D(Basis.looking_at(dir, Vector3.UP), mid - dir * (_xbow_grip * 0.5))
+		# Arbalète : poignée arrière (Grip_R) dans la main droite, avant du fût (Grip_L) dans la gauche (cinématique inverse des deux bras)
+		_xbow_node.global_transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), _grip_r)
 
 
-## Les postures d'arc et de fusil sont de profil : la ligne main arrière -> main avant pointe de ~30 à 45° à côté
-## de la direction visée. On tourne le corps du personnage (pas son collisionneur) pour que cette ligne,
-## donc l'arme et la flèche, soit exactement dans l'axe du tir.
-func _update_aim_yaw(delta: float, active: bool) -> void:
-	var goal_step := 0.0
-	if active:
-		var line := _hand_world("mixamorig_LeftHand") - _hand_world("mixamorig_RightHand")
-		line.y = 0.0
-		var fwd := -global_transform.basis.z
-		fwd.y = 0.0
-		if line.length() > 0.05:
-			var ang := fwd.normalized().signed_angle_to(line.normalized(), Vector3.UP)
-			goal_step = -ang
-	if active:
-		_aim_corr = clampf(_aim_corr + goal_step * minf(1.0, delta * 12.0), -1.2, 1.2)
-	else:
-		_aim_corr = move_toward(_aim_corr, 0.0, delta * 6.0)
+## Points où doivent se trouver les mains, d'après les épaules et la direction visée (indépendant de l'animation).
+func _compute_grips() -> void:
+	var fwd := -global_transform.basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	var right := global_transform.basis.x.normalized()
+	var sh_r := _hand_world("mixamorig_RightArm")
+	var sh_l := _hand_world("mixamorig_LeftArm")
+	if _grip_mode == 2:
+		_grip_r = sh_r + fwd * GameConfig.XBOW_GRIP_R_FWD + Vector3.UP * -GameConfig.XBOW_GRIP_R_DOWN + right * GameConfig.XBOW_GRIP_R_SIDE
+		_grip_l = _grip_r + fwd * _xbow_grip
+	elif _grip_mode == 1:
+		_grip_l = sh_l + right * GameConfig.BOW_ARM_SIDE + fwd * GameConfig.BOW_ARM_REACH
+
+
+## Les postures d'arc et de fusil sont de profil : on tourne le corps du personnage (visuel seulement, le
+## collisionneur ne bouge pas) de l'angle mesuré par tools/aim_yaw.gd pour que le tronc fasse face à la cible.
+func _update_aim_yaw(delta: float, mode: int) -> void:
+	var goal := 0.0
+	if mode == 1:
+		goal = GameConfig.AIM_YAW_BOW
+	elif mode == 2:
+		goal = GameConfig.AIM_YAW_XBOW
+	_aim_corr = move_toward(_aim_corr, goal, delta * 5.0)
 	model_root.rotation.y = PI + _aim_corr
 
 
@@ -639,7 +686,9 @@ func _update_bow_prop(delta: float, drawing: bool, _tension: float, aiming := fa
 	else:
 		_bow_hold = maxf(0.0, _bow_hold - delta)
 	_bow_in_hand = _bow_hold > 0.0
-	_update_aim_yaw(delta, (weapon_kind_now == 2 and xbow_holder.visible) or (weapon_kind_now == 1 and _bow_in_hand))
+	_grip_mode = 2 if (weapon_kind_now == 2 and xbow_holder.visible) else (1 if (weapon_kind_now == 1 and _bow_in_hand) else 0)
+	_update_aim_yaw(delta, _grip_mode)
+	_compute_grips()
 	_place_props()
 	if not bow_holder.visible:
 		return

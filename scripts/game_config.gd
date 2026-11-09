@@ -256,11 +256,22 @@ const GUARD_POSE := 1
 
 # Armes tenues (modèles .glb) : placement dans la main / sur l'avant-bras (3e personne)
 const MELEE_GRIP_OFFSET := Vector3(0.0, 0.07, 0.0)       # décalage de la prise par rapport au poignet (repère de l'os de la main)
-const SHIELD_ROTATION_DEG := Vector3(-37.5, -176.1, -107.4)   # orientation de l'écu sur l'avant-bras gauche (mesurée en posture de parade : face vers l'avant, pointe vers le bas)
-const SHIELD_OFFSET := Vector3(-0.19, 0.04, -0.075)          # position de l'écu sur l'avant-bras gauche
 const FIRST_PERSON_WEAPON_SCALE := 1.2                   # l'arme est un peu agrandie en 1re personne (lisibilité)
 
 # Arc porté dans le dos quand on ne vise pas
 const BOW_BACK_TILT := 0.5     # inclinaison de l'arc (0 = vertical, 1 = 45°)
 const BOW_BACK_DEPTH := 0.2    # distance derrière la colonne vertébrale (m)
 const BOW_BACK_SIDE := 0.05    # décalage latéral (m)
+
+# --- Prises à deux mains par cinématique inverse (bras gauche et droit) ---
+const AIM_YAW_BOW := -0.12          # rotation du corps en visée à l'arc (rad) ; mesurée par tools/aim_yaw.gd
+const AIM_YAW_XBOW := -0.53         # idem arbalète
+const BOW_ARM_REACH := 0.43         # le bras de l'arc est tendu droit devant l'épaule gauche (m)
+const BOW_ARM_SIDE := 0.10          # et un peu vers le centre (m)
+const XBOW_GRIP_R_FWD := 0.26       # main arrière de l'arbalète : devant l'épaule droite (m)
+const XBOW_GRIP_R_DOWN := 0.17      # sous le niveau de l'épaule (m)
+const XBOW_GRIP_R_SIDE := -0.07     # vers le centre (négatif) (m)
+# --- Écu : posé devant l'avant-bras gauche, face vers l'avant ---
+const SHIELD_GUARD_HAND := Vector3(-0.20, 1.28, -0.42)   # où l'avant-bras gauche amène l'écu en parade (repère du personnage)
+const SHIELD_FORWARD := 0.10        # l'écu est décalé devant l'avant-bras (m)
+const SHIELD_SIDE := 0.08           # et vers l'extérieur (m)

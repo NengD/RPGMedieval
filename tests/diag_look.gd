@@ -43,16 +43,32 @@ func _run() -> void:
 	pos = p.global_position
 	fwd = -p.global_basis.z
 	side = p.global_basis.x
-	p.combatant.equipment.equip_weapon(Registry.get_data(&"arme.hache_guerre"))
-	for i in 30: await physics_frame
-	for v in ["profil", "face"]:
-		await _snap("hache2", v, Vector3.ZERO, 1.2, Rect2i(300, 80, 360, 400), 2.2)
-	p.combatant.equipment.equip_weapon(Registry.get_data(&"arme.epee_longue"))
+	# arbalète visée
+	p.switch_weapon(Player.Weapon.CROSSBOW)
+	Input.action_press(&"guard")
+	for i in 70: await physics_frame
+	for v in ["profil", "dos", "dessus", "face"]:
+		await _snap("xb", v, Vector3.ZERO, 1.3, Rect2i(180, 60, 600, 420), 1.5)
+	Input.action_release(&"guard")
+	# arc : bande à mi-tension
 	p.switch_weapon(Player.Weapon.BOW)
 	Input.action_press(&"guard")
 	Input.action_press(&"attack")
 	p.start_draw()
-	for i in 90: await physics_frame
-	for v in ["profil", "dessus", "dos"]:
-		await _snap("arc2", v, Vector3.ZERO, 1.3, Rect2i(180, 60, 600, 420), 1.6)
+	for i in 45: await physics_frame
+	for v in ["profil", "dos", "dessus"]:
+		await _snap("ba", v, Vector3.ZERO, 1.3, Rect2i(180, 60, 600, 420), 1.6)
+	Input.action_release(&"attack")
+	Input.action_release(&"guard")
+	p.cancel_draw()
+	# écu : parade et repos
+	p.switch_weapon(Player.Weapon.SWORD)
+	p.toggle_shield()
+	for i in 40: await physics_frame
+	for v in ["profil", "face", "dessus"]:
+		await _snap("ecu_repos", v, Vector3.ZERO, 1.2, Rect2i(240, 60, 480, 420), 2.4)
+	Input.action_press(&"guard")
+	for i in 60: await physics_frame
+	for v in ["profil", "face", "dessus", "dos"]:
+		await _snap("ecu_parade", v, Vector3.ZERO, 1.2, Rect2i(240, 60, 480, 420), 2.4)
 	quit()
