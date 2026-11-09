@@ -893,6 +893,10 @@ func _test_polish() -> void:
 	_check(Vector2(p.global_position.x - body_before.x, p.global_position.z - body_before.z).length() < 0.01 and is_equal_approx(c.attack_step(1).reach, reach_before), "le corps réel et la portée du coup ne changent pas")
 	await _frames(120)
 	_check(absf(m.model_root.position.z) < 0.01, "retour en position après l'attaque")
+	# --- pieds au sol : les orteils ne s'enfoncent pas
+	e.global_position = Vector3(30, 0, 30)
+	await _frames(60)
+	_check(m.foot_ik.lift > 0.0 and m.foot_ik.lift <= 0.15, "les pieds sont remontés pour ne pas s'enfoncer dans le sol (+%.1f cm)" % (m.foot_ik.lift * 100.0))
 	# --- regard
 	e.global_position = p.global_position + Vector3(0, 0, -5)
 	await _frames(40)

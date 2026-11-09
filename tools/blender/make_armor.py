@@ -298,7 +298,7 @@ def build_pieces():
         c = center(f)
         in_face = abs(c.x) < 0.085 and 1.57 < c.z < 1.72 and c.y < SRC_HEAD_Y
         return not in_face
-    piece("armure.capuchon_mailles", hood, 0.022, MATS["mailles"](), pattern=mail)
+    piece("armure.capuchon_mailles", hood, 0.034, MATS["mailles"](), pattern=mail)
     # --- plaques
     piece("armure.cuirasse_plates", lambda f: R(f) == "torso" and "Shoulder" not in "".join(SRC.dom[v.index] for v in f.verts) and 1.05 < Z(f) < 1.5, 0.036, MATS["acier"](), weights=("limit", ["Spine", "Spine1", "Spine2"]), pattern=ridge)
     piece("armure.spalieres", lambda f: (R(f) == "torso" and "Shoulder" in "".join(SRC.dom[v.index] for v in f.verts)) or (R(f) == "upper_arm" and Z(f) > 1.33), 0.045, MATS["acier"](), weights=("limit", ["{S}Shoulder", "{S}Arm"]))
@@ -327,7 +327,7 @@ def helmet(pid, kind):
     bm = bmesh.new()
     if kind == "bassinet":
         bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=12, radius=1.0,
-                                  matrix=Matrix.Translation(head_c + Vector((0, 0, 0.015))) @ Matrix.Diagonal((0.118, 0.14, 0.135, 1.0)))
+                                  matrix=Matrix.Translation(head_c + Vector((0, 0, 0.015))) @ Matrix.Diagonal((0.125, 0.152, 0.142, 1.0)))
         # pointe du dessus : on étire le sommet
         top = max(bm.verts, key=lambda v: v.co.z)
         top.co.z += 0.025
@@ -465,7 +465,7 @@ def build_head():
             v[dl][GROUP_INDEX["mixamorig_Head"]] = 1.0
         objs.append(to_object("tete_" + key, bm, MATS[key]()))
     hair_pred = lambda c: c.z > 1.722 or (c.z > 1.655 and c.y > -0.012) or (abs(c.x) > 0.071 and c.z > 1.675 and c.y > -0.075)
-    hair = shell_of(src, hair_pred, 0.011, 0.0012)
+    hair = shell_of(src, hair_pred, 0.008, 0.0010)
     objs.append(to_object("tete_cheveux", hair, MATS["cheveux"]()))
     path = os.path.join(OUT_ARMOR, "armure_tete_homme.glb")
     export(objs, path)

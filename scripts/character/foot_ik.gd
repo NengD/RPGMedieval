@@ -8,6 +8,9 @@ extends Node
 var model: Node3D
 var skeleton: Skeleton3D
 var _legs: Array = []          # [{ik, target, pole, foot_bone, applied, amount}]
+## Remontée (m) du personnage entier : les animations viennent d'un autre squelette et enfoncent parfois les pieds dans le sol.
+var lift := 0.0
+var _rest_toe_y := 0.03
 var pelvis := 0.0              # décalage vertical du bassin (m, négatif = plus bas)
 
 
@@ -24,6 +27,9 @@ static func plant_weight(foot_height: float) -> float:
 func setup(p_model: Node3D, p_skeleton: Skeleton3D) -> void:
 	model = p_model
 	skeleton = p_skeleton
+	var toe := skeleton.find_bone("mixamorig_LeftToeBase")
+	if toe >= 0:
+		_rest_toe_y = (skeleton.get_bone_global_rest(toe)).origin.y   # hauteur des orteils quand le personnage se tient droit sur le sol
 	for side in ["Left", "Right"]:
 		var target := Node3D.new()
 		target.name = "FootTarget" + side
@@ -51,8 +57,15 @@ func _foot_world(bone: String) -> Vector3:
 ## À appeler chaque image. `active` : false en l'air, en esquive, mort, ragdoll…
 func update(delta: float, active: bool) -> void:
 	var space := model.get_world_3d().direct_space_state
-	var base_y := model.global_position.y
+	# Sol sous le personnage (son origine peut flotter de quelques cm au-dessus du sol : marge de la capsule de collision)
+	var origin_hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(model.global_position + Vector3.UP * 0.5, model.global_position + Vector3.DOWN * 1.0, GameConfig.LAYER_WORLD))
+	var base_y: float = (origin_hit.position.y as float) if origin_hit else model.global_position.y
 	var lowest := 0.0
+	var lowest_toe := 1e9
+	for side in ["Left", "Right"]:
+		lowest_toe = minf(lowest_toe, _foot_world("mixamorig_%sToeBase" % side).y - lift)
+	var need := clampf(base_y + _rest_toe_y - lowest_toe, 0.0, 0.15) if active else 0.0
+	lift = lerpf(lift, need, 1.0 - exp(-12.0 * delta))
 	for leg in _legs:
 		var foot := _foot_world(leg["foot"])
 		var desired := 0.0
@@ -61,7 +74,7 @@ func update(delta: float, active: bool) -> void:
 			var hit := space.intersect_ray(q)
 			var ground_y := (hit.position.y as float) if hit else base_y
 			var off := ground_offset(ground_y, base_y, GameConfig.FOOT_IK_MAX_OFFSET)
-			var anim_height := foot.y - base_y - float(leg["applied"])   # hauteur du pied dans l'animation (sans notre correction)
+			var anim_height := foot.y - base_y - float(leg["applied"]) - lift   # hauteur du pied dans l'animation (sans notre correction)
 			desired = off * plant_weight(anim_height)
 		var old_applied: float = leg["applied"]
 		var applied := lerpf(old_applied, desired, 1.0 - exp(-18.0 * delta))

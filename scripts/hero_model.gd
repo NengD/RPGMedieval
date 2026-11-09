@@ -552,7 +552,8 @@ func _update_lunge(attacking: bool) -> void:
 			Combatant.State.RECOVERY: lunge = 1.0 - ease(p, 0.6)
 	if not _ragdoll_on:
 		var pelvis_y := foot_ik.pelvis if foot_ik != null else 0.0
-		model_root.position = Vector3(0.0, pelvis_y, -GameConfig.ATTACK_LUNGE * lunge)
+		var lift_y := foot_ik.lift if foot_ik != null else 0.0
+		model_root.position = Vector3(0.0, pelvis_y + lift_y, -GameConfig.ATTACK_LUNGE * lunge)
 
 
 func _update_ik(delta: float, attacking: bool) -> void:

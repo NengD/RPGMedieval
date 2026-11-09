@@ -14,7 +14,7 @@ func _run() -> void:
 	main.add_child(cam)
 	cam.fov = 28
 	var eq := p.combatant.equipment
-	var configs := [["nu", []], ["capuchon", ["armure.capuchon_mailles"]], ["bassinet", ["armure.capuchon_mailles", "armure.bassinet"]], ["heaume", ["armure.heaume"]], ["barbe", ["armure.barbe"]]]
+	var configs := [["nu", []], ["barbe", ["armure.barbe"]], ["capuchon", ["armure.capuchon_mailles"]], ["bassinet", ["armure.capuchon_mailles", "armure.bassinet"]], ["heaume", ["armure.heaume"]]]
 	for cfg in configs:
 		eq.clear_armor()
 		eq.equip(Registry.get_data(&"armure.tete_homme"))
@@ -25,7 +25,7 @@ func _run() -> void:
 		var hb: Vector3 = p.model._hand_world("mixamorig_Head")
 		var pos := hb + Vector3(0, 0.1, 0)
 		var fwd := -p.global_basis.z
-		for v in [["face", fwd * 1.1], ["profil", p.global_basis.x * 1.1]]:
+		for v in [["face", fwd * 1.1], ["profil", p.global_basis.x * 1.1], ["dessus", Vector3(0.01, 1.2, 0.01)]]:
 			cam.global_position = pos + v[1]
 			cam.look_at(pos, Vector3.UP)
 			cam.current = true
