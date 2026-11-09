@@ -1,2 +1,8 @@
 .godot/
 *.tmp
+*.bak
+*.blend1
+.claude/
+Thumbs.db
+desktop.ini
+.DS_Store
