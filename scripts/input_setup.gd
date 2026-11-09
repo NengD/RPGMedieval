@@ -27,6 +27,8 @@ static func register_actions() -> void:
 	_add(&"guard", [_mouse(MOUSE_BUTTON_RIGHT), _btn(JOY_BUTTON_LEFT_SHOULDER)])
 	_add(&"cancel_draw", [_key(KEY_X), _btn(JOY_BUTTON_X)])
 	_add(&"toggle_practice", [_key(KEY_T), _btn(JOY_BUTTON_Y)])
+	_add(&"quick_save", [_key(KEY_F5)])
+	_add(&"quick_load", [_key(KEY_F9)])
 	_add(&"toggle_ai", [_key(KEY_F4), _btn(JOY_BUTTON_DPAD_DOWN)])
 	_add(&"difficulty_easy", [_key(KEY_F1)])
 	_add(&"difficulty_normal", [_key(KEY_F2)])

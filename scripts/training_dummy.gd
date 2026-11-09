@@ -49,6 +49,7 @@ func _ready() -> void:
 	combatant.speed_scale = GameConfig.PRACTICE_SPEED_SCALE
 	combatant.damage_scale = GameConfig.PRACTICE_DAMAGE_SCALE
 	add_child(combatant)
+	add_to_group(&"saveable")
 	weapon = WeaponVisual.new()
 	_pivot.add_child(weapon)
 	weapon.bind(combatant)
@@ -66,7 +67,7 @@ func _physics_process(delta: float) -> void:
 	if target_node and combatant.state != Combatant.State.STAGGER:
 		var to := target_node.global_position - global_position
 		rotation.y = lerp_angle(rotation.y, atan2(-to.x, -to.z), 1.0 - exp(-8.0 * delta))
-	combatant.stamina = GameConfig.STAMINA_MAX
+	combatant.stamina = combatant.stats.get_derived(&"endurance_max")
 	combatant.exhausted = false
 
 	if practice and combatant.state == Combatant.State.IDLE:
@@ -111,7 +112,7 @@ func _on_damaged(amount: float, _attacker: Combatant) -> void:
 	total_damage += amount
 	hit_count += 1
 	_refresh_total()
-	_spawn_floating_number("-%d" % int(round(amount)), Color(1.0, 0.85, 0.2))
+	_spawn_floating_number("-%d" % int(round(amount)), DamageType.color_of(combatant.last_damage_type))
 	_mat.albedo_color = Color(1, 1, 1)   # éclair blanc
 	var tw := create_tween()
 	tw.tween_property(_pivot, "rotation:x", -0.25, 0.05)
@@ -120,11 +121,11 @@ func _on_damaged(amount: float, _attacker: Combatant) -> void:
 
 func _on_hit_resolved(result: int, _dir: int, _amount: float, _attacker: Combatant) -> void:
 	if result == Combatant.Result.DODGED:
-		_spawn_floating_number("esquivé", Color(0.7, 0.7, 0.7))
+		_spawn_floating_number(tr("FLOAT_DODGED"), Color(0.7, 0.7, 0.7))
 
 
 func _refresh_total() -> void:
-	_total_label.text = "Dégâts reçus : %d  (%d coups)" % [int(total_damage), hit_count]
+	_total_label.text = tr("HUD_DUMMY_TOTAL") % [int(total_damage), hit_count]
 
 
 func _spawn_floating_number(text: String, color: Color) -> void:
@@ -147,3 +148,20 @@ func _make_label(size: int, color: Color) -> Label3D:
 	label.outline_size = 12
 	label.modulate = color
 	return label
+
+
+# ---------------------------------------------------------------- sauvegarde
+
+var instance_id := ""
+
+
+func save_id() -> String:
+	return instance_id
+
+
+func capture_state() -> Dictionary:
+	return CharacterSave.capture(self, combatant)
+
+
+func restore_state(d: Dictionary) -> void:
+	CharacterSave.restore(self, combatant, d)

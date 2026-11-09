@@ -22,12 +22,30 @@ enum Result { HIT, BLOCKED, PARRIED, GUARD_BROKEN, DODGED }
 var body: Node3D                 # le corps dans le monde (position / orientation)
 var team := 0                    # 0 = héros, 1 = ennemis
 var radius := 0.4
-var max_health := GameConfig.PLAYER_MAX_HEALTH
+## Statistiques (attributs, valeurs dérivées, modificateurs). Avec les valeurs par défaut, tout vaut ce que
+## donnait game_config.gd avant : le combat est identique.
+var stats := Stats.new()
+var equipment := EquipmentComponent.new(stats, self)
+## Part de chaque type de dégâts absorbée par l'armure portée : { DamageType.Type -> 0..0,9 }
+var protection: Dictionary = {}
+## Type de dégâts du dernier coup reçu (pour la couleur des chiffres flottants).
+var last_damage_type: int = DamageType.Type.TRANCHANT
+## Type de dégâts infligés par nos attaques (l'arme décidera à l'étape 3).
+var attack_damage_type: int = DamageType.Type.TRANCHANT
+var instance_id := ""
+
+var max_health: float:
+	get: return stats.get_derived(&"vie_max")
+	set(v): stats.set_base_derived(&"vie_max", v)
 var health := GameConfig.PLAYER_MAX_HEALTH
 var invincible := false          # le mannequin ne meurt jamais
 var dead := false
 var damage_scale := 1.0
-var speed_scale := 1.0           # > 1 : attaques plus rapides
+var _speed_scale := 1.0
+## > 1 : attaques plus rapides (réglage de difficulté × vitesse d'attaque des stats)
+var speed_scale: float:
+	get: return _speed_scale * stats.get_derived(&"vitesse_attaque")
+	set(v): _speed_scale = v
 var invulnerable := false        # activé par le pas de côté (esquive)
 
 var state: int = State.IDLE
@@ -40,7 +58,7 @@ var guard_held := false
 var guard_dir: int = Dir.UP
 var guard_time := 0.0            # depuis combien de temps la garde est effective
 
-var stamina := GameConfig.STAMINA_MAX
+var stamina := GameConfig.STAMINA_MAX   # même valeur que endurance_max par défaut
 var exhausted := false
 
 var _regen_timer := 0.0
@@ -60,7 +78,7 @@ func _ready() -> void:
 
 func reset() -> void:
 	health = max_health
-	stamina = GameConfig.STAMINA_MAX
+	stamina = stats.get_derived(&"endurance_max")
 	exhausted = false
 	dead = false
 	state = State.IDLE
@@ -154,7 +172,10 @@ func take_damage(amount: float, attacker: Combatant = null) -> void:
 
 
 ## Un coup arrive. Retourne un Result.
-func receive_hit(attacker: Combatant, dir: int, damage: float) -> int:
+func receive_hit(attacker: Combatant, dir: int, damage_in: Variant) -> int:
+	var packet := DamagePacket.of(damage_in, DamageType.Type.TRANCHANT)
+	var damage := packet.total()
+	last_damage_type = packet.dominant_type()
 	if dead:
 		return Result.DODGED
 	if invulnerable:
@@ -174,14 +195,14 @@ func receive_hit(attacker: Combatant, dir: int, damage: float) -> int:
 			return Result.BLOCKED
 		# Plus assez d'endurance : la garde se brise
 		spend_stamina(stamina)
-		var dealt := damage * GameConfig.GUARD_BREAK_DAMAGE_FACTOR
+		var dealt := packet.after_protection(protection) * GameConfig.GUARD_BREAK_DAMAGE_FACTOR
 		stagger(GameConfig.GUARD_BREAK_STAGGER)
 		take_damage(dealt, attacker)
 		hit_resolved.emit(Result.GUARD_BROKEN, dir, dealt, attacker)
 		return Result.GUARD_BROKEN
 
 	# Pas de garde : le coup passe
-	var dealt := damage * (GameConfig.STAGGER_DAMAGE_BONUS if state == State.STAGGER else 1.0)
+	var dealt := packet.after_protection(protection) * (GameConfig.STAGGER_DAMAGE_BONUS if state == State.STAGGER else 1.0)
 	stagger(GameConfig.HIT_STUN)
 	take_damage(dealt, attacker)
 	hit_resolved.emit(Result.HIT, dir, dealt, attacker)
@@ -189,7 +210,10 @@ func receive_hit(attacker: Combatant, dir: int, damage: float) -> int:
 
 
 ## Un tir (flèche, carreau) arrive. `dir` = direction de vol. Retourne un Result.
-func receive_projectile(attacker: Combatant, damage: float, dir: Vector3, head: bool) -> int:
+func receive_projectile(attacker: Combatant, damage_in: Variant, dir: Vector3, head: bool) -> int:
+	var packet := DamagePacket.of(damage_in, DamageType.Type.PERFORANT)
+	var damage := packet.total()
+	last_damage_type = packet.dominant_type()
 	if dead:
 		return Result.DODGED
 	if invulnerable:
@@ -210,12 +234,12 @@ func receive_projectile(attacker: Combatant, damage: float, dir: Vector3, head: 
 			hit_resolved.emit(Result.BLOCKED, -1, 0.0, attacker)
 			return Result.BLOCKED
 		spend_stamina(stamina)
-		var broken := damage * GameConfig.GUARD_BREAK_DAMAGE_FACTOR
+		var broken := packet.after_protection(protection) * GameConfig.GUARD_BREAK_DAMAGE_FACTOR
 		stagger(GameConfig.GUARD_BREAK_STAGGER)
 		take_damage(broken, attacker)
 		hit_resolved.emit(Result.GUARD_BROKEN, -1, broken, attacker)
 		return Result.GUARD_BROKEN
-	var dealt := damage * (GameConfig.STAGGER_DAMAGE_BONUS if state == State.STAGGER else 1.0)
+	var dealt := packet.after_protection(protection) * (GameConfig.STAGGER_DAMAGE_BONUS if state == State.STAGGER else 1.0)
 	if state != State.STAGGER:
 		stagger(GameConfig.PROJECTILE_STUN)
 	take_damage(dealt, attacker)
@@ -230,11 +254,12 @@ func _physics_process(delta: float) -> void:
 	if _regen_timer > 0.0:
 		_regen_timer -= delta
 	else:
-		stamina = minf(GameConfig.STAMINA_MAX, stamina + GameConfig.STAMINA_REGEN * delta)
+		stamina = minf(stats.get_derived(&"endurance_max"), stamina + stats.get_derived(&"recuperation_endurance") * delta)
 		if exhausted and stamina >= GameConfig.EXHAUSTED_RECOVER:
 			exhausted = false
 	guard_time = guard_time + delta if is_guarding() else 0.0
 	_queue_time -= delta
+	stats.tick(delta)
 	_combo_idle = _combo_idle + delta if state == State.IDLE else 0.0
 
 	state_time += delta
@@ -285,6 +310,32 @@ func _strike_check() -> void:
 			continue
 		_strike_done = true
 		var dmg: float = GameConfig.ATTACK_DAMAGE[attack_dir] * damage_scale
-		var result := c.receive_hit(self, attack_dir, dmg)
+		var result := c.receive_hit(self, attack_dir, DamagePacket.of(dmg, attack_damage_type))
 		strike_result.emit(result, c)
 		return
+
+
+# ---------------------------------------------------------------- sauvegarde
+
+func capture_state() -> Dictionary:
+	return {
+		"vie": health,
+		"endurance": stamina,
+		"epuise": exhausted,
+		"mort": dead,
+		"stats": stats.capture_state(),
+		"equipement": equipment.capture_state(),
+	}
+
+
+func restore_state(d: Dictionary) -> void:
+	stats.restore_state(d.get("stats", {}))
+	equipment.restore_state(d.get("equipement", {}))
+	health = float(d.get("vie", max_health))
+	stamina = float(d.get("endurance", stats.get_derived(&"endurance_max")))
+	exhausted = bool(d.get("epuise", false))
+	dead = bool(d.get("mort", false))
+	state = State.IDLE
+	state_time = 0.0
+	guard_held = false
+	_queued_dir = -1

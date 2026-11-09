@@ -68,7 +68,7 @@ const DUMMY_HEIGHT := 1.8
 # Pour parer, il faut garder le côté opposé du point de vue de l'attaquant
 # = le côté d'où le coup t'arrive à l'écran (haut/bas restent haut/bas).
 # ============================================================
-const DIR_NAMES := ["haut", "droite", "estoc", "gauche"]   # "bas" = l'estoc (coup pointé droit devant)
+const DIR_NAMES := ["DIR_UP", "DIR_RIGHT", "DIR_STAB", "DIR_LEFT"]   # clés de traduction (l'estoc = coup pointé droit devant)
 
 # Une attaque = préparation -> coup (touche) -> récupération.
 const ATTACK_WINDUP   := [0.65, 0.48, 0.45, 0.48]   # préparation (s)
@@ -120,7 +120,7 @@ const PRACTICE_DAMAGE_SCALE := 0.6   # le mannequin frappe moins fort
 # Les listes ont 3 valeurs : [Facile, Normal, Difficile].
 # Touches en jeu : F1 facile · F2 normal · F3 difficile.
 # ============================================================
-const DIFFICULTY_NAMES := ["Facile", "Normal", "Difficile"]
+const DIFFICULTY_NAMES := ["DIFF_EASY", "DIFF_NORMAL", "DIFF_HARD"]   # clés de traduction
 const DEFAULT_DIFFICULTY := 1
 const ENEMY_AI_ENABLED_AT_START := true   # false = l'ennemi reste immobile et inoffensif au départ (touche F4 en jeu)
 const AI_REACTION_TIME := [0.40, 0.28, 0.18]          # délai avant de réagir à ton coup (s) : plus c'est long, moins il pare
@@ -148,7 +148,7 @@ const ENEMY_MIN_ATTACK_STAMINA := 30.0    # endurance minimale pour lancer une a
 # COMBAT À DISTANCE (étape 4) — arc et arbalète
 # Changer d'arme : Tab ou molette de la souris (D-pad droit sur manette).
 # ============================================================
-const WEAPON_NAMES := ["Épée", "Arc", "Arbalète"]
+const WEAPON_NAMES := ["WEAPON_SWORD", "WEAPON_BOW", "WEAPON_CROSSBOW"]   # clés de traduction
 
 # Arc : maintenir le clic gauche pour bander, relâcher pour tirer (clic droit = annuler)
 const BOW_DRAW_TIME := 1.1              # temps pour bander à fond (s)

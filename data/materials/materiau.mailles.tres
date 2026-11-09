@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/material_data.gd" id="1_ixqhi"]
+
+[resource]
+script = ExtResource("1_ixqhi")
+id = &"materiau.mailles"
+display_name = &"MATERIAU_MAILLES"
+tranchant = 0.65
+contondant = 0.15
+perforant = 0.25

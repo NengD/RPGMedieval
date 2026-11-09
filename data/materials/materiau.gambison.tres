@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/material_data.gd" id="1_3gjgx"]
+
+[resource]
+script = ExtResource("1_3gjgx")
+id = &"materiau.gambison"
+display_name = &"MATERIAU_GAMBISON"
+tranchant = 0.4
+contondant = 0.35
+perforant = 0.25

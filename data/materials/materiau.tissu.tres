@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MaterialData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/material_data.gd" id="1_qay1f"]
+
+[resource]
+script = ExtResource("1_qay1f")
+id = &"materiau.tissu"
+display_name = &"MATERIAU_TISSU"
+tranchant = 0.1
+contondant = 0.05
+perforant = 0.05

@@ -7,7 +7,7 @@ extends CharacterBody3D
 ##  - _physics_process : applique la vitesse (avec gravité et collisions).
 
 enum Mode { APPROACH, CIRCLE, ATTACK, DEFEND, RETREAT, STAGGERED, DEAD, COVER, EVADE }
-const MODE_NAMES := ["s'approche", "tourne autour de toi", "attaque", "se défend", "RECULE (fatigué)", "déséquilibré", "vaincu", "se met à couvert", "charge en zigzag"]
+const MODE_NAMES := ["AI_MODE_APPROACH", "AI_MODE_CIRCLE", "AI_MODE_ATTACK", "AI_MODE_DEFEND", "AI_MODE_RETREAT", "AI_MODE_STAGGER", "AI_MODE_DEAD", "AI_MODE_COVER", "AI_MODE_ZIGZAG"]   # clés de traduction
 const ENEMY_TINT := Color(1.0, 0.45, 0.4)   # teinte du chevalier ennemi (rouge sombre)
 
 var combatant: Combatant
@@ -73,6 +73,22 @@ func _ready() -> void:
 	combatant.hit_resolved.connect(_on_hit_resolved)
 	combatant.died.connect(_on_died)
 	set_difficulty(difficulty)
+	add_to_group(&"saveable")
+
+
+var instance_id := ""
+
+
+func save_id() -> String:
+	return instance_id
+
+
+func capture_state() -> Dictionary:
+	return CharacterSave.capture(self, combatant)
+
+
+func restore_state(d: Dictionary) -> void:
+	CharacterSave.restore(self, combatant, d)
 
 
 func set_difficulty(level: int) -> void:
@@ -387,18 +403,18 @@ func _process(delta: float) -> void:
 
 
 func _on_damaged(amount: float, _attacker: Combatant) -> void:
-	FloatingText.spawn(self, "-%d" % int(round(amount)), Color(1.0, 0.85, 0.2), GameConfig.ENEMY_HEIGHT + 0.1)
+	FloatingText.spawn(self, "-%d" % int(round(amount)), DamageType.color_of(combatant.last_damage_type), GameConfig.ENEMY_HEIGHT + 0.1)
 	model.flash()
 
 
 func _on_hit_resolved(result: int, _dir: int, _amount: float, _attacker: Combatant) -> void:
 	match result:
 		Combatant.Result.BLOCKED:
-			FloatingText.spawn(self, "paré", Color(0.5, 0.8, 1.0), GameConfig.ENEMY_HEIGHT + 0.1)
+			FloatingText.spawn(self, tr("FLOAT_BLOCKED"), Color(0.5, 0.8, 1.0), GameConfig.ENEMY_HEIGHT + 0.1)
 		Combatant.Result.PARRIED:
-			FloatingText.spawn(self, "PARADE PARFAITE", Color(0.4, 1.0, 1.0), GameConfig.ENEMY_HEIGHT + 0.1)
+			FloatingText.spawn(self, tr("FLOAT_PARRY"), Color(0.4, 1.0, 1.0), GameConfig.ENEMY_HEIGHT + 0.1)
 		Combatant.Result.GUARD_BROKEN:
-			FloatingText.spawn(self, "GARDE BRISÉE", Color(1.0, 0.55, 0.1), GameConfig.ENEMY_HEIGHT + 0.1)
+			FloatingText.spawn(self, tr("FLOAT_GUARD_BROKEN"), Color(1.0, 0.55, 0.1), GameConfig.ENEMY_HEIGHT + 0.1)
 
 
 func _on_died() -> void:

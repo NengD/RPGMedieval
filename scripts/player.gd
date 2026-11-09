@@ -87,6 +87,7 @@ func _ready() -> void:
 	combatant.team = 0
 	combatant.radius = GameConfig.PLAYER_RADIUS
 	add_child(combatant)
+	add_to_group(&"saveable")
 	weapon = WeaponVisual.new()
 	add_child(weapon)
 	weapon.bind(combatant)
@@ -222,7 +223,7 @@ func release_draw() -> Arrow:
 	var t := bow_tension
 	cancel_draw()
 	if t < GameConfig.BOW_MIN_TENSION:
-		notice.emit("Corde relâchée (pas assez tendue)")
+		notice.emit(&"NOTICE_BOW_LOOSE")
 		return null
 	return fire_bow(t)
 
@@ -244,7 +245,7 @@ func fire_crossbow() -> bool:
 	if combatant.dead or is_dodging or combatant.exhausted or combatant.state != Combatant.State.IDLE:
 		return false
 	if crossbow_reload > 0.0:
-		notice.emit("Rechargement de l'arbalète…")
+		notice.emit(&"NOTICE_XBOW_RELOAD")
 		return false
 	combatant.spend_stamina(GameConfig.CROSSBOW_STAMINA_COST)
 	_shoot(GameConfig.CROSSBOW_SPEED, GameConfig.CROSSBOW_GRAVITY, GameConfig.CROSSBOW_DAMAGE, GameConfig.CROSSBOW_SPREAD_DEG, true)
@@ -473,3 +474,29 @@ func _update_dodge(delta: float) -> void:
 		invulnerable = false
 		_dodge_cooldown = GameConfig.DODGE_COOLDOWN
 		_body_pivot.rotation.z = 0.0
+
+
+# ---------------------------------------------------------------- sauvegarde
+
+var instance_id := ""
+
+
+func save_id() -> String:
+	return instance_id
+
+
+func capture_state() -> Dictionary:
+	return CharacterSave.capture(self, combatant)
+
+
+func restore_state(d: Dictionary) -> void:
+	CharacterSave.restore(self, combatant, d)
+	var yaw := rotation.y
+	rig.yaw = yaw
+	facing_yaw = yaw
+	is_dodging = false
+	invulnerable = false
+	drawing = false
+	bow_tension = 0.0
+	is_aiming = false
+	model.reset()

@@ -52,8 +52,8 @@ func _draw() -> void:
 	_bar(Vector2(x, y), Vector2(320, 18), health_ratio, Color(0.8, 0.15, 0.15))
 	_bar(Vector2(x, y + 26.0), Vector2(320, 12), stamina_ratio, Color(1.0, 0.55, 0.1) if exhausted else Color(0.3, 0.8, 0.3))
 	var font := ThemeDB.fallback_font
-	draw_string(font, Vector2(x + 4.0, y - 4.0), "Vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.8))
-	draw_string(font, Vector2(x + 4.0, y + 56.0), "Endurance" + ("  (ÉPUISÉ)" if exhausted else ""), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.8))
+	draw_string(font, Vector2(x + 4.0, y - 4.0), tr("HUD_LIFE"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.8))
+	draw_string(font, Vector2(x + 4.0, y + 56.0), tr("HUD_STAMINA") + (tr("HUD_EXHAUSTED") if exhausted else ""), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.8))
 
 
 func _draw_reticle(center: Vector2) -> void:
@@ -71,15 +71,15 @@ func _draw_reticle(center: Vector2) -> void:
 			var m := center + Vector2(0.0, reticle_radius + drop_offset)
 			draw_colored_polygon(PackedVector2Array([m + Vector2(0, -5), m + Vector2(5, 0), m + Vector2(0, 5), m + Vector2(-5, 0)]), Color(1.0, 0.55, 0.1, 0.95))
 		if aim_distance > 0.0:
-			draw_string(font, center + Vector2(reticle_radius + 16.0, 5.0), "%d m" % int(round(aim_distance)), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 1, 1, 0.9))
+			draw_string(font, center + Vector2(reticle_radius + 16.0, 5.0), tr("HUD_METERS") % int(round(aim_distance)), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 1, 1, 0.9))
 	if weapon_kind == 1 and drawing:
 		_bar(p, Vector2(w, 8), tension, Color(1.0, 0.85, 0.2) if tension >= 1.0 else Color(0.9, 0.9, 0.9))
 	elif weapon_kind == 2:
 		if reload_ratio < 1.0:
 			_bar(p, Vector2(w, 8), reload_ratio, Color(0.9, 0.5, 0.2))
-			draw_string(font, p + Vector2(0, 26), "Recharge…", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.85))
+			draw_string(font, p + Vector2(0, 26), tr("HUD_RELOADING"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 1, 1, 0.85))
 		else:
-			draw_string(font, p + Vector2(0, 12), "Prête", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.6, 1.0, 0.6, 0.9))
+			draw_string(font, p + Vector2(0, 12), tr("HUD_READY"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.6, 1.0, 0.6, 0.9))
 
 
 func _bar(pos: Vector2, bar_size: Vector2, ratio: float, color: Color) -> void:

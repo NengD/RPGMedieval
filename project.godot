@@ -23,6 +23,12 @@ InputSetup="*res://scripts/input_setup.gd"
 window/size/viewport_width=1280
 window/size/viewport_height=720
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://locale/translations.fr.translation")
+locale/test="fr"
+locale/fallback="fr"
+
 [layer_names]
 
 3d_physics/layer_1="monde"

@@ -13,18 +13,13 @@ var _message: Label
 var _crosshair: ColorRect
 var _canvas: HudCanvas
 
-const _STATE_NAMES := ["libre", "préparation", "COUP", "récupération", "DÉSÉQUILIBRÉ"]
+const _STATE_NAMES := ["STATE_IDLE", "STATE_WINDUP", "STATE_STRIKE", "STATE_RECOVERY", "STATE_STAGGER"]   # clés de traduction
 
 
 func _ready() -> void:
 	_help = _make_label()
 	_help.position = Vector2(16, 12)
-	_help.text = "ÉTAPE 4 — Combat à distance\n" \
-		+ "ZQSD : bouger   Maj : courir   Espace : sauter   C : pas de côté   V : changer de vue\n" \
-		+ "Tab / molette : changer d'arme (épée, arc, arbalète)\n" \
-		+ "ÉPÉE : clic gauche = coup (clics répétés = combo), clic droit (maintenu) = pare\n" \
-		+ "ARC / ARBALÈTE : clic droit (maintenu) = VISER (zoom, plus précis)   clic gauche : bander puis relâcher / tirer   X : annuler la corde\n" \
-		+ "F1 / F2 / F3 : difficulté   F4 : IA ennemie   R : recommencer   Retour arrière : retirer les flèches   T : mannequin agressif   Échap : souris\n"
+	_help.text = "\n".join([tr("HELP_TITLE"), tr("HELP_MOVE"), tr("HELP_WEAPON"), tr("HELP_SWORD"), tr("HELP_RANGED"), tr("HELP_KEYS"), tr("HELP_SAVE")])
 	add_child(_help)
 
 	_status = _make_label()
@@ -55,10 +50,10 @@ func _ready() -> void:
 	var c := player.combatant
 	c.hit_resolved.connect(_on_player_hit_resolved)
 	c.strike_result.connect(_on_player_strike_result)
-	c.died.connect(func(): show_message("VOUS ÊTES MORT", Color(1, 0.3, 0.3), 2.0))
-	player.notice.connect(func(text: String): show_message(text, Color(0.9, 0.9, 0.9), 1.0))
+	c.died.connect(func(): show_message(tr("MSG_DEAD"), Color(1, 0.3, 0.3), 2.0))
+	player.notice.connect(func(text: String): show_message(tr(text), Color(0.9, 0.9, 0.9), 1.0))
 	player.combatant.projectile_result.connect(_on_player_shot_result)
-	enemy.combatant.died.connect(func(): show_message("ENNEMI VAINCU !", Color(0.5, 1.0, 0.5), 2.0))
+	enemy.combatant.died.connect(func(): show_message(tr("MSG_ENEMY_DEFEATED"), Color(0.5, 1.0, 0.5), 2.0))
 
 
 func show_message(text: String, color: Color, duration := 0.9) -> void:
@@ -71,28 +66,28 @@ func show_message(text: String, color: Color, duration := 0.9) -> void:
 
 func _on_player_hit_resolved(result: int, _dir: int, amount: float, _attacker: Combatant) -> void:
 	match result:
-		Combatant.Result.HIT: show_message("Touché  -%d" % int(round(amount)), Color(1, 0.35, 0.3))
-		Combatant.Result.BLOCKED: show_message("Paré", Color(0.5, 0.8, 1.0))
-		Combatant.Result.PARRIED: show_message("PARADE PARFAITE !", Color(0.4, 1.0, 1.0))
-		Combatant.Result.GUARD_BROKEN: show_message("GARDE BRISÉE !  -%d" % int(round(amount)), Color(1, 0.55, 0.1))
-		Combatant.Result.DODGED: show_message("Esquive", Color(0.8, 0.8, 0.8))
+		Combatant.Result.HIT: show_message(tr("MSG_HIT") % int(round(amount)), Color(1, 0.35, 0.3))
+		Combatant.Result.BLOCKED: show_message(tr("MSG_BLOCKED"), Color(0.5, 0.8, 1.0))
+		Combatant.Result.PARRIED: show_message(tr("MSG_PARRY_PERFECT"), Color(0.4, 1.0, 1.0))
+		Combatant.Result.GUARD_BROKEN: show_message(tr("MSG_GUARD_BROKEN") % int(round(amount)), Color(1, 0.55, 0.1))
+		Combatant.Result.DODGED: show_message(tr("MSG_DODGED"), Color(0.8, 0.8, 0.8))
 
 
 func _on_player_shot_result(result: int, _victim: Combatant, amount: float, head: bool) -> void:
 	match result:
 		Combatant.Result.HIT:
-			show_message(("TIR À LA TÊTE !  -%d" if head else "Touché  -%d") % int(round(amount)), Color(1.0, 0.85, 0.2) if head else Color(1.0, 0.7, 0.4))
+			show_message(tr("MSG_HEADSHOT" if head else "MSG_HIT") % int(round(amount)), Color(1.0, 0.85, 0.2) if head else Color(1.0, 0.7, 0.4))
 		Combatant.Result.BLOCKED, Combatant.Result.PARRIED:
-			show_message("Tir paré", Color(0.8, 0.8, 0.8))
+			show_message(tr("MSG_SHOT_BLOCKED"), Color(0.8, 0.8, 0.8))
 		Combatant.Result.GUARD_BROKEN:
-			show_message("Garde brisée par le tir !", Color(1, 0.55, 0.1))
+			show_message(tr("MSG_SHOT_GUARD_BROKEN"), Color(1, 0.55, 0.1))
 
 
 func _on_player_strike_result(result: int, _victim: Combatant) -> void:
 	if result == Combatant.Result.BLOCKED:
-		show_message("Ton coup est paré", Color(0.8, 0.8, 0.8))
+		show_message(tr("MSG_STRIKE_BLOCKED"), Color(0.8, 0.8, 0.8))
 	elif result == Combatant.Result.PARRIED:
-		show_message("Ton coup est paré — déséquilibré !", Color(1, 0.7, 0.2))
+		show_message(tr("MSG_STRIKE_PARRIED"), Color(1, 0.7, 0.2))
 
 
 func _process(_delta: float) -> void:
@@ -102,19 +97,15 @@ func _process(_delta: float) -> void:
 	var speed := Vector2(player.velocity.x, player.velocity.z).length()
 	var guard_text := ""
 	if c.is_guarding():
-		guard_text = "   GARDE : %s%s" % ["parade", " (parfaite !)" if c.guard_time <= GameConfig.PERFECT_PARRY_WINDOW else ""]
-	_status.text = "Vue : %s   Vitesse : %.1f m/s\nÉtat : %s%s%s\nMannequin agressif : %s (T)\nDifficulté : %s    Ennemi : %s\nArme : %s    Score aux cibles : %d" % [
-		"1re personne" if fps_view else "3e personne",
-		speed,
-		_STATE_NAMES[c.state],
-		guard_text,
-		"   PAS DE CÔTÉ" if player.is_dodging else "",
-		"OUI" if dummy.practice else "non",
-		GameConfig.DIFFICULTY_NAMES[enemy.difficulty],
-		Enemy.MODE_NAMES[enemy.mode] if enemy.ai_enabled else "IA DÉSACTIVÉE (F4)",
-		GameConfig.WEAPON_NAMES[player.weapon_kind],
-		target_score,
+		guard_text = tr("HUD_GUARD") % (tr("HUD_PERFECT") if c.guard_time <= GameConfig.PERFECT_PARRY_WINDOW else "")
+	var lines := [
+		tr("HUD_LINE_VIEW") % [tr("HUD_VIEW_FIRST") if fps_view else tr("HUD_VIEW_THIRD"), speed],
+		tr("HUD_LINE_STATE") % [tr(_STATE_NAMES[c.state]), guard_text, tr("HUD_DODGING") if player.is_dodging else ""],
+		tr("HUD_LINE_DUMMY") % (tr("HUD_YES") if dummy.practice else tr("HUD_NO")),
+		tr("HUD_LINE_DIFFICULTY") % [tr(GameConfig.DIFFICULTY_NAMES[enemy.difficulty]), tr(Enemy.MODE_NAMES[enemy.mode]) if enemy.ai_enabled else tr("HUD_AI_OFF")],
+		tr("HUD_LINE_WEAPON") % [tr(GameConfig.WEAPON_NAMES[player.weapon_kind]), target_score],
 	]
+	_status.text = "\n".join(lines)
 
 	_canvas.weapon_kind = player.weapon_kind
 	_canvas.drawing = player.drawing
@@ -133,13 +124,13 @@ func _process(_delta: float) -> void:
 	_canvas.drop_offset = focal * tan(player.impact_drop_angle()) if GameConfig.AIM_SHOW_DROP_MARKER else 0.0
 	_canvas.guarding = c.guard_held
 	_canvas.health_ratio = c.health / c.max_health
-	_canvas.stamina_ratio = c.stamina / GameConfig.STAMINA_MAX
+	_canvas.stamina_ratio = c.stamina / c.stats.get_derived(&"endurance_max")
 	_canvas.exhausted = c.exhausted
 	_canvas.enemy_visible = not enemy.combatant.dead
 	_canvas.enemy_health_ratio = enemy.combatant.health / enemy.combatant.max_health
-	_canvas.enemy_stamina_ratio = enemy.combatant.stamina / GameConfig.STAMINA_MAX
+	_canvas.enemy_stamina_ratio = enemy.combatant.stamina / enemy.combatant.stats.get_derived(&"endurance_max")
 	_canvas.enemy_exhausted = enemy.combatant.exhausted
-	_canvas.enemy_title = "ENNEMI — %s" % GameConfig.DIFFICULTY_NAMES[enemy.difficulty]
+	_canvas.enemy_title = tr("HUD_ENEMY_TITLE") % tr(GameConfig.DIFFICULTY_NAMES[enemy.difficulty])
 	_canvas.queue_redraw()
 
 

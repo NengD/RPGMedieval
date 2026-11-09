@@ -11,7 +11,7 @@ savoir si le combat est amusant. Toutes les valeurs de réglage sont dans `scrip
 ## Commandes
 - Godot console : `E:\_jeu perso\godot\Godot_v4.7.2-stable_win64_console.exe`
 - Import : `godot --headless --path . --import`
-- Tests (code de sortie 1 si échec) : `godot --headless --path . --fixed-fps 120 -s tests/run_tests.gd` (arène, déplacement, caméra, combat) et `... -s tests/combat_tests.gd` (logique pure du combat)
+- Tests (code de sortie 1 si échec) : `godot --headless --path . --fixed-fps 120 -s tests/run_tests.gd` (arène, déplacement, caméra, combat) `... -s tests/combat_tests.gd` (logique pure du combat) et `... -s tests/rpg_tests.gd` (stats, dégâts/armures, identifiants, sauvegarde, traduction, équipement)
 - Test du regard souris en fenêtre réelle : `godot --path . --resolution 960x540 -s tests/shot.gd` (affiche RESULTAT OK)
 - Lancer le jeu : ouvrir le projet dans l'éditeur Godot puis F5.
 
@@ -25,10 +25,12 @@ savoir si le combat est amusant. Toutes les valeurs de réglage sont dans `scrip
 - `hud.gd` + `hud_canvas.gd` — aide, messages, barres vie/endurance, réticule (JAMAIS de Control qui bloque la souris : mouse_filter = IGNORE).
 - `hero_model.gd` — chevalier Mixamo animé (héros ET ennemi) : AnimationTree = Loco (BlendSpace2D) → haut du corps (filtre os Spine et enfants : attaque / parade / coup reçu) → corps entier (esquive / saut / mort). Les attaques sont « scrubbées » par TimeSeek au rythme du Combatant (contact visuel = début du coup). Épée en BoneAttachment3D (main droite).
 - `arrow.gd` — flèche/carreau (gravité, rayon balayé, reste planté, max MAX_STUCK_ARROWS). `archery_target.gd` — cibles 10/5/2 pts. `ranged_visual.gd` — arc et arbalète en formes simples (à remplacer par les animations à l'étape 5, lot 2).
+- `scripts/rpg/` (étape 2, voir docs/FONDATIONS_RPG.md) : `stats.gd` + `stat_modifier.gd` + `stats_formulas.gd` (attributs, dérivées, modificateurs), `damage_type.gd` / `damage_packet.gd` (types de dégâts), `material_data.gd` / `armor_data.gd` / `equipment_component.gd` (armures), `registry.gd` (identifiants de type et d'instance, scan de `data/`), `save_service.gd` + `character_save.gd` (sauvegarde JSON atomique, migrations). `Combatant` lit ses valeurs dans `combatant.stats` (max_health, speed_scale restent des propriétés compatibles) et applique `combatant.protection`.
+- Textes : TOUT passe par `tr("CLÉ")` (locale/translations.csv, colonnes keys,fr,en). Les listes de noms de game_config / enemy / hud contiennent des CLÉS. Ne jamais écrire de texte affiché en dur (testé).
 - Couches physiques : 1 monde, 2 joueur, 3 ennemis.
 
 ## Contrôles
-F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le combat · ZQSD/stick G déplacer · souris/stick D regarder · Maj courir · Espace sauter · C pas de côté · V changer de vue · Tab/molette changer d'arme (épée, arc, arbalète) · clic gauche (RB) attaquer (clics répétés = combo)/bander/tirer · clic droit (LB) parer ou annuler la corde · Retour arrière retire les flèches · T mannequin agressif · R reset · Échap libère la souris.
+F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le combat · ZQSD/stick G déplacer · souris/stick D regarder · Maj courir · Espace sauter · C pas de côté · V changer de vue · Tab/molette changer d'arme (épée, arc, arbalète) · clic gauche (RB) attaquer (clics répétés = combo)/bander/tirer · clic droit (LB) parer ou annuler la corde · Retour arrière retire les flèches · T mannequin agressif · R reset · F5 sauvegarde rapide · F9 chargement rapide · Échap libère la souris.
 
 ## Avancement
 - [x] Étape 1 — Base : arène, héros, caméra 3e/1re personne, mannequin
@@ -36,6 +38,7 @@ F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le com
 - [x] Étape 3 — Ennemi IA (approche, tourne autour, attaque variée, parade imparfaite, recule épuisé, 3 difficultés)
 - [x] Étape 4 — Arc / arbalète (trajectoire, tension, flèches plantées, cibles, ennemi qui pare les tirs ou se met à couvert)
 - [~] Étape 5 — Animations Mixamo : FAIT = chevalier animé (héros + ennemi teinté), AnimationTree (jambes + haut du corps), épée en main. RESTE = animations arc/arbalète (Pro Longbow Pack, Pro Rifle Pack), armes/bouclier gratuits (Quaternius…), garde par direction
+- [x] Fondations RPG (étape 2 du chantier « réalisme + RPG ») : stats, types de dégâts/armures, identifiants, sauvegarde, traduction — voir docs/FONDATIONS_RPG.md et docs/ARCHITECTURE.md (étapes 3 à 6 du chantier : armes, personnage modulaire, matériaux/arène, animations naturelles)
 - [ ] Étape 6 — Game feel, sons
 
 ## Règles du combat

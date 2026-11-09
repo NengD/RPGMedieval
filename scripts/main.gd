@@ -22,10 +22,14 @@ func _ready() -> void:
 	dummy = TrainingDummy.new()
 	dummy.position = DUMMY_POS
 	add_child(dummy)
+	dummy.instance_id = Registry.new_instance_id("mannequin")
+	Registry.register_instance(dummy.instance_id, dummy)
 
 	player = Player.new()
 	player.position = PLAYER_START
 	add_child(player)
+	player.instance_id = Registry.new_instance_id("hero")
+	Registry.register_instance(player.instance_id, player)
 	dummy.target_node = player
 	player.combatant.died.connect(_on_player_died)
 
@@ -35,6 +39,8 @@ func _ready() -> void:
 	enemy.difficulty = GameConfig.DEFAULT_DIFFICULTY
 	enemy.cover_objects = arena.cover_objects
 	add_child(enemy)
+	enemy.instance_id = Registry.new_instance_id("ennemi")
+	Registry.register_instance(enemy.instance_id, enemy)
 	enemy.combatant.died.connect(_on_enemy_died)
 
 	_build_targets()
@@ -55,9 +61,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event.is_action_pressed(&"reset_combat"):
 		reset_combat()
+	elif event.is_action_pressed(&"quick_save"):
+		quick_save()
+	elif event.is_action_pressed(&"quick_load"):
+		quick_load()
 	elif event.is_action_pressed(&"toggle_ai"):
 		enemy.ai_enabled = not enemy.ai_enabled
-		hud.show_message("IA de l'ennemi : %s" % ("activée" if enemy.ai_enabled else "DÉSACTIVÉE (il reste immobile)"), Color(1, 0.9, 0.5), 1.5)
+		hud.show_message(tr("MSG_AI_ON") if enemy.ai_enabled else tr("MSG_AI_OFF"), Color(1, 0.9, 0.5), 1.5)
 	elif event.is_action_pressed(&"clear_arrows"):
 		Arrow.clear_all(get_tree())
 	elif event.is_action_pressed(&"toggle_practice"):
@@ -70,6 +80,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		set_difficulty(2)
 	elif event.is_action_pressed(&"difficulty_cycle"):
 		set_difficulty((enemy.difficulty + 1) % 3)
+
+
+## Sauvegarde rapide (F5) : écrit user://saves/quick.json.
+func quick_save() -> void:
+	var err := SaveService.save_slot(get_tree(), SaveService.QUICK_SLOT)
+	hud.show_message(tr("MSG_SAVED") if err == OK else tr("MSG_LOAD_FAILED"), Color(0.6, 1.0, 0.6), 1.2)
+
+
+## Chargement rapide (F9).
+func quick_load() -> void:
+	_reset_gen += 1   # annule un redémarrage de combat programmé
+	var n := SaveService.load_slot(get_tree(), SaveService.QUICK_SLOT)
+	hud.show_message(tr("MSG_LOADED") if n >= 0 else tr("MSG_LOAD_FAILED"), Color(0.6, 1.0, 0.6) if n >= 0 else Color(1, 0.5, 0.4), 1.2)
 
 
 ## Cibles d'entraînement au tir, à différentes distances (la dernière se déplace).
@@ -104,7 +127,7 @@ func _on_enemy_died() -> void:
 func set_difficulty(level: int) -> void:
 	enemy.difficulty = level
 	reset_combat()
-	hud.show_message("Difficulté : %s" % GameConfig.DIFFICULTY_NAMES[level], Color(1, 0.9, 0.5), 1.5)
+	hud.show_message(tr("MSG_DIFFICULTY") % tr(GameConfig.DIFFICULTY_NAMES[level]), Color(1, 0.9, 0.5), 1.5)
 
 
 func _reset_later(delay: float) -> void:
