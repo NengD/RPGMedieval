@@ -37,6 +37,9 @@ func setup(p_model: Node3D, p_skeleton: Skeleton3D) -> void:
 		var pole := Node3D.new()
 		pole.name = "FootPole" + side
 		model.add_child(pole)
+		var tilt := FootTiltModifier.new()   # APRÈS le TwoBoneIK3D : incline la cheville selon la pente
+		tilt.name = "FootTilt" + side
+		tilt.bone_name = "mixamorig_%sFoot" % side
 		var ik := TwoBoneIK3D.new()
 		ik.name = "LegIK" + side
 		skeleton.add_child(ik)
@@ -47,7 +50,9 @@ func setup(p_model: Node3D, p_skeleton: Skeleton3D) -> void:
 		ik.set_target_node(0, ik.get_path_to(target))
 		ik.set_pole_node(0, ik.get_path_to(pole))
 		ik.influence = 0.0
-		_legs.append({"ik": ik, "target": target, "pole": pole, "foot": "mixamorig_%sFoot" % side, "applied": 0.0, "amount": 0.0})
+		skeleton.add_child(tilt)
+		tilt.influence = 0.0
+		_legs.append({"ik": ik, "target": target, "pole": pole, "foot": "mixamorig_%sFoot" % side, "applied": 0.0, "amount": 0.0, "tilt": tilt, "normal": Vector3.UP})
 
 
 func _foot_world(bone: String) -> Vector3:
@@ -73,9 +78,18 @@ func update(delta: float, active: bool) -> void:
 			var q := PhysicsRayQueryParameters3D.create(foot + Vector3.UP * 0.5, foot + Vector3.DOWN * 0.7, GameConfig.LAYER_WORLD)
 			var hit := space.intersect_ray(q)
 			var ground_y := (hit.position.y as float) if hit else base_y
+			var ground_normal: Vector3 = (hit.normal as Vector3) if hit else Vector3.UP
+			leg["normal"] = (leg["normal"] as Vector3).slerp(ground_normal, 1.0 - exp(-14.0 * delta))
 			var off := ground_offset(ground_y, base_y, GameConfig.FOOT_IK_MAX_OFFSET)
 			var anim_height := foot.y - base_y - float(leg["applied"]) - lift   # hauteur du pied dans l'animation (sans notre correction)
 			desired = off * plant_weight(anim_height)
+		if not (active and GameConfig.FOOT_IK_ENABLED):
+			leg["normal"] = (leg["normal"] as Vector3).slerp(Vector3.UP, 1.0 - exp(-14.0 * delta))
+		var tiltm := leg["tilt"] as FootTiltModifier
+		tiltm.normal_world = leg["normal"]
+		var slope := 1.0 - (leg["normal"] as Vector3).dot(Vector3.UP)
+		tiltm.amount = GameConfig.FOOT_TILT_AMOUNT * plant_weight(foot.y - base_y - float(leg["applied"]) - lift)
+		tiltm.influence = 1.0 if slope > 0.002 else 0.0
 		var old_applied: float = leg["applied"]
 		var applied := lerpf(old_applied, desired, 1.0 - exp(-18.0 * delta))
 		leg["applied"] = applied

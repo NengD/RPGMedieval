@@ -897,6 +897,16 @@ func _test_polish() -> void:
 	e.global_position = Vector3(30, 0, 30)
 	await _frames(60)
 	_check(m.foot_ik.lift > 0.0 and m.foot_ik.lift <= 0.15, "les pieds sont remontés pour ne pas s'enfoncer dans le sol (+%.1f cm)" % (m.foot_ik.lift * 100.0))
+	# --- chevilles inclinées selon la pente
+	var tm: FootTiltModifier = m.foot_ik._legs[0]["tilt"]
+	m.foot_ik._legs[0]["normal"] = Vector3(0.0, 0.94, -0.34).normalized()
+	tm.normal_world = m.foot_ik._legs[0]["normal"]
+	_check(tm is FootTiltModifier and m.foot_ik._legs[0]["tilt"].bone_name == "mixamorig_LeftFoot" and GameConfig.FOOT_TILT_AMOUNT > 0.0, "chevilles : un modificateur incline le pied selon la normale du sol")
+	# --- réactions raccourcies : le clip est accéléré pour tenir dans l'étourdissement
+	c.stagger(GameConfig.HIT_STUN)
+	var react_speed := float(m.tree.get("parameters/UpperTS/scale"))
+	_check(react_speed >= 1.0 and react_speed <= GameConfig.HIT_REACT_MAX_SPEED, "réaction de coup reçu accélérée pour tenir dans l'étourdissement (x%.1f)" % react_speed)
+	c.reset()
 	# --- regard
 	e.global_position = p.global_position + Vector3(0, 0, -5)
 	await _frames(40)
@@ -918,6 +928,11 @@ func _test_polish() -> void:
 	c.take_damage(9999.0, attacker)
 	await _frames(30)
 	_check(m.is_ragdoll() and m.ragdoll_sim.get_child_count() == 16, "mort en ragdoll : 16 os physiques")
+	var elbow := m.ragdoll_sim.get_node("PB_LeftForeArm") as PhysicalBone3D
+	var knee := m.ragdoll_sim.get_node("PB_RightLeg") as PhysicalBone3D
+	var neck := m.ragdoll_sim.get_node("PB_Head") as PhysicalBone3D
+	_check(elbow.joint_type == PhysicalBone3D.JOINT_TYPE_HINGE and knee.joint_type == PhysicalBone3D.JOINT_TYPE_HINGE and neck.joint_type == PhysicalBone3D.JOINT_TYPE_CONE, "ragdoll : coudes et genoux en charnière, cou en cône limité")
+	_check(elbow.get("joint_constraints/angular_limit_enabled") == true and knee.get("joint_constraints/angular_limit_enabled") == true and float(neck.get("joint_constraints/swing_span")) <= 45.0, "ragdoll : limites d'articulations actives (coude, genou, cou ≤ 45°)")
 	_check(m._armor_holder.get_child_count() == meshes_before and m.sword_holder.visible, "l'équipement suit le corps (même maillages, arme en main)")
 	p.reset_to(Vector3(0, 0.05, 9), 0.0)
 	await _frames(30)

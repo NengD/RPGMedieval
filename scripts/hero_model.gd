@@ -947,7 +947,12 @@ func _on_attack_started(dir: int) -> void:
 func _on_staggered(perfect: bool) -> void:
 	if _dead:
 		return
-	_set_upper(_pick_hit_anim(perfect))
+	var react := _pick_hit_anim(perfect)
+	_set_upper(react)
+	# le clip est accéléré pour que le coup reçu se joue en entier pendant l'étourdissement
+	var length := _library.get_animation(react).length
+	var stun := maxf(combatant.state_duration, 0.1)
+	tree.set("parameters/UpperTS/scale", clampf(length * 0.8 / stun, GameConfig.HIT_REACT_MIN_SPEED, GameConfig.HIT_REACT_MAX_SPEED))
 
 
 ## Réaction selon d'où vient le coup (gauche, droite, face) et sa force ; tir à la tête = secousse de la tête.

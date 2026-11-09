@@ -301,3 +301,6 @@ const KNOCKBACK_DECAY := 14.0         # décélération du recul (m/s²)
 const KNOCKBACK_BIG_HIT := 26.0       # à partir de ces dégâts on joue la grande réaction (« ventre »)
 const RAGDOLL_ON_DEATH := true        # mort en ragdoll (false = animation de mort)
 const RAGDOLL_PUSH := 3.0             # vitesse donnée au corps par le coup fatal (m/s)
+const FOOT_TILT_AMOUNT := 1.0          # inclinaison des chevilles selon la pente (0 = pieds à plat)
+const HIT_REACT_MIN_SPEED := 1.0       # une réaction de coup reçu est accélérée pour tenir dans l'étourdissement (jamais ralentie)
+const HIT_REACT_MAX_SPEED := 4.0

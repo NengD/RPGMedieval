@@ -21,8 +21,10 @@ Chaque option se coupe dans `game_config.gd` (section « Animations plus naturel
 - Captures : `godot --path . --resolution 960x540 --position 6000,3000 -s tests/polish_look.gd` (images `user://polish_*.png`).
 - Les os animés par IK ne se lisent pas en mode sans fenêtre : les tests vérifient les valeurs et les cibles ; le rendu se juge sur captures ou en jeu.
 
+## Corrections de l'étape 9A
+- **Chevilles inclinées** : `FootTiltModifier` (après les `TwoBoneIK3D` des jambes) fait pivoter la cheville vers la normale du sol (lissée), seulement quand le pied est posé. `FOOT_TILT_AMOUNT`.
+- **Réactions serrées et courtes** : `hit_left` / `hit_right` / `hit_gut` gardent 55 / 55 / 70 % de leur amplitude (`TIGHTEN` dans `tools/bake_animations.gd`) ; le clip est accéléré pour se jouer en entier pendant l'étourdissement (`HIT_REACT_MIN/MAX_SPEED`).
+- **Ragdoll avec limites** : coudes et genoux en charnière avec butées, cou et poignets / chevilles / dos en cône limité (`Ragdoll.JOINTS`). Mesure : `tools/ragdoll_probe.gd` (les os animés ne se lisent pas : on lit les `PhysicalBone3D`). Résultat : coudes 0-63°, genoux ≥ -10° (légère hyper-extension résiduelle).
+
 ## Limites connues
-- Les pieds sont posés en hauteur mais **pas inclinés** (la cheville ne suit pas la pente).
-- Les réactions « de la gauche / de la droite » viennent du pack hache : elles sont plus ouvertes que les impacts de l'épée.
-- Ragdoll : capsules simples, joints coniques sans limites fines ; le corps peut parfois se plier de façon peu naturelle. Réglable dans `scripts/character/ragdoll.gd`.
-- Les cinq clips de réaction durent plus longtemps que l'étourdissement (0,35 s) : seul leur début est joué.
+- Le sens de butée des genoux n'est pas parfaitement tenu par le moteur (jusqu'à 10° d'hyper-extension). Les cinq réactions viennent des packs hache et arc.

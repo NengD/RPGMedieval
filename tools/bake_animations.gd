@@ -67,6 +67,28 @@ const MAP := {
 	&"xbow_run_l": ["rifle_run_left", true, true, false],
 }
 
+## Réactions de coup reçu plus serrées : part de l'amplitude d'origine conservée (1 = clip tel quel).
+const TIGHTEN := {&"hit_left": 0.55, &"hit_right": 0.55, &"hit_gut": 0.7}
+
+
+## Réduit l'amplitude d'un clip : chaque pose se rapproche de la première image.
+func _tighten(anim: Animation, keep: float) -> void:
+	for i in anim.get_track_count():
+		var n := anim.track_get_key_count(i)
+		if n < 2:
+			continue
+		match anim.track_get_type(i):
+			Animation.TYPE_ROTATION_3D:
+				var q0: Quaternion = anim.track_get_key_value(i, 0)
+				for k in n:
+					var q: Quaternion = anim.track_get_key_value(i, k)
+					anim.track_set_key_value(i, k, q0.slerp(q, keep))
+			Animation.TYPE_POSITION_3D:
+				var v0: Vector3 = anim.track_get_key_value(i, 0)
+				for k in n:
+					var v: Vector3 = anim.track_get_key_value(i, k)
+					anim.track_set_key_value(i, k, v0.lerp(v, keep))
+
 
 func _initialize() -> void:
 	_run()
@@ -88,6 +110,8 @@ func _run() -> void:
 		anim.set_meta(&"root_speed", _root_speed(anim))   # vitesse de déplacement d'origine (m/s) : sert à caler la cadence sur la vitesse réelle
 		if spec[1]:
 			_make_in_place(anim)
+		if key in TIGHTEN:
+			_tighten(anim, float(TIGHTEN[key]))   # réaction plus serrée : amplitude réduite
 		anim.loop_mode = Animation.LOOP_LINEAR if spec[2] else Animation.LOOP_NONE
 		if spec[3]:
 			var t_min: float = spec[4] if spec.size() > 4 else 0.0
