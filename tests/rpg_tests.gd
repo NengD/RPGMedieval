@@ -577,7 +577,7 @@ func _test_arm_ik() -> void:
 	p.start_draw()
 	await _frames(60)
 	_check(p.model.ik_l.influence > 0.9, "arc bandé : le bras de l'arc est tendu par cinématique inverse")
-	_check(p.rig.aim_side < 0.0, "arc : la caméra de visée passe du côté de l'épaule gauche (bras de l'arc)")
+	_check(p.rig.aim_side > 0.0, "arc : la caméra de visée passe par-dessus l'épaule droite, comme l'arbalète")
 	_check(_reach_ok(p, "Left", p.model._grip_l), "arc : la poignée est à portée du bras gauche (bras tendu)")
 	Input.action_release(&"attack")
 	p.cancel_draw()

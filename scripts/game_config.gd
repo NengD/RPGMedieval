@@ -276,7 +276,7 @@ const SHIELD_GUARD_HAND := Vector3(-0.20, 1.28, -0.42)   # où l'avant-bras gauc
 const SHIELD_FORWARD := 0.10        # l'écu est décalé devant l'avant-bras (m)
 const SHIELD_SIDE := 0.08           # et vers l'extérieur (m)
 # --- Caméra en visée : du côté de l'arme, pour voir l'arme et le réticule alignés ---
-const AIM_CAMERA_SIDE_BOW := -0.30    # arc : par-dessus l'épaule GAUCHE (négatif = gauche), le bras de l'arc est de ce côté (m)
+const AIM_CAMERA_SIDE_BOW := 0.30     # arc : par-dessus l'épaule DROITE comme l'arbalète (standard des RPG à la 3e personne) ; négatif = gauche
 const AIM_CAMERA_SIDE_XBOW := 0.30    # arbalète : par-dessus l'épaule droite (m)
 # --- Parade sans écu : le bras libre reste bas devant le ventre (sinon l'animation lève le bras comme pour tenir un écu) ---
 const FREE_GUARD_HAND := Vector3(-0.22, 1.02, -0.30)
