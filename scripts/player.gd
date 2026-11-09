@@ -16,9 +16,6 @@ var ranged_visual: RangedVisual
 var facing_yaw := 0.0
 var invulnerable := false
 var is_dodging := false
-## Direction choisie pour attaquer / parer : 0 haut, 1 droite, 2 estoc, 3 gauche
-var aim_dir: int = Combatant.Dir.UP
-var aim_accum := Vector2.ZERO
 ## Pour les tests automatiques : accepte les événements souris même sans capture (la vraie souris n'est alors pas utilisée).
 var accept_input_without_capture := false
 
@@ -146,8 +143,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		cycle_weapon(1)
 	elif event.is_action_pressed(&"weapon_prev"):
 		cycle_weapon(-1)
-	elif event is InputEventMouseMotion and captured:
-		aim_accum += (event as InputEventMouseMotion).screen_relative
 	elif event.is_action_pressed(&"attack") and captured:
 		primary_action()
 
@@ -195,12 +190,12 @@ func switch_weapon(kind: int) -> bool:
 
 # --- Épée
 
-## Attaque à l'épée dans la direction choisie (aim_dir).
+## Attaque à l'épée : chaque clic enchaîne le coup suivant du combo.
 func try_attack() -> bool:
 	if combatant.dead or is_dodging:
 		return false
 	_assist_yaw = _find_assist_yaw()
-	return combatant.request_attack(aim_dir)
+	return combatant.request_attack()
 
 
 # --- Arc
@@ -361,20 +356,6 @@ func _find_assist_yaw() -> float:
 	return best
 
 
-func _update_aim(delta: float) -> void:
-	var look := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
-	aim_accum += look * GameConfig.STICK_AIM_GAIN * delta
-	aim_accum *= exp(-GameConfig.AIM_DECAY * delta)
-	if aim_accum.length() > GameConfig.AIM_THRESHOLD:
-		var ax := absf(aim_accum.x)
-		var ay := absf(aim_accum.y)
-		# On ne change de direction que si le geste est franchement horizontal ou vertical
-		if ax > ay * GameConfig.AIM_DOMINANCE:
-			aim_dir = Combatant.Dir.RIGHT if aim_accum.x > 0.0 else Combatant.Dir.LEFT
-		elif ay > ax * GameConfig.AIM_DOMINANCE:
-			aim_dir = Combatant.Dir.DOWN if aim_accum.y > 0.0 else Combatant.Dir.UP
-
-
 func _move_factor() -> float:
 	match combatant.state:
 		Combatant.State.STAGGER:
@@ -397,13 +378,12 @@ func _move_factor() -> float:
 
 func _physics_process(delta: float) -> void:
 	_dodge_cooldown = maxf(0.0, _dodge_cooldown - delta)
-	_update_aim(delta)
 	_update_aim_state(delta)
 	_update_ranged(delta)
 
 	# Garde (clic droit maintenu, épée seulement)
 	var alive := not combatant.dead
-	combatant.set_guard(alive and weapon_kind == Weapon.SWORD and Input.is_action_pressed(&"guard"), aim_dir)
+	combatant.set_guard(alive and weapon_kind == Weapon.SWORD and Input.is_action_pressed(&"guard"))
 	combatant.invulnerable = invulnerable
 	if not combatant.is_attacking():
 		_assist_yaw = NAN

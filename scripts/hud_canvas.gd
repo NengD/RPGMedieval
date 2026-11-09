@@ -1,10 +1,8 @@
 class_name HudCanvas
 extends Control
-## Dessine : indicateur de direction autour du centre, barres de vie et d'endurance.
+## Dessine : réticule, barres de vie et d'endurance.
 
-var selected_dir := 0
 var guarding := false
-var threat_dir := -1         # côté d'où arrive un coup ennemi (= côté à garder), -1 si aucun
 var health_ratio := 1.0
 var stamina_ratio := 1.0
 var exhausted := false
@@ -38,16 +36,6 @@ static func dir_vector(d: int) -> Vector2:
 
 func _draw() -> void:
 	var center := size * 0.5
-	for d in (4 if weapon_kind == 0 else 0):
-		var v := dir_vector(d)
-		var chosen := d == selected_dir
-		var color := Color(1, 1, 1, 0.22)
-		if chosen:
-			color = Color(0.45, 0.8, 1.0, 0.95) if guarding else Color(1.0, 0.9, 0.4, 0.95)
-		_triangle(center + v * 46.0, v, 9.0 if chosen else 6.0, color)
-		if d == threat_dir:
-			_triangle(center + v * 66.0, -v, 13.0, Color(1.0, 0.15, 0.1, 0.95))
-
 	if weapon_kind != 0:
 		_draw_reticle(center)
 

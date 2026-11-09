@@ -53,7 +53,7 @@ func _run() -> void:
 		await _frames(3)
 		p.rig.yaw = 0.0
 		p.rig.pitch = -0.15
-		var picked := p.aim_dir
+		var picked := -1
 		_click(true)
 		_click(false)
 		var marks := [0.0, 0.25, 0.5, 0.7, 0.85, 1.2]

@@ -84,10 +84,6 @@ const AIM_ASSIST_ANGLE_DEG := 40.0
 const COMBAT_TURN_SPEED := 30.0      # vitesse à laquelle le corps se tourne vers la caméra en combat
 
 # Choix de la direction à la souris / au stick droit
-const AIM_THRESHOLD := 70.0          # mouvement de souris (pixels) nécessaire pour changer de direction : plus haut = moins sensible
-const AIM_DOMINANCE := 1.4           # l'axe dominant doit dépasser l'autre d'au moins ce facteur, sinon la direction ne change pas
-const AIM_DECAY := 4.0               # oubli du mouvement de souris (plus haut = il faut bouger plus vite)
-const STICK_AIM_GAIN := 700.0        # équivalent pixels/seconde du stick droit à fond
 
 # Parade
 const PERFECT_PARRY_WINDOW := 0.20   # parade parfaite : garde levée depuis moins de X s à l'impact
@@ -127,11 +123,9 @@ const DIFFICULTY_NAMES := ["Facile", "Normal", "Difficile"]
 const DEFAULT_DIFFICULTY := 1
 const ENEMY_AI_ENABLED_AT_START := true   # false = l'ennemi reste immobile et inoffensif au départ (touche F4 en jeu)
 const AI_REACTION_TIME := [0.40, 0.28, 0.18]          # délai avant de réagir à ton coup (s) : plus c'est long, moins il pare
-const AI_PARRY_CHANCE := [0.15, 0.30, 0.50]           # chance de tenter une parade
+const AI_PARRY_CHANCE := [0.08, 0.17, 0.32]       # chance de parer un coup (il n'y a plus de mauvais côté : valeurs réduites pour garder une parade faible)
 const AI_PERFECT_PARRY_CHANCE := [0.0, 0.04, 0.12]    # parmi les parades : tentative de parade parfaite
-const AI_WRONG_SIDE_CHANCE := [0.50, 0.35, 0.20]      # chance de garder du mauvais côté
 const AI_ATTACK_INTERVAL := [2.4, 1.6, 0.9]           # pause moyenne entre deux attaques (s)
-const AI_SMART_CHANCE := [0.15, 0.45, 0.75]           # chance d'éviter la direction que tu gardes
 const AI_SPEED_SCALE := [0.75, 0.90, 1.05]            # vitesse de ses attaques (1 = comme toi)
 const AI_DAMAGE_SCALE := [0.6, 0.8, 1.0]              # force de ses coups
 const AI_MAX_HEALTH := [70.0, 100.0, 130.0]           # points de vie
@@ -256,3 +250,10 @@ const BOW_HAND_OFFSET := Vector3(0.0, 0.08, 0.0)
 # Arbalète tenue en main (3e personne) : orientation dans la main droite (tools/xbow_hand_axes.gd : l'avant de l'arme va vers la main gauche)
 const XBOW_HAND_ROTATION := Vector3(1.053, 2.569, 1.060)   # radians
 const XBOW_HAND_OFFSET := Vector3(0.0, 0.0, 0.0)
+
+# Enchaînement (combo) : plus de choix de direction, chaque clic enchaîne le coup suivant
+# (0 haut, 1 droite, 2 estoc, 3 gauche). Sans attaque pendant COMBO_RESET_TIME s, on repart du premier coup.
+const COMBO_ORDER := [1, 3, 0, 2]
+const COMBO_RESET_TIME := 1.1
+# Une seule parade, quel que soit le coup : pose de garde utilisée (0 haut, 1 droite, 2 bas, 3 gauche)
+const GUARD_POSE := 1

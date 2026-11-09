@@ -178,7 +178,6 @@ func _update_defense(delta: float, dist: float) -> void:
 		_threat_time += delta
 		if _plan_parry and _threat_time >= _plan_raise_at:
 			_guard_wanted = true
-			_guard_dir = _plan_dir
 			_guard_release = 0.3
 	else:
 		_seen_threat = false
@@ -187,7 +186,7 @@ func _update_defense(delta: float, dist: float) -> void:
 			if _guard_release <= 0.0:
 				_guard_wanted = false
 	_check_arrows(delta)
-	c.set_guard(_guard_wanted or _arrow_guard > 0.0, _guard_dir if _guard_wanted else Combatant.Dir.UP)
+	c.set_guard(_guard_wanted or _arrow_guard > 0.0)
 
 
 ## Décide, une fois par coup du joueur, si l'ennemi tente de parer, de quel côté et quand.
@@ -197,12 +196,7 @@ func _plan_threat(pc: Combatant) -> void:
 	if not _plan_parry:
 		return
 	var react: float = GameConfig.AI_REACTION_TIME[difficulty]
-	var wrong: float = GameConfig.AI_WRONG_SIDE_CHANCE[difficulty]
 	var perfect: float = GameConfig.AI_PERFECT_PARRY_CHANCE[difficulty]
-	var needed := Combatant.mirror(pc.attack_dir)
-	_plan_dir = needed
-	if randf() < wrong:
-		_plan_dir = (needed + 1 + randi() % 3) % 4   # un autre côté que le bon
 	_plan_raise_at = react
 	if randf() < perfect and pc.state == Combatant.State.WINDUP:
 		# parade parfaite : lever la garde juste avant l'impact
@@ -276,19 +270,13 @@ func _start_attack(dist: float) -> void:
 		_last_dirs.pop_front()
 
 
-## Direction variée : évite de répéter, et évite (parfois) le côté que le joueur garde.
+## Coup varié : évite de répéter les deux derniers.
 func _choose_dir(dist: float) -> int:
 	var w := [1.0, 1.0, 1.0, 1.0]
 	if dist > GameConfig.MELEE_RANGE + GameConfig.PLAYER_RADIUS - 0.1:
 		w = [0.0, 0.0, 1.0, 0.0]   # trop loin pour un coup de taille : seul l'estoc porte
 	for d in _last_dirs:
 		w[d] *= 0.35
-	var pc := target.combatant
-	var smart: float = GameConfig.AI_SMART_CHANCE[difficulty]
-	if pc.guard_held and randf() < smart:
-		for d in 4:
-			if Combatant.mirror(d) == pc.guard_dir:
-				w[d] *= 0.08
 	var total := 0.0
 	for x in w:
 		total += x

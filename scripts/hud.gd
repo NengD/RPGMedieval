@@ -22,7 +22,7 @@ func _ready() -> void:
 	_help.text = "ÉTAPE 4 — Combat à distance\n" \
 		+ "ZQSD : bouger   Maj : courir   Espace : sauter   C : pas de côté   V : changer de vue\n" \
 		+ "Tab / molette : changer d'arme (épée, arc, arbalète)\n" \
-		+ "ÉPÉE : bouge la souris pour choisir haut/estoc/gauche/droite, clic gauche attaque, clic droit (maintenu) pare\n" \
+		+ "ÉPÉE : clic gauche = coup (clics répétés = combo), clic droit (maintenu) = pare\n" \
 		+ "ARC / ARBALÈTE : clic droit (maintenu) = VISER (zoom, plus précis)   clic gauche : bander puis relâcher / tirer   X : annuler la corde\n" \
 		+ "F1 / F2 / F3 : difficulté   F4 : IA ennemie   R : recommencer   Retour arrière : retirer les flèches   T : mannequin agressif   Échap : souris\n"
 	add_child(_help)
@@ -102,11 +102,10 @@ func _process(_delta: float) -> void:
 	var speed := Vector2(player.velocity.x, player.velocity.z).length()
 	var guard_text := ""
 	if c.is_guarding():
-		guard_text = "   GARDE : %s%s" % [GameConfig.DIR_NAMES[c.guard_dir], " (parfaite !)" if c.guard_time <= GameConfig.PERFECT_PARRY_WINDOW else ""]
-	_status.text = "Vue : %s   Vitesse : %.1f m/s   Direction choisie : %s\nÉtat : %s%s%s\nMannequin agressif : %s (T)\nDifficulté : %s    Ennemi : %s\nArme : %s    Score aux cibles : %d" % [
+		guard_text = "   GARDE : %s%s" % ["parade", " (parfaite !)" if c.guard_time <= GameConfig.PERFECT_PARRY_WINDOW else ""]
+	_status.text = "Vue : %s   Vitesse : %.1f m/s\nÉtat : %s%s%s\nMannequin agressif : %s (T)\nDifficulté : %s    Ennemi : %s\nArme : %s    Score aux cibles : %d" % [
 		"1re personne" if fps_view else "3e personne",
 		speed,
-		GameConfig.DIR_NAMES[player.aim_dir].to_upper(),
 		_STATE_NAMES[c.state],
 		guard_text,
 		"   PAS DE CÔTÉ" if player.is_dodging else "",
@@ -117,7 +116,6 @@ func _process(_delta: float) -> void:
 		target_score,
 	]
 
-	_canvas.selected_dir = player.aim_dir
 	_canvas.weapon_kind = player.weapon_kind
 	_canvas.drawing = player.drawing
 	_canvas.tension = player.bow_tension
@@ -142,17 +140,7 @@ func _process(_delta: float) -> void:
 	_canvas.enemy_stamina_ratio = enemy.combatant.stamina / GameConfig.STAMINA_MAX
 	_canvas.enemy_exhausted = enemy.combatant.exhausted
 	_canvas.enemy_title = "ENNEMI — %s" % GameConfig.DIFFICULTY_NAMES[enemy.difficulty]
-	_canvas.threat_dir = _find_threat()
 	_canvas.queue_redraw()
-
-
-## Un adversaire prépare un coup contre le héros : retourne le côté à garder, sinon -1.
-func _find_threat() -> int:
-	for node in get_tree().get_nodes_in_group(&"combatants"):
-		var c := node as Combatant
-		if c != null and c.team != player.combatant.team and not c.dead and c.is_attacking():
-			return Combatant.mirror(c.attack_dir)
-	return -1
 
 
 func _make_label() -> Label:

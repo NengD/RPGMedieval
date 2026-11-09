@@ -54,9 +54,19 @@ func _cleanup(list: Array) -> void:
 
 
 func _run() -> void:
-	print("[Directions]")
-	_check(Combatant.mirror(D.LEFT) == D.RIGHT and Combatant.mirror(D.RIGHT) == D.LEFT, "gauche/droite sont inversés pour la parade")
-	_check(Combatant.mirror(D.UP) == D.UP and Combatant.mirror(D.DOWN) == D.DOWN, "haut/bas ne changent pas")
+	print("[Combo]")
+	var cb := _pair()
+	var combo_a: Combatant = cb[0]
+	await physics_frame
+	combo_a.request_attack()
+	var first: int = combo_a.attack_dir
+	await _seconds(1.3)   # attaque finie, pause courte (< COMBO_RESET_TIME) : le combo continue
+	combo_a.request_attack()
+	_check(first == GameConfig.COMBO_ORDER[0] and combo_a.attack_dir == GameConfig.COMBO_ORDER[1], "deux clics rapprochés enchaînent le coup suivant du combo")
+	await _seconds(3.0)   # longue pause : le combo est oublié
+	combo_a.request_attack()
+	_check(combo_a.attack_dir == GameConfig.COMBO_ORDER[0], "après une pause, le combo repart du premier coup")
+	await _cleanup(cb)
 
 	print("[Attaque en 3 temps]")
 	var p := _pair()
@@ -113,23 +123,24 @@ func _run() -> void:
 	_check(is_equal_approx(off_b.health, off_b.max_health), "l'estoc doit être visé : pas de touche à 45° sur le côté")
 	await _cleanup([off_a, off_b])
 
-	print("[Parade directionnelle]")
+	print("[Parade]")
 	p = _pair()
 	a = p[0]
 	b = p[1]
 	await physics_frame
-	# A frappe de SA droite -> B doit garder sa GAUCHE (côté opposé)
-	b.set_guard(true, D.LEFT)
+	# Une seule parade : elle arrête les coups, quelle que soit leur direction
+	b.set_guard(true)
 	await _seconds(0.5)   # garde levée depuis longtemps : parade normale
 	var stam0 := b.stamina
 	var res := b.receive_hit(a, D.RIGHT, 20.0)
 	_check(res == R.BLOCKED, "bon côté : coup paré")
 	_check(is_equal_approx(b.health, b.max_health), "aucun dégât en parant")
 	_check(is_equal_approx(stam0 - b.stamina, 20.0 * GameConfig.BLOCK_STAMINA_FACTOR), "la parade coûte de l'endurance")
-	b.set_guard(true, D.RIGHT)
-	await _seconds(0.5)
+	res = b.receive_hit(a, D.UP, 20.0)
+	_check(res == R.BLOCKED and is_equal_approx(b.health, b.max_health), "une autre direction est parée aussi")
+	b.set_guard(false)
 	res = b.receive_hit(a, D.RIGHT, 20.0)
-	_check(res == R.HIT and b.health < b.max_health, "mauvais côté : le coup passe")
+	_check(res == R.HIT and b.health < b.max_health, "sans garde : le coup passe")
 	await _cleanup(p)
 
 	print("[Parade parfaite]")

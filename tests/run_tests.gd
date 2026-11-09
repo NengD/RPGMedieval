@@ -244,7 +244,6 @@ func _run() -> void:
 		player.combatant.reset()
 		enemy.combatant.stamina = GameConfig.STAMINA_MAX
 		enemy.combatant.exhausted = false
-		player.aim_dir = n % 4
 		await _frames(30)
 		player.try_attack()
 		await _frames(120 * 2)
@@ -455,7 +454,6 @@ func _run() -> void:
 	var arm := model.skeleton.find_bone("mixamorig_RightForeArm")
 	_hold([&"move_forward"])
 	await _frames(60)
-	player.aim_dir = Combatant.Dir.RIGHT
 	player.try_attack()
 	var leg_angle := 0.0
 	var arm_angle := 0.0
@@ -515,26 +513,17 @@ func _run() -> void:
 	var tint_mat := enemy_mesh.get_surface_override_material(0) as StandardMaterial3D
 	_check(tint_mat != null and tint_mat.albedo_color.r > tint_mat.albedo_color.g + 0.05, "l'ennemi est teinté en rouge sombre")
 
-	print("[Parade par direction]")
+	print("[Parade]")
 	player.combatant.invincible = true
 	player.combatant.reset()
 	player.model.reset()
 	_teleport(Vector3(0, 0.05, 9), 0.0)
 	await _frames(60)
-	var hands := {}
-	for d in 4:
-		player.aim_dir = d
-		player.aim_accum = Vector2.ZERO
-		Input.action_press(&"guard")
-		await _frames(120)
-		var hp: Vector3 = player.model.to_local(player.model.ik_target.global_position)   # où l'on demande à la main d'aller (repère du personnage)
-		hands[d] = hp
-		_check(player.combatant.is_guarding() and player.combatant.guard_dir == d and player.model.ik.influence > 0.9, "garde %s : le bras est dirigé (%.0f %%)" % [GameConfig.DIR_NAMES[d], player.model.ik.influence * 100.0])
-		Input.action_release(&"guard")
-		await _frames(60)
-	_check(hands[Combatant.Dir.UP].y > hands[Combatant.Dir.RIGHT].y + 0.3, "garde haute : la main est demandée nettement plus haut qu'en garde latérale")
-	_check(hands[Combatant.Dir.DOWN].y < hands[Combatant.Dir.RIGHT].y - 0.2, "garde basse : la main est plus bas")
-	_check(hands[Combatant.Dir.RIGHT].x - hands[Combatant.Dir.LEFT].x > 0.25 or hands[Combatant.Dir.LEFT].x - hands[Combatant.Dir.RIGHT].x > 0.25, "gardes gauche et droite : la main change de côté")
+	Input.action_press(&"guard")
+	await _frames(120)
+	_check(player.combatant.is_guarding() and player.combatant.guard_dir == GameConfig.GUARD_POSE and player.model.ik.influence > 0.9, "garde : le bras prend la pose de parade (%.0f %%)" % (player.model.ik.influence * 100.0))
+	Input.action_release(&"guard")
+	await _frames(60)
 	_check(player.model.ik.influence < 0.1, "garde relâchée : le bras reprend l'animation")
 	player.combatant.invincible = false
 

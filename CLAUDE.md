@@ -22,13 +22,13 @@ savoir si le combat est amusant. Toutes les valeurs de réglage sont dans `scrip
 - `player.gd` — CharacterBody3D : marche/course/saut/pas de côté. `camera_rig.gd` — 3e/1re personne (SpringArm3D), touche V.
 - `combatant.gd` — cerveau du combat (états, parade, endurance, vie), réutilisé par le héros, le mannequin et l'ennemi (étape 3).
 - `weapon_visual.gd` — épée en formes simples, poses par code selon l'état. `training_dummy.gd` — mannequin (T = agressif).
-- `hud.gd` + `hud_canvas.gd` — aide, messages, barres vie/endurance, indicateur de direction (JAMAIS de Control qui bloque la souris : mouse_filter = IGNORE).
+- `hud.gd` + `hud_canvas.gd` — aide, messages, barres vie/endurance, réticule (JAMAIS de Control qui bloque la souris : mouse_filter = IGNORE).
 - `hero_model.gd` — chevalier Mixamo animé (héros ET ennemi) : AnimationTree = Loco (BlendSpace2D) → haut du corps (filtre os Spine et enfants : attaque / parade / coup reçu) → corps entier (esquive / saut / mort). Les attaques sont « scrubbées » par TimeSeek au rythme du Combatant (contact visuel = début du coup). Épée en BoneAttachment3D (main droite).
 - `arrow.gd` — flèche/carreau (gravité, rayon balayé, reste planté, max MAX_STUCK_ARROWS). `archery_target.gd` — cibles 10/5/2 pts. `ranged_visual.gd` — arc et arbalète en formes simples (à remplacer par les animations à l'étape 5, lot 2).
 - Couches physiques : 1 monde, 2 joueur, 3 ennemis.
 
 ## Contrôles
-F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le combat · ZQSD/stick G déplacer · souris/stick D regarder + choisir la direction · Maj courir · Espace sauter · C pas de côté · V changer de vue · Tab/molette changer d'arme (épée, arc, arbalète) · clic gauche (RB) attaquer/bander/tirer · clic droit (LB) parer ou annuler la corde · Retour arrière retire les flèches · T mannequin agressif · R reset · Échap libère la souris.
+F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le combat · ZQSD/stick G déplacer · souris/stick D regarder · Maj courir · Espace sauter · C pas de côté · V changer de vue · Tab/molette changer d'arme (épée, arc, arbalète) · clic gauche (RB) attaquer (clics répétés = combo)/bander/tirer · clic droit (LB) parer ou annuler la corde · Retour arrière retire les flèches · T mannequin agressif · R reset · Échap libère la souris.
 
 ## Avancement
 - [x] Étape 1 — Base : arène, héros, caméra 3e/1re personne, mannequin
@@ -39,11 +39,11 @@ F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le com
 - [ ] Étape 6 — Game feel, sons
 
 ## Règles du combat
-- 4 directions : 0 haut, 1 droite, 2 estoc (ex-« bas »), 3 gauche. L'estoc = coup pointé droit devant : plus de portée, cône plus étroit (ATTACK_REACH / ATTACK_ARC_DEG). Direction choisie par le mouvement de souris / stick droit récent ; elle reste affichée (chevrons autour du centre). Attaquer / parer utilisent la direction courante.
+- PLUS DE CHOIX DE DIRECTION (retiré à la demande du propriétaire) : un clic = le coup suivant d'un COMBO (`COMBO_ORDER` = droite, gauche, haut, estoc ; `COMBO_RESET_TIME` : sans attaquer on repart du premier ; `Combatant.request_attack()` sans argument = coup suivant, `combo_index`). Les index internes restent 0 haut, 1 droite, 2 estoc, 3 gauche pour choisir animations et chiffres (`attack_dir` = coup en cours). Estoc = plus de portée, cône étroit (ATTACK_REACH / ATTACK_ARC_DEG).
 - Attaque = préparation → coup (touche une fois, cône devant, portée MELEE_RANGE) → récupération. Un clic pendant la récupération est mémorisé.
 - Pas de feinte (retirée à la demande du propriétaire).
-- Parade : maintenir clic droit, du côté d'où vient le coup *à l'écran* (gauche/droite inversés par rapport à la direction d'attaque : `Combatant.mirror`). Haut/bas identiques.
-- Parade parfaite : garde levée (ou direction changée) depuis ≤ PERFECT_PARRY_WINDOW à l'impact → pas de dégâts, attaquant déséquilibré PARRY_STAGGER s (+50 % de dégâts sur lui).
+- Parade : maintenir clic droit ; une seule parade qui arrête tous les coups de face (pose de garde unique `GUARD_POSE`).
+- Parade parfaite : garde levée depuis ≤ PERFECT_PARRY_WINDOW à l'impact → pas de dégâts, attaquant déséquilibré PARRY_STAGGER s (+50 % de dégâts sur lui).
 - Parade normale : coûte endurance = dégâts. Pas assez d'endurance → garde brisée (déséquilibre + 40 % des dégâts).
 - Endurance : attaque, pas de côté, parade en consomment ; à 0 on est ÉPUISÉ jusqu'à EXHAUSTED_RECOVER (ni attaque, ni garde, ni esquive).
 - Pas de côté (C) : invulnérable une courte fenêtre, peut interrompre une récupération.
@@ -51,9 +51,9 @@ F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le com
 
 ## IA de l'ennemi (étape 3)
 - Modes : s'approche (> 3,4 m) → tourne autour (rayon ~2,6 m, change de sens au hasard, anti-blocage) → attaque (cooldown AI_ATTACK_INTERVAL, endurance ≥ 30) ; recule quand épuisé ou endurance < 20 jusqu'à 65.
-- Direction d'attaque pondérée : évite de répéter les 2 dernières, évite parfois la direction que le joueur garde (AI_SMART_CHANCE), seul l'estoc si trop loin pour une taille.
-- Parade imparfaite : à chaque coup du joueur il tire au sort s'il pare (AI_PARRY_CHANCE), met AI_REACTION_TIME à réagir, peut garder du mauvais côté (AI_WRONG_SIDE_CHANCE), peut viser la parade parfaite (lève la garde juste avant l'impact).
-- Parade volontairement faible (réglée après retour du propriétaire) : AI_PARRY_CHANCE, AI_REACTION_TIME, AI_WRONG_SIDE_CHANCE.
+- Coup choisi au hasard (évite de répéter les 2 derniers, seul l'estoc si trop loin).
+- Parade imparfaite : à chaque coup du joueur il tire au sort s'il pare (AI_PARRY_CHANCE), met AI_REACTION_TIME à réagir, peut viser la parade parfaite (lève la garde juste avant l'impact).
+- Parade volontairement faible (réglée après retour du propriétaire) : AI_PARRY_CHANCE, AI_REACTION_TIME.
 - Vaincu → "ENNEMI VAINCU" puis combat relancé ; changer de difficulté relance le combat.
 - Pas encore : se protéger des flèches / se mettre à couvert (étape 4).
 
@@ -78,9 +78,8 @@ F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le com
 - Déplacement : en 3e personne le héros regarde TOUJOURS dans la direction de la caméra (il ne se tourne plus vers sa direction de marche) : marche arrière = à reculons, côtés = pas chassés (animations strafe/walk_b via le BlendSpace2D).
 - PIÈGE AnimationTree : quand un TimeScale à 0 est après un nœud Transition (attaques pilotées par TimeSeek), le fondu (xfade) du Transition ne progresse jamais et la pose reste bloquée sur l'ancienne animation. Les Transition de HeroModel ont donc xfade_time = 0 (le lissage se fait via blend_amount).
 - Test « comme un joueur » (sans l'éditeur) : envoyer des InputEventMouseMotion / InputEventMouseButton avec `root.push_input(...)` dans une fenêtre placée hors écran (`--position 6000,3000`) pour que la vraie souris ne perturbe pas.
-- Choix de la direction (souris / stick) : seuil AIM_THRESHOLD = 70 px et dominance AIM_DOMINANCE = 1.4 (moins sensible : un petit mouvement de caméra ne change plus la direction). La préparation de l'attaque est lente puis accélère (ANIM_WINDUP_CURVE).
 - ATTENTION aux tests fenêtrés pendant que le propriétaire joue : une fenêtre de test peut capter sa vraie souris / manette. `tests/real_input_attacks.gd` retire donc les commandes réelles et ne capture pas la souris.
 - Coup d'en haut et estoc : la main est dirigée par `TwoBoneIK3D` (bras droit) dans HeroModel (`_build_ik`, `_ik_hand_position`, `_update_ik`) ; les autres attaques jouent l'animation telle quelle. Trajectoires de la main = constantes `IK_*` de game_config.gd (repère du personnage : +X droite, +Y haut, -Z devant) : levée au-dessus de la tête puis abattue devant pour « haut » ; ramenée en arrière puis tendue droit devant pour l'estoc. `IK_RAISE_SHARE` = part de la préparation passée à lever / armer, le reste = geste rapide avant le coup. Le reste du corps garde l'animation du pack.
 - La lame est orientée par `HandAimModifier` (scripts/hand_aim_modifier.gd, SkeletonModifier3D placé APRÈS le TwoBoneIK3D) : lame vers le haut puis abattue vers l'avant et le bas pour « haut », droit devant pour l'estoc (constantes IK_BLADE_*). Base de « haut » = posture calme (sword&shield idle) pour que le corps ne se cambre pas ; la base de l'estoc reste la fente du pack hache.
 - Pour comprendre un défaut vu par le propriétaire : il peut envoyer un enregistrement .mp4 (Outil Capture de Windows). Pas de ffmpeg sur sa machine : extraire les images avec Blender (`blender -b -P script.py`, voir l'historique : sequencer + new_movie + render.write_still) puis assembler une planche avec Godot (Image.blit_rect).
-- Parade en 3e personne : base = axe « standing block idle », puis le bras d'épée est dirigé par le même TwoBoneIK3D / HandAimModifier que le coup d'en haut : une pose par direction de garde (constantes `IK_GUARD_HAND`, `IK_GUARD_BLADE`, ordre 0 haut, 1 droite, 2 bas, 3 gauche ; `IK_GUARD_SPEED` = vivacité de la main, `IK_GUARD_BLEND` = passage de l'animation à la pose ; poses relevées à hauteur d'épaule pour les côtés). Comme les poses de `weapon_visual.gd` en 1re personne : haut = lame à l'horizontale au-dessus de la tête, côtés = lame verticale, bas = lame horizontale basse.
+- Parade en 3e personne : base = axe « standing block idle », puis le bras d'épée est dirigé par le même TwoBoneIK3D / HandAimModifier que le coup d'en haut : une seule pose de garde (`GUARD_POSE`, les autres poses restent dans les constantes) (constantes `IK_GUARD_HAND`, `IK_GUARD_BLADE`, ordre 0 haut, 1 droite, 2 bas, 3 gauche ; `IK_GUARD_SPEED` = vivacité de la main, `IK_GUARD_BLEND` = passage de l'animation à la pose ; poses relevées à hauteur d'épaule pour les côtés). Comme les poses de `weapon_visual.gd` en 1re personne : haut = lame à l'horizontale au-dessus de la tête, côtés = lame verticale, bas = lame horizontale basse.

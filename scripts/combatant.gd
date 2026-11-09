@@ -46,16 +46,10 @@ var exhausted := false
 var _regen_timer := 0.0
 var _strike_done := false
 var _queued_dir := -1
+var combo_index := 0
+var _combo_idle := 0.0
+const AUTO := 9              # request_attack(AUTO) : coup suivant du combo
 var _queue_time := 0.0
-
-
-## Côté de garde qu'il faut présenter face à un coup de direction `dir` (gauche/droite inversés).
-static func mirror(dir: int) -> int:
-	if dir == Dir.RIGHT:
-		return Dir.LEFT
-	if dir == Dir.LEFT:
-		return Dir.RIGHT
-	return dir
 
 
 func _ready() -> void:
@@ -76,6 +70,8 @@ func reset() -> void:
 	invulnerable = false
 	_regen_timer = 0.0
 	_queued_dir = -1
+	combo_index = 0
+	_combo_idle = 0.0
 
 
 func is_attacking() -> bool:
@@ -91,11 +87,9 @@ func is_guarding() -> bool:
 	return guard_held and state == State.IDLE and not exhausted and not dead
 
 
-func set_guard(held: bool, dir: int) -> void:
-	if held and guard_held and dir != guard_dir:
-		guard_time = 0.0   # changer de côté recommence la fenêtre de parade parfaite
+func set_guard(held: bool, dir: int = GameConfig.GUARD_POSE) -> void:
 	guard_held = held
-	guard_dir = dir
+	guard_dir = dir   # sert seulement à choisir la pose de garde affichée
 
 
 func spend_stamina(amount: float) -> void:
@@ -106,7 +100,7 @@ func spend_stamina(amount: float) -> void:
 		_regen_timer = GameConfig.EXHAUSTED_DELAY
 
 
-func request_attack(dir: int) -> bool:
+func request_attack(dir: int = AUTO) -> bool:
 	if dead:
 		return false
 	if state == State.RECOVERY:
@@ -115,6 +109,11 @@ func request_attack(dir: int) -> bool:
 		return false
 	if state != State.IDLE or exhausted or stamina <= 0.0:
 		return false
+	if dir == AUTO:
+		if _combo_idle > GameConfig.COMBO_RESET_TIME:
+			combo_index = 0
+		dir = GameConfig.COMBO_ORDER[combo_index % GameConfig.COMBO_ORDER.size()]
+		combo_index = (combo_index + 1) % GameConfig.COMBO_ORDER.size()
 	attack_dir = dir
 	_strike_done = false
 	spend_stamina(GameConfig.ATTACK_STAMINA[dir])
@@ -135,6 +134,7 @@ func stagger(duration: float, perfect := false) -> void:
 	if state == State.STAGGER and state_duration - state_time >= duration:
 		return
 	_queued_dir = -1
+	combo_index = 0
 	stagger_perfect = perfect
 	_enter(State.STAGGER, duration)
 	staggered.emit(perfect)
@@ -161,8 +161,8 @@ func receive_hit(attacker: Combatant, dir: int, damage: float) -> int:
 		hit_resolved.emit(Result.DODGED, dir, 0.0, attacker)
 		return Result.DODGED
 
-	if is_guarding() and guard_dir == mirror(dir):
-		# Bon côté : parade parfaite si la garde vient d'être levée
+	if is_guarding():
+		# Parade parfaite si la garde vient d'être levée
 		if guard_time <= GameConfig.PERFECT_PARRY_WINDOW:
 			attacker.stagger(GameConfig.PARRY_STAGGER, true)
 			hit_resolved.emit(Result.PARRIED, dir, 0.0, attacker)
@@ -180,7 +180,7 @@ func receive_hit(attacker: Combatant, dir: int, damage: float) -> int:
 		hit_resolved.emit(Result.GUARD_BROKEN, dir, dealt, attacker)
 		return Result.GUARD_BROKEN
 
-	# Mauvais côté ou pas de garde : le coup passe
+	# Pas de garde : le coup passe
 	var dealt := damage * (GameConfig.STAGGER_DAMAGE_BONUS if state == State.STAGGER else 1.0)
 	stagger(GameConfig.HIT_STUN)
 	take_damage(dealt, attacker)
@@ -235,6 +235,7 @@ func _physics_process(delta: float) -> void:
 			exhausted = false
 	guard_time = guard_time + delta if is_guarding() else 0.0
 	_queue_time -= delta
+	_combo_idle = _combo_idle + delta if state == State.IDLE else 0.0
 
 	state_time += delta
 	match state:
