@@ -158,7 +158,9 @@ func _process(_delta: float) -> void:
 	model.visible = third_person
 	model.show_sword(weapon_kind == Weapon.SWORD)
 	weapon.visible = weapon_kind == Weapon.SWORD and not third_person
-	model.drive(_delta, velocity, global_basis, is_on_floor(), is_dodging, _dodge_dir)
+	model.show_bow(third_person and weapon_kind == Weapon.BOW)
+	ranged_visual.visible = not (third_person and weapon_kind == Weapon.BOW)   # en 3e personne l'arc est celui du chevalier
+	model.drive(_delta, velocity, global_basis, is_on_floor(), is_dodging, _dodge_dir, weapon_kind, bow_tension, drawing)
 	_ranged_pivot.rotation.x = rig.pitch
 	ranged_visual.refresh(weapon_kind, bow_tension if drawing else 0.0, drawing, crossbow_reload, rig.first_person)
 
@@ -231,6 +233,7 @@ func release_draw() -> Arrow:
 
 ## Tire une flèche avec une tension donnée (0..1).
 func fire_bow(tension: float) -> Arrow:
+	model.play_bow_release()
 	_release_cooldown = GameConfig.BOW_RELEASE_COOLDOWN
 	combatant.spend_stamina(GameConfig.BOW_STAMINA_COST * tension)
 	var speed := lerpf(GameConfig.BOW_SPEED_MIN, GameConfig.BOW_SPEED_MAX, tension)

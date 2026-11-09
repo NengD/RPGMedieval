@@ -35,6 +35,19 @@ const MAP := {
 	&"hit_3": ["sword_and_shield_impact_3", true, false, false],
 	&"death": ["sword_and_shield_death", false, false, false],
 	&"jump": ["sword_and_shield_jump_2", true, false, false],
+	# --- Arc (Pro Longbow Pack) : locomotion tenue à l'arc, et les trois temps du tir
+	&"bow_idle": ["bow_standing_idle_01", true, true, false],
+	&"bow_walk_f": ["bow_standing_walk_forward", true, true, false],
+	&"bow_walk_b": ["bow_standing_walk_back", true, true, false],
+	&"bow_walk_r": ["bow_standing_walk_right", true, true, false],
+	&"bow_walk_l": ["bow_standing_walk_left", true, true, false],
+	&"bow_run_f": ["bow_standing_run_forward", true, true, false],
+	&"bow_run_b": ["bow_standing_run_back", true, true, false],
+	&"bow_run_r": ["bow_standing_run_right", true, true, false],
+	&"bow_run_l": ["bow_standing_run_left", true, true, false],
+	&"bow_draw": ["bow_standing_draw_arrow", true, false, false],
+	&"bow_aim": ["bow_standing_aim_overdraw", true, true, false],
+	&"bow_release": ["bow_standing_aim_recoil", true, false, false],
 }
 
 

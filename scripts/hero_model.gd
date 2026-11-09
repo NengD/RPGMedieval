@@ -14,7 +14,7 @@ const LIBRARY := "res://assets/anims/hero_library.res"
 const ATTACK_ANIMS := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left"]
 const HIT_ANIMS := [&"hit_1", &"hit_2", &"hit_3"]
 const FULL_STATES := [&"dodge_l", &"dodge_r", &"dodge_b", &"jump", &"death", &"attack_up", &"attack_right", &"attack_estoc", &"attack_left"]
-const UPPER_STATES := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left", &"guard", &"hit_1", &"hit_2", &"hit_3"]
+const UPPER_STATES := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left", &"guard", &"hit_1", &"hit_2", &"hit_3", &"bow_draw", &"bow_release"]
 
 var skeleton: Skeleton3D
 var anim_player: AnimationPlayer
@@ -41,6 +41,13 @@ var _ik_amount := 0.0
 var _ik_pos := Vector3.ZERO      # position lissée de la main (repère du personnage)
 var _ik_blade := Vector3.ZERO    # direction lissée de la lame
 var _attack_full_body := false
+var _weapon_amount := 0.0        # 0 = épée en main, 1 = arc en main (fondu de la locomotion)
+var _bow_release_time := 0.0
+var bow_holder: BoneAttachment3D
+var bow_prop: Node3D
+var _bow_strings: Array = []
+var _bow_arrow: Node3D
+var _bow_nock := Vector3(0.0, 0.0, 0.15)
 
 
 func _ready() -> void:
@@ -60,6 +67,7 @@ func _ready() -> void:
 	_build_tree()
 	_build_attachments()
 	_build_ik()
+	_build_bow_prop()
 
 
 func bind(c: Combatant) -> void:
@@ -115,6 +123,16 @@ func show_sword(on: bool) -> void:
 	sword_holder.visible = on
 
 
+func show_bow(on: bool) -> void:
+	bow_holder.visible = on
+
+
+## Le tir part : l'archer relâche la corde (animation de recul).
+func play_bow_release() -> void:
+	_bow_release_time = _library.get_animation(&"bow_release").length
+	_set_upper(&"bow_release")
+
+
 # ---------------------------------------------------------------- construction
 
 func _anim_node(anim: StringName, loop := false) -> AnimationNodeAnimation:
@@ -157,6 +175,26 @@ func _build_tree() -> void:
 	bt.add_node(&"LocoTS", loco_ts, Vector2(200, 0))
 	bt.connect_node(&"LocoTS", 0, &"Loco")
 
+	# Locomotion avec l'arc en main (même repère que ci-dessus)
+	var loco_bow := AnimationNodeBlendSpace2D.new()
+	loco_bow.min_space = Vector2(-2.5, -2.5)
+	loco_bow.max_space = Vector2(2.5, 2.5)
+	loco_bow.add_blend_point(_anim_node(&"bow_idle"), Vector2(0, 0))
+	loco_bow.add_blend_point(_anim_node(&"bow_walk_f"), Vector2(0, 1))
+	loco_bow.add_blend_point(_anim_node(&"bow_run_f"), Vector2(0, run_k))
+	loco_bow.add_blend_point(_anim_node(&"bow_walk_b"), Vector2(0, -1))
+	loco_bow.add_blend_point(_anim_node(&"bow_run_b"), Vector2(0, -run_k))
+	loco_bow.add_blend_point(_anim_node(&"bow_walk_r"), Vector2(1, 0))
+	loco_bow.add_blend_point(_anim_node(&"bow_run_r"), Vector2(run_k, 0))
+	loco_bow.add_blend_point(_anim_node(&"bow_walk_l"), Vector2(-1, 0))
+	loco_bow.add_blend_point(_anim_node(&"bow_run_l"), Vector2(-run_k, 0))
+	bt.add_node(&"LocoBow", loco_bow, Vector2(0, -200))
+	bt.add_node(&"LocoBowTS", AnimationNodeTimeScale.new(), Vector2(200, -200))
+	bt.connect_node(&"LocoBowTS", 0, &"LocoBow")
+	bt.add_node(&"WeaponBlend", AnimationNodeBlend2.new(), Vector2(400, -100))
+	bt.connect_node(&"WeaponBlend", 0, &"LocoTS")
+	bt.connect_node(&"WeaponBlend", 1, &"LocoBowTS")
+
 	# Haut du corps : choix de l'animation, vitesse (0 = on la pilote à la main), saut dans le temps
 	var upper := _transition(UPPER_STATES, 0.0)
 	bt.add_node(&"Upper", upper, Vector2(0, 300))
@@ -174,7 +212,7 @@ func _build_tree() -> void:
 	for bone_path in _upper_body_paths():
 		upper_blend.set_filter_path(bone_path, true)
 	bt.add_node(&"UpperBlend", upper_blend, Vector2(600, 100))
-	bt.connect_node(&"UpperBlend", 0, &"LocoTS")
+	bt.connect_node(&"UpperBlend", 0, &"WeaponBlend")
 	bt.connect_node(&"UpperBlend", 1, &"UpperSeek")
 
 	# Corps entier : esquive, saut, mort
@@ -337,6 +375,79 @@ func _build_attachments() -> void:
 	skeleton.add_child(shield_holder)
 
 
+func _build_bow_prop() -> void:
+	bow_holder = BoneAttachment3D.new()
+	bow_holder.name = "BowHolder"
+	bow_holder.bone_name = "mixamorig_LeftHand"
+	skeleton.add_child(bow_holder)
+	bow_prop = Node3D.new()
+	bow_prop.name = "Bow"
+	bow_holder.add_child(bow_prop)
+	bow_prop.rotation = GameConfig.BOW_HAND_ROTATION
+	bow_prop.position = GameConfig.BOW_HAND_OFFSET
+	var wood := Color(0.45, 0.30, 0.15)
+	_add_part(bow_prop, Vector3(0.04, 0.2, 0.04), Vector3(0, 0, 0), Vector3.ZERO, wood)
+	_add_part(bow_prop, Vector3(0.028, 0.5, 0.028), Vector3(0, 0.32, 0.075), Vector3(20, 0, 0), wood)
+	_add_part(bow_prop, Vector3(0.028, 0.5, 0.028), Vector3(0, -0.32, 0.075), Vector3(-20, 0, 0), wood)
+	for i in 2:
+		var mi := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.008, 0.008, 1.0)
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(0.9, 0.85, 0.7)
+		bm.material = mat
+		mi.mesh = bm
+		bow_prop.add_child(mi)
+		_bow_strings.append(mi)
+	_bow_arrow = Node3D.new()
+	_add_part(_bow_arrow, Vector3(0.018, 0.018, 0.7), Vector3(0, 0, 0.35), Vector3.ZERO, Color(0.55, 0.38, 0.2))
+	_add_part(_bow_arrow, Vector3(0.05, 0.05, 0.1), Vector3.ZERO, Vector3.ZERO, Color(0.7, 0.72, 0.78))
+	bow_prop.add_child(_bow_arrow)
+	_bow_arrow.visible = false
+	bow_holder.visible = false
+
+
+func _add_part(parent: Node3D, size: Vector3, pos: Vector3, euler_deg: Vector3, color: Color) -> void:
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = size
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	bm.material = mat
+	mi.mesh = bm
+	mi.position = pos
+	mi.rotation = Vector3(deg_to_rad(euler_deg.x), deg_to_rad(euler_deg.y), deg_to_rad(euler_deg.z))
+	parent.add_child(mi)
+
+
+func _set_segment(mi: MeshInstance3D, a: Vector3, b: Vector3) -> void:
+	var d := b - a
+	var length := d.length()
+	if length < 0.001:
+		return
+	var up := Vector3.UP if absf(d.normalized().y) < 0.9 else Vector3.RIGHT
+	mi.transform = Transform3D(Basis.looking_at(d.normalized(), up).scaled(Vector3(1, 1, length)), (a + b) * 0.5)
+
+
+## La corde suit la main droite ; la flèche est encochée tant qu'on bande.
+func _update_bow_prop(delta: float, drawing: bool, _tension: float) -> void:
+	if not bow_holder.visible:
+		return
+	var rest := Vector3(0.0, 0.0, 0.15)
+	var goal := rest
+	if drawing:
+		var right_hand := skeleton.global_transform * skeleton.get_bone_global_pose(skeleton.find_bone("mixamorig_RightHand")).origin
+		goal = bow_prop.to_local(right_hand)
+		goal.z = maxf(goal.z, 0.15)
+		goal.x = clampf(goal.x, -0.1, 0.1)
+		goal.y = clampf(goal.y, -0.15, 0.15)
+	_bow_nock = _bow_nock.lerp(goal, 1.0 - exp(-(30.0 if drawing else 40.0) * delta))
+	_set_segment(_bow_strings[0], Vector3(0, 0.52, 0.15), _bow_nock)
+	_set_segment(_bow_strings[1], Vector3(0, -0.52, 0.15), _bow_nock)
+	_bow_arrow.visible = drawing
+	_bow_arrow.position = _bow_nock + Vector3(0, 0, -0.7)
+
+
 func _add_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color, metallic: float, roughness: float) -> void:
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
@@ -378,7 +489,7 @@ func _on_died() -> void:
 func _set_upper(mode: StringName) -> void:
 	_upper_mode = mode
 	tree.set("parameters/Upper/transition_request", str(mode))
-	var scrubbed := str(mode).begins_with("attack")
+	var scrubbed := str(mode).begins_with("attack") or mode == &"bow_draw"
 	tree.set("parameters/UpperTS/scale", 0.0 if scrubbed else 1.0)
 
 
@@ -391,7 +502,7 @@ func _set_full(mode: StringName, time_scale: float) -> void:
 # ---------------------------------------------------------------- chaque image
 
 ## velocity : vitesse du monde ; body_basis : orientation du corps ; dodge_dir : direction du pas de côté.
-func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, is_dodging: bool, dodge_dir: Vector3) -> void:
+func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, is_dodging: bool, dodge_dir: Vector3, weapon_kind := 0, bow_tension := 0.0, bow_drawing := false) -> void:
 	if combatant == null or tree == null:
 		return
 	var c := combatant
@@ -400,6 +511,11 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 	_last_speed = horizontal
 	tree.set("parameters/Loco/blend_position", Vector2(local.x, -local.z) / GameConfig.WALK_SPEED)
 	tree.set("parameters/LocoTS/scale", clampf(horizontal / 2.0, 1.0, 1.9))
+	tree.set("parameters/LocoBow/blend_position", Vector2(local.x, -local.z) / GameConfig.WALK_SPEED)
+	tree.set("parameters/LocoBowTS/scale", clampf(horizontal / 1.5, 1.0, 2.2))
+	_weapon_amount = move_toward(_weapon_amount, 1.0 if weapon_kind == 1 else 0.0, delta * 8.0)
+	tree.set("parameters/WeaponBlend/blend_amount", _weapon_amount)
+	_bow_release_time = maxf(0.0, _bow_release_time - delta)
 
 	# --- haut du corps
 	var upper_target := 0.0
@@ -419,7 +535,17 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 					upper_target = 1.0
 					if _upper_mode != &"guard":
 						_set_upper(&"guard")
+				elif weapon_kind == 1 and bow_drawing:
+					# Arc : l'animation de bandage suit la tension de la corde
+					upper_target = 1.0
+					if _upper_mode != &"bow_draw":
+						_set_upper(&"bow_draw")
+					var draw_len := _library.get_animation(&"bow_draw").length
+					tree.set("parameters/UpperSeek/seek_request", clampf(bow_tension, 0.0, 1.0) * draw_len * 0.995)
+				elif _bow_release_time > 0.0:
+					upper_target = 1.0   # relâchement de la corde
 	_upper_amount = move_toward(_upper_amount, upper_target, delta * 14.0)
+	_update_bow_prop(delta, bow_drawing and weapon_kind == 1, bow_tension)
 	tree.set("parameters/UpperBlend/blend_amount", _upper_amount)
 
 	# --- corps entier

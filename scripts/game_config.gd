@@ -247,3 +247,8 @@ const IK_GUARD_HAND  := [Vector3(0.22, 1.88, -0.38), Vector3(0.52, 1.38, -0.50),
 const IK_GUARD_BLADE := [Vector3(-1.0, 0.10, 0.0), Vector3(-0.12, 1.0, -0.25), Vector3(-0.75, -0.65, -0.15), Vector3(0.12, 1.0, -0.25)]
 const IK_GUARD_SPEED := 10.0    # vitesse à laquelle la main rejoint la pose de garde (plus bas = geste plus doux, plus haut = plus vif)
 const IK_GUARD_BLEND := 8.0    # vitesse à laquelle le bras passe de l'animation à la pose de garde
+
+# Arc tenu en main (3e personne) : orientation et décalage de l'arc dans la main gauche
+# (mesurés avec tools/bow_hand_axes.gd à pleine tension : l'arc est alors vertical, la corde vers l'archer).
+const BOW_HAND_ROTATION := Vector3(1.258, -0.749, 1.110)   # radians
+const BOW_HAND_OFFSET := Vector3(0.0, 0.08, 0.0)
