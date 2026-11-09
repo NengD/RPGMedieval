@@ -205,7 +205,7 @@ def sword(root, blade_len, half_w, grip_len, guard_w, two_hand=False, name="epee
 
 
 def build_longsword(root):
-    sword(root, 0.82, 0.026, 0.19, 0.22, name="epee_longue")
+    sword(root, 0.90, 0.026, 0.20, 0.22, name="epee_longue")
 
 
 def build_shortsword(root):

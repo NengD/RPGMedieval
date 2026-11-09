@@ -509,9 +509,12 @@ func _run() -> void:
 	player.reset_to(Vector3(0, 0.05, 9), 0.0)
 	await _frames(30)
 	_check(not player.combatant.dead and model.tree.get("parameters/FullBlend/blend_amount") < 0.1, "remise à zéro : le chevalier se relève")
-	var enemy_mesh: MeshInstance3D = enemy.model.model_root.find_children("*", "MeshInstance3D", true, false)[0]
-	var tint_mat := enemy_mesh.get_surface_override_material(0) as StandardMaterial3D
-	_check(tint_mat != null and tint_mat.albedo_color.r > tint_mat.albedo_color.g + 0.05, "l'ennemi est teinté en rouge sombre")
+	var warm := false
+	for mi in enemy.model._armor_holder.find_children("*", "MeshInstance3D", true, false):
+		var tm := (mi as MeshInstance3D).get_surface_override_material(0) as StandardMaterial3D
+		if tm != null and String(tm.resource_name).begins_with("teinte_") and tm.albedo_color.r > tm.albedo_color.b + 0.05:
+			warm = true
+	_check(warm, "les tissus de l'ennemi ont un ton chaud (rouge lie-de-vin)")
 
 	print("[Parade]")
 	player.combatant.invincible = true

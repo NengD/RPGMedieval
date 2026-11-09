@@ -12,7 +12,7 @@ Dans Godot, seuls les maillages sont utilisés : ils sont rattachés au squelett
 """
 import sys, os, math
 import bpy, bmesh
-from mathutils import Vector, Matrix
+from mathutils import Vector, Matrix, Euler
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 FBX, OUT_BASE, OUT_ARMOR = argv[0], argv[1], argv[2]
@@ -87,13 +87,16 @@ def mat(name, color, metallic=0.0, rough=0.7):
 
 
 MATS = {
-    "peau": lambda: mat("peau", (0.74, 0.55, 0.43), 0.0, 0.65),
+    "peau": lambda: mat("peau", (0.62, 0.43, 0.32), 0.0, 0.6),
     "lin": lambda: mat("teinte_lin", (0.80, 0.76, 0.64), 0.0, 0.95),
     "gambison": lambda: mat("teinte_gambison", (0.66, 0.58, 0.44), 0.0, 0.95),
     "cuir": lambda: mat("cuir", (0.22, 0.13, 0.07), 0.0, 0.85),
     "mailles": lambda: mat("mailles", (0.30, 0.31, 0.35), 0.75, 0.65),
     "acier": lambda: mat("acier_plaques", (0.42, 0.44, 0.49), 0.72, 0.55),
-    "tabard": lambda: mat("teinte_tabard", (0.85, 0.85, 0.85), 0.0, 0.9),
+    "cheveux": lambda: mat("cheveux", (0.10, 0.065, 0.04), 0.0, 0.8),
+    "oeil": lambda: mat("oeil", (0.88, 0.86, 0.82), 0.0, 0.25),
+    "iris": lambda: mat("iris", (0.16, 0.1, 0.06), 0.0, 0.2),
+    "tabard": lambda: mat("teinte_tabard", (1.0, 1.0, 1.0), 0.0, 0.9),
 }
 
 # ------------------------------------------------------------------ outils bmesh
@@ -269,6 +272,10 @@ def mail(co):           # texture de mailles (relief fin)
     return 0.0025 * math.sin(co.z * 140.0) * math.sin(co.x * 140.0 + co.y * 90.0)
 
 
+def pleats(co):         # plis verticaux du tabard, plus marqués vers le bas
+    return 0.012 * math.sin(co.x * 38.0 + co.y * 22.0) * (0.4 + 0.6 * max(0.0, min(1.0, (1.45 - co.z) / 0.7)))
+
+
 def ridge(co):          # arête centrale de la cuirasse
     return 0.02 * max(0.0, 1.0 - abs(co.x) / 0.07) * (1.0 if co.y < 0 else 0.3)
 
@@ -291,7 +298,7 @@ def build_pieces():
         c = center(f)
         in_face = abs(c.x) < 0.085 and 1.57 < c.z < 1.72 and c.y < SRC_HEAD_Y
         return not in_face
-    piece("armure.capuchon_mailles", hood, 0.014, MATS["mailles"](), pattern=mail)
+    piece("armure.capuchon_mailles", hood, 0.022, MATS["mailles"](), pattern=mail)
     # --- plaques
     piece("armure.cuirasse_plates", lambda f: R(f) == "torso" and "Shoulder" not in "".join(SRC.dom[v.index] for v in f.verts) and 1.05 < Z(f) < 1.5, 0.036, MATS["acier"](), weights=("limit", ["Spine", "Spine1", "Spine2"]), pattern=ridge)
     piece("armure.spalieres", lambda f: (R(f) == "torso" and "Shoulder" in "".join(SRC.dom[v.index] for v in f.verts)) or (R(f) == "upper_arm" and Z(f) > 1.33), 0.045, MATS["acier"](), weights=("limit", ["{S}Shoulder", "{S}Arm"]))
@@ -301,7 +308,7 @@ def build_pieces():
     piece("armure.greves_genouilleres", lambda f: R(f) == "shin" or (R(f) == "thigh" and Z(f) <= 0.74 and Z(f) > 0.42), 0.026, MATS["acier"]())
     piece("armure.solerets", lambda f: R(f) == "foot", 0.018, MATS["acier"](), weights=("limit", ["{S}Foot", "{S}ToeBase"]))
     # --- surcot
-    piece("armure.tabard", lambda f: R(f) in ("torso", "hips") or (R(f) == "thigh" and Z(f) > 0.62), 0.07, MATS["tabard"]())
+    piece("armure.tabard", lambda f: R(f) in ("torso", "hips") or (R(f) == "thigh" and Z(f) > 0.62), 0.07, MATS["tabard"](), pattern=pleats)
 
 
 # tête : hauteur du visage
@@ -369,7 +376,114 @@ def helmet(pid, kind):
     discard([ob])
 
 
+
+# ------------------------------------------------------------------ tête humaine (homme adulte, cheveux courts, barbe courte)
+def G(d, sigma):
+    return math.exp(-0.5 * (d / sigma) ** 2)
+
+
+def face_offset(co):
+    """Déplacement d'un sommet de la tête pour sculpter le visage (le visage regarde vers -Y)."""
+    ax = abs(co.x)
+    front = max(0.0, min(1.0, (-co.y - 0.03) / 0.05))      # 0 à l'arrière du crâne, 1 sur le visage
+    dy = 0.0
+    dy -= 0.024 * G(ax, 0.011) * G(co.z - 1.640, 0.024)       # nez : arête
+    dy -= 0.010 * G(ax, 0.014) * G(co.z - 1.622, 0.009)       # bout du nez
+    dy -= 0.007 * G(co.z - 1.699, 0.010) * G(ax, 0.050)       # arcade sourcilière
+    dy += 0.008 * G(ax - 0.034, 0.013) * G(co.z - 1.683, 0.013)   # orbites
+    dy -= 0.007 * G(ax - 0.056, 0.018) * G(co.z - 1.648, 0.018)   # pommettes
+    dy += 0.0035 * G(ax, 0.030) * G(co.z - 1.602, 0.0035)     # ligne de la bouche
+    dy -= 0.0045 * G(ax, 0.026) * (G(co.z - 1.612, 0.006) + G(co.z - 1.592, 0.007))   # lèvres
+    dy -= 0.011 * G(ax, 0.026) * G(co.z - 1.548, 0.017)       # menton
+    dy -= 0.004 * G(ax - 0.05, 0.015) * G(co.z - 1.58, 0.02)  # mâchoire
+    off = Vector((0.0, dy * front, 0.0))
+    # oreilles
+    ear = G(co.z - 1.665, 0.028) * G(co.y - 0.015, 0.024) * max(0.0, min(1.0, (ax - 0.068) / 0.012))
+    off.x += math.copysign(0.02 * ear, co.x)
+    return off
+
+
+def head_shell():
+    """Le crâne du corps de base, subdivisé puis sculpté. Renvoie (bmesh, normales)."""
+    bm = fresh()
+    keep_faces(bm, lambda f: majority(f) == "head")
+    bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=2, use_grid_fill=True)
+    bm.verts.ensure_lookup_table()
+    dl = bm.verts.layers.deform.verify()
+    for v in bm.verts:
+        v.co += face_offset(v.co)
+        d = v[dl]
+        if v.co.z > 1.545:
+            d.clear()
+            d[GROUP_INDEX["mixamorig_Head"]] = 1.0
+        elif len(d) == 0:
+            d[GROUP_INDEX["mixamorig_Neck"]] = 1.0
+    bmesh.ops.smooth_vert(bm, verts=[v for v in bm.verts if v.co.z > 1.545], factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    bm.normal_update()
+    return bm
+
+
+def shell_of(src, pred, offset, noise):
+    """Une coque (cheveux, barbe) copiée sur la tête sculptée."""
+    bm = src.copy()
+    bm.normal_update()
+    drop = [f for f in bm.faces if not pred(f.calc_center_median())]
+    keep_norm = {v: v.normal.copy() for v in bm.verts}
+    bmesh.ops.delete(bm, geom=drop, context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    for v in bm.verts:
+        n = keep_norm.get(v, Vector((0, 0, 1)))
+        v.co += n * (offset + noise * (math.sin(v.co.x * 520 + v.co.z * 140) * math.sin(v.co.y * 470 + v.co.z * 330)))
+    return bm
+
+
+def eyes_and_brows():
+    bm = bmesh.new()
+    for sx in (-1, 1):
+        bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=7, radius=0.0085, matrix=Matrix.Translation(Vector((sx * 0.034, -0.1005, 1.683))))
+    bm2 = bmesh.new()
+    for sx in (-1, 1):
+        bmesh.ops.create_uvsphere(bm2, u_segments=8, v_segments=6, radius=0.0058, matrix=Matrix.Translation(Vector((sx * 0.034, -0.1085, 1.683))) @ Matrix.Diagonal((1.0, 0.4, 1.0, 1.0)))
+    bm3 = bmesh.new()
+    for sx in (-1, 1):
+        m = Matrix.Translation(Vector((sx * 0.036, -0.1245, 1.7075))) @ Euler((0, math.radians(-sx * 7), 0), "XYZ").to_matrix().to_4x4() @ Matrix.Diagonal((0.034, 0.008, 0.0065, 1.0))
+        bmesh.ops.create_cube(bm3, size=1.0, matrix=m)
+    return bm, bm2, bm3
+
+
+def build_head():
+    src = head_shell()
+    # tête : peau + yeux (le corps de base « head » est caché dessous par hidden_body_regions)
+    skin = src.copy()
+    eye_w, eye_i, brows = eyes_and_brows()
+    dl_names = [(eye_w, "oeil"), (eye_i, "iris"), (brows, "cheveux")]
+    objs = [to_object("tete_peau", skin, MATS["peau"]())]
+    for bm, key in dl_names:
+        dl = bm.verts.layers.deform.verify()
+        for v in bm.verts:
+            v[dl].clear()
+            v[dl][GROUP_INDEX["mixamorig_Head"]] = 1.0
+        objs.append(to_object("tete_" + key, bm, MATS[key]()))
+    hair_pred = lambda c: c.z > 1.722 or (c.z > 1.655 and c.y > -0.012) or (abs(c.x) > 0.071 and c.z > 1.675 and c.y > -0.075)
+    hair = shell_of(src, hair_pred, 0.011, 0.0012)
+    objs.append(to_object("tete_cheveux", hair, MATS["cheveux"]()))
+    path = os.path.join(OUT_ARMOR, "armure_tete_homme.glb")
+    export(objs, path)
+    print("%-28s %5d polygones %6.0f Ko" % ("armure.tete_homme", sum(len(o.data.polygons) for o in objs), os.path.getsize(path) / 1024.0))
+    discard(objs)
+    # barbe courte (pièce séparée : optionnelle)
+    beard_pred = lambda c: 1.532 < c.z < 1.628 and c.y < -0.035 and abs(c.x) < 0.074 and not (1.592 < c.z < 1.613 and abs(c.x) < 0.021)
+    beard = shell_of(src, beard_pred, 0.009, 0.0015)
+    ob = to_object("barbe", beard, MATS["cheveux"]())
+    path = os.path.join(OUT_ARMOR, "armure_barbe.glb")
+    export([ob], path)
+    print("%-28s %5d polygones %6.0f Ko" % ("armure.barbe", len(ob.data.polygons), os.path.getsize(path) / 1024.0))
+    discard([ob])
+    src.free()
+
+
 build_body()
+build_head()
 build_pieces()
 helmet("armure.bassinet", "bassinet")
 helmet("armure.heaume", "heaume")

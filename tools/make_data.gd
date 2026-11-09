@@ -123,14 +123,14 @@ const S := ArmorData.Slot
 const L := ArmorData.Layer
 # id, clé, emplacement, couche, matière, poids (kg), régions du corps cachées, variantes de couleur
 func _armor_table() -> Array:
-	var cloth := [Color(1, 1, 1), Color(0.85, 0.85, 0.95), Color(0.9, 0.8, 0.7)]
-	var tabard := [Color(0.62, 0.09, 0.09), Color(0.15, 0.25, 0.62), Color(0.2, 0.45, 0.25), Color(0.13, 0.13, 0.14)]   # rouge, bleu, vert, noir
+	var cloth := [Color(1.05, 0.9, 0.72), Color(0.85, 0.85, 0.9), Color(0.95, 0.78, 0.6)]
+	var tabard := [Color(0.80, 0.30, 0.26), Color(0.34, 0.42, 0.68), Color(0.42, 0.62, 0.40), Color(0.34, 0.32, 0.32)]   # laine teinte naturelle : lie-de-vin, indigo, vert mousse, brun-noir (multiplie le gris de la texture)
 	return [
 		["armure.chemise", "ARMURE_CHEMISE", S.TORSE, L.VETEMENT, "materiau.tissu", 0.6, ["torso", "upper_arm", "forearm"], cloth],
 		["armure.braies", "ARMURE_BRAIES", S.JAMBES, L.VETEMENT, "materiau.tissu", 0.4, ["hips", "thigh"], cloth],
 		["armure.gants_cuir", "ARMURE_GANTS_CUIR", S.MAINS, L.VETEMENT, "materiau.cuir", 0.2, ["hand"], []],
 		["armure.bottes_cuir", "ARMURE_BOTTES_CUIR", S.PIEDS, L.VETEMENT, "materiau.cuir", 0.9, ["foot"], []],
-		["armure.gambison", "ARMURE_GAMBISON", S.TORSE, L.GAMBISON, "materiau.gambison", 3.0, ["torso", "upper_arm", "forearm"], [Color(1, 1, 1), Color(0.55, 0.4, 0.3)]],
+		["armure.gambison", "ARMURE_GAMBISON", S.TORSE, L.GAMBISON, "materiau.gambison", 3.0, ["torso", "upper_arm", "forearm"], [Color(1.5, 1.4, 1.2), Color(1.1, 0.8, 0.6)]],
 		["armure.haubert_mailles", "ARMURE_HAUBERT_MAILLES", S.TORSE, L.MAILLES, "materiau.mailles", 9.0, ["torso", "upper_arm", "forearm", "hips"], []],
 		["armure.capuchon_mailles", "ARMURE_CAPUCHON_MAILLES", S.TETE, L.MAILLES, "materiau.mailles", 1.0, [], []],
 		["armure.cuirasse_plates", "ARMURE_CUIRASSE_PLATES", S.TORSE, L.PLAQUES, "materiau.plaques", 6.0, ["torso"], []],
@@ -142,6 +142,8 @@ func _armor_table() -> Array:
 		["armure.solerets", "ARMURE_SOLERETS", S.PIEDS, L.PLAQUES, "materiau.plaques", 1.4, ["foot"], []],
 		["armure.bassinet", "ARMURE_BASSINET", S.TETE, L.PLAQUES, "materiau.plaques", 2.0, [], []],
 		["armure.heaume", "ARMURE_HEAUME", S.TETE, L.PLAQUES, "materiau.plaques", 3.0, [], []],
+		["armure.tete_homme", "ARMURE_TETE_HOMME", S.TETE, L.VETEMENT, "materiau.tissu", 0.0, ["head"], []],
+		["armure.barbe", "ARMURE_BARBE", S.COU, L.VETEMENT, "materiau.tissu", 0.0, [], []],
 		["armure.tabard", "ARMURE_TABARD", S.TORSE, L.SURCOT, "materiau.tissu", 0.8, [], tabard],
 	]
 
@@ -157,6 +159,8 @@ func _make_armor() -> void:
 		a.layer = row[3]
 		a.material = load("res://data/materials/%s.tres" % row[4]) as MaterialData
 		a.weight = row[5]
+		if row[0] in ["armure.tete_homme", "armure.barbe"]:
+			a.coverage = 0.0   # esthétique : aucune protection
 		var regions: Array[StringName] = []
 		for r in row[6]:
 			regions.append(StringName(r))
@@ -168,9 +172,9 @@ func _make_armor() -> void:
 		a.model = load("res://assets/armor/%s.glb" % str(row[0]).replace(".", "_")) as PackedScene
 		_save(a, "res://data/armor/%s.tres" % row[0])
 	var outfits := [
-		["tenue.chevalier_plates", "TENUE_CHEVALIER_PLATES", ["armure.chemise", "armure.braies", "armure.gambison", "armure.capuchon_mailles", "armure.cuirasse_plates", "armure.spalieres", "armure.canons_cubitieres", "armure.gantelets_plates", "armure.tassettes", "armure.greves_genouilleres", "armure.solerets", "armure.bassinet", "armure.tabard"], {}],
-		["tenue.homme_armes", "TENUE_HOMME_ARMES", ["armure.chemise", "armure.braies", "armure.gambison", "armure.haubert_mailles", "armure.capuchon_mailles", "armure.gants_cuir", "armure.bottes_cuir", "armure.tabard"], {"armure.tabard": 0}],
-		["tenue.archer_leger", "TENUE_ARCHER_LEGER", ["armure.chemise", "armure.braies", "armure.gambison", "armure.gants_cuir", "armure.bottes_cuir"], {"armure.gambison": 1}],
+		["tenue.chevalier_plates", "TENUE_CHEVALIER_PLATES", ["armure.tete_homme", "armure.barbe", "armure.chemise", "armure.braies", "armure.gambison", "armure.capuchon_mailles", "armure.cuirasse_plates", "armure.spalieres", "armure.canons_cubitieres", "armure.gantelets_plates", "armure.tassettes", "armure.greves_genouilleres", "armure.solerets", "armure.bassinet", "armure.tabard"], {"armure.tabard": 1}],
+		["tenue.homme_armes", "TENUE_HOMME_ARMES", ["armure.tete_homme", "armure.barbe", "armure.chemise", "armure.braies", "armure.gambison", "armure.haubert_mailles", "armure.capuchon_mailles", "armure.gants_cuir", "armure.bottes_cuir", "armure.tabard"], {"armure.tabard": 0}],
+		["tenue.archer_leger", "TENUE_ARCHER_LEGER", ["armure.tete_homme", "armure.chemise", "armure.braies", "armure.gambison", "armure.gants_cuir", "armure.bottes_cuir"], {"armure.gambison": 1}],
 	]
 	for o in outfits:
 		var t := OutfitData.new()

@@ -263,10 +263,14 @@ func _tint_mesh(mi: MeshInstance3D, variant: Color) -> void:
 	mi.set_meta(&"couleur", variant)
 	for s in mi.mesh.get_surface_count():
 		var base := mi.mesh.surface_get_material(s)
-		if base is StandardMaterial3D and String(base.resource_name).begins_with("teinte_"):
-			var mat: StandardMaterial3D = base.duplicate()
-			mat.albedo_color = base.albedo_color * variant * _tint_color
-			mi.set_surface_override_material(s, mat)
+		var mat_name := String(base.resource_name) if base != null else ""
+		if not ArmorMaterials.is_known(mat_name):
+			continue
+		var mat := ArmorMaterials.get_material(mat_name)
+		if ArmorMaterials.is_tinted(mat_name):
+			mat = mat.duplicate()
+			mat.albedo_color = variant * _tint_color
+		mi.set_surface_override_material(s, mat)
 
 
 ## Éclair blanc très court quand le personnage est touché.

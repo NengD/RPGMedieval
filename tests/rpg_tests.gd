@@ -632,7 +632,7 @@ func _test_outfits() -> void:
 		var piece := Registry.get_data(id) as ArmorData
 		if piece != null and piece.model != null:
 			pieces.append(piece)
-	_check(pieces.size() == 17, "17 pièces d'armure et d'habit avec modèle : %d" % pieces.size())
+	_check(pieces.size() == 19, "19 pièces d'armure et d'habit avec modèle (dont tête et barbe) : %d" % pieces.size())
 	var bones_ok := true
 	var budget_ok := true
 	var inside := 0
@@ -647,8 +647,11 @@ func _test_outfits() -> void:
 			for i in skin.get_bind_count():
 				if sk.find_bone(String(skin.get_bind_name(i))) < 0:
 					bones_ok = false
-		if _triangles(inst) > 12000:
+		if _triangles(inst) > (25000 if str(piece.id) == "armure.tete_homme" else 12000):
 			budget_ok = false
+		if str(piece.id) in ["armure.tete_homme", "armure.barbe"]:
+			inst.free()
+			continue   # la tête remplace la région « head » du corps, la barbe colle à la tête : elles sont censées la toucher
 		var verts := _mesh_vertices(inst)
 		var step := maxi(1, verts.size() / 60)
 		for vi in range(0, verts.size(), step):
@@ -660,7 +663,7 @@ func _test_outfits() -> void:
 				inside += 1
 		inst.free()
 	_check(bones_ok, "tous les os utilisés par les pièces existent dans le squelette du jeu")
-	_check(budget_ok, "chaque pièce fait moins de 12 000 triangles")
+	_check(budget_ok, "chaque pièce fait moins de 12 000 triangles (25 000 pour la tête)")
 	_check(inside <= checked / 100, "les pièces ne traversent pas la peau en pose de repos (%d sommets contrôlés, %d trop près : bords des coques, tolérance 1 %%)" % [checked, inside])
 	var t_plates := Registry.get_data(&"tenue.chevalier_plates") as OutfitData
 	var t_mail := Registry.get_data(&"tenue.homme_armes") as OutfitData
@@ -692,7 +695,7 @@ func _test_outfits() -> void:
 	var p: Player = main.player
 	var m: HeroModel = p.model
 	_check(m._armor_holder.get_child_count() >= 13, "le héros affiche sa tenue de chevalier (%d maillages)" % m._armor_holder.get_child_count())
-	_check(not (m._body_nodes["torso"] as Node3D).visible and not (m._body_nodes["hand"] as Node3D).visible and (m._body_nodes["head"] as Node3D).visible, "torse et mains cachés sous l'armure, tête visible")
+	_check(not (m._body_nodes["torso"] as Node3D).visible and not (m._body_nodes["hand"] as Node3D).visible and not (m._body_nodes["head"] as Node3D).visible, "torse, mains et tête du corps de base cachés (la tête modelée les remplace)")
 	_check(main.enemy.model._armor_holder.get_child_count() >= 8, "l'ennemi porte sa tenue d'homme d'armes (%d maillages)" % main.enemy.model._armor_holder.get_child_count())
 	var plate_count := m._armor_holder.get_child_count()
 	p.cycle_outfit()

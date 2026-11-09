@@ -18,5 +18,7 @@ Toutes les ressources doivent être gratuites (CC0 ou licence libre) et notées 
 | Texture PBR « Rustic Stone Wall » 1k | Poly Haven | CC0 | https://polyhaven.com/a/rustic_stone_wall | murs, piliers, plateforme, rampe (`assets/textures/pierre/`) |
 | Texture PBR « Rough Wood » 1k | Poly Haven | CC0 | https://polyhaven.com/a/rough_wood | caisses, tonneaux, râtelier, poteaux (`assets/textures/bois/`) |
 | Accessoires de l'arène : caisses, tonneau, râtelier, poteau d'entraînement | Créés pour ce projet (Claude, Blender en ligne de commande, `tools/blender/make_props.py`) | Libres de droits | — | `assets/props/*.glb` |
+| Textures PBR « Brown Leather », « Rough Linen », « Poly Wool Herringbone » 1k (couleur, normale, ARM) | Poly Haven | CC0 | https://polyhaven.com/a/brown_leather · https://polyhaven.com/a/rough_linen · https://polyhaven.com/a/poly_wool_herringbone | cuir, tissus et tabards des armures (`assets/textures/cuir`, `lin`, `laine`) ; script `tools/fetch_polyhaven.py` |
+| Acier, mailles, peau, cheveux | Générés par code (bruit, `scripts/character/armor_materials.gd`) et dans Blender (`tools/blender/make_armor.py`) | Libres de droits | — | rayures d'acier, anneaux de mailles, tête sculptée (`assets/armor/armure_tete_homme.glb`, `armure_barbe.glb`) |
 
 Moteur : [Godot Engine](https://godotengine.org) (licence MIT).

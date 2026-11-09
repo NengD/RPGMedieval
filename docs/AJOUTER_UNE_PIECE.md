@@ -87,3 +87,9 @@ protection (plates > mailles > cuir), régions cachées, poids, affichage, varia
 - Les plaques « rigides » gardent les poids de plusieurs os : elles suivent le corps sans se détacher, mais peuvent se déformer un peu aux articulations.
 - Cape et pans de tissu animés : pas encore faits.
 - Les bords des coques laissent parfois un petit anneau de peau visible (poignets, cou).
+
+
+## Matériaux et tête (étape 8)
+- Le matériau d'une pièce est choisi d'après le NOM du matériau Blender (`acier_plaques`, `mailles`, `cuir`, `teinte_lin`, `teinte_gambison`, `teinte_tabard`) par `scripts/character/armor_materials.gd` (acier = métal rayé généré, rim light sur les bords ; mailles = relief d'anneaux ; cuir / tissus = textures Poly Haven en projection triplanaire d'OBJET). Un nouveau nom de matériau doit y être ajouté.
+- Les matériaux `teinte_*` prennent la couleur de la variante (`color_variants`) ; les couleurs sont multipliées par le gris de la texture de laine : prendre des valeurs vives pour obtenir des teintes naturelles.
+- La tête (`armure.tete_homme`, slot TETE couche vêtement, cache la région `head`) et la barbe (`armure.barbe`, slot COU) sont sculptées dans `make_armor.py` (`face_offset`, `build_head`). Capuchon, bassinet et heaume se portent par-dessus ; le heaume la cache entièrement.

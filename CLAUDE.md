@@ -40,7 +40,7 @@ ZQSD / stick G déplacer · souris / stick D regarder · Maj courir · Espace sa
 Chantier « réalisme + RPG » (étapes numérotées dans la conversation du propriétaire) :
 - [x] 0 Sauvegarde GitHub (https://github.com/NengD/RPGMedieval, branche `main`) · [x] 1 Diagnostic et architecture · [x] 2 Fondations RPG · [x] 3 Armes extensibles (11 modèles Blender) · [x] 4 Personnage modulaire (Mannequin + 17 pièces + 3 tenues) · [x] 5 Arène PBR, ciel HDRI, qualité F10 · [x] 6 Animations plus naturelles (cadence, pieds, regard, réactions, ragdoll).
 - [x] 7 Remise en ordre : ce fichier allégé, aide masquée (F6), panneau de débogage séparé (F7), HUD sobre.
-- [ ] 8 Réalisme visuel du chevalier (matériaux d'armure, tête et visage, mains, proportions des armes).
+- [x] 8 Réalisme visuel du chevalier : matériaux PBR (`scripts/character/armor_materials.gd` : acier rayé, mailles, cuir, tissus Poly Haven), tête humaine modelée (`armure.tete_homme`, cheveux courts, `armure.barbe`), épée longue ≈ 1,1 m. Voir docs/REALISME_CHEVALIER.md.
 - [ ] 9 Animations créées dans Blender (corriger les limites de `ANIMATIONS_NATURELLES.md`, retravailler les clips Mixamo, créer attaques et parades par catégorie d'arme).
 - [ ] 10 Game feel et sons (arrêt sur image, tremblement, étincelles, ralenti, sons CC0 ou générés, bus audio, menu d'options). C'est l'ancienne « étape 6 — Game feel, sons » du plan d'origine.
 Historique du prototype d'origine : combat à 4 directions puis combo (direction retirée), IA, arc / arbalète, animations Mixamo (chevalier Paladin, remplacé par le Mannequin modulaire à l'étape 4).

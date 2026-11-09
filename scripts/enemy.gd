@@ -8,7 +8,7 @@ extends CharacterBody3D
 
 enum Mode { APPROACH, CIRCLE, ATTACK, DEFEND, RETREAT, STAGGERED, DEAD, COVER, EVADE }
 const MODE_NAMES := ["AI_MODE_APPROACH", "AI_MODE_CIRCLE", "AI_MODE_ATTACK", "AI_MODE_DEFEND", "AI_MODE_RETREAT", "AI_MODE_STAGGER", "AI_MODE_DEAD", "AI_MODE_COVER", "AI_MODE_ZIGZAG"]   # clés de traduction
-const ENEMY_TINT := Color(1.0, 0.45, 0.4)   # teinte du chevalier ennemi (rouge sombre)
+const ENEMY_TINT := Color(1.0, 0.9, 0.85)   # léger ton chaud sur les tissus de l'ennemi (la différence vient surtout de sa tenue)
 
 var combatant: Combatant
 var model: HeroModel

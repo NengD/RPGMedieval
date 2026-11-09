@@ -14,4 +14,4 @@ material = ExtResource("1_bc6mr")
 weight = 3.0
 hidden_body_regions = Array[StringName]([&"torso", &"upper_arm", &"forearm"])
 model = ExtResource("2_1xy5s")
-color_variants = Array[Color]([Color(1, 1, 1, 1), Color(0.55, 0.4, 0.3, 1)])
+color_variants = Array[Color]([Color(1.5, 1.4, 1.2, 1), Color(1.1, 0.8, 0.6, 1)])

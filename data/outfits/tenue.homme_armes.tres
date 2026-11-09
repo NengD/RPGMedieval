@@ -6,7 +6,7 @@
 script = ExtResource("1_8h4sx")
 id = &"tenue.homme_armes"
 display_name = &"TENUE_HOMME_ARMES"
-pieces = Array[StringName]([&"armure.chemise", &"armure.braies", &"armure.gambison", &"armure.haubert_mailles", &"armure.capuchon_mailles", &"armure.gants_cuir", &"armure.bottes_cuir", &"armure.tabard"])
+pieces = Array[StringName]([&"armure.tete_homme", &"armure.barbe", &"armure.chemise", &"armure.braies", &"armure.gambison", &"armure.haubert_mailles", &"armure.capuchon_mailles", &"armure.gants_cuir", &"armure.bottes_cuir", &"armure.tabard"])
 variants = {
 "armure.tabard": 0
 }

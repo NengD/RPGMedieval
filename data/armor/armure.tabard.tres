@@ -13,4 +13,4 @@ layer = 4
 material = ExtResource("1_060vg")
 weight = 0.8
 model = ExtResource("2_xsul4")
-color_variants = Array[Color]([Color(0.62, 0.09, 0.09, 1), Color(0.15, 0.25, 0.62, 1), Color(0.2, 0.45, 0.25, 1), Color(0.13, 0.13, 0.14, 1)])
+color_variants = Array[Color]([Color(0.8, 0.3, 0.26, 1), Color(0.34, 0.42, 0.68, 1), Color(0.42, 0.62, 0.4, 1), Color(0.34, 0.32, 0.32, 1)])
