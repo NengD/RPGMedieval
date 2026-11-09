@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/attack_step.gd" id="1_m84md"]
+[ext_resource type="Resource" path="res://data/categories/categorie.epee_une_main.tres" id="2_r5tij"]
+[ext_resource type="PackedScene" path="res://assets/weapons/arme_epee_longue.glb" id="3_brdd4"]
+[ext_resource type="Script" path="res://scripts/rpg/weapon_data.gd" id="4_fqdgk"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="5_6fe2j"]
+
+[sub_resource type="Resource" id="Resource_ud3a4"]
+script = ExtResource("1_m84md")
+windup = 0.65
+strike = 0.14
+recovery = 0.55
+stamina = 30.0
+damage = 28.0
+
+[sub_resource type="Resource" id="Resource_qa4wa"]
+script = ExtResource("1_m84md")
+slot = 1
+windup = 0.48
+recovery = 0.45
+
+[sub_resource type="Resource" id="Resource_5ae44"]
+script = ExtResource("1_m84md")
+slot = 2
+windup = 0.45
+recovery = 0.45
+damage = 24.0
+reach = 0.7
+arc_deg = 45.0
+
+[sub_resource type="Resource" id="Resource_14ko8"]
+script = ExtResource("1_m84md")
+slot = 3
+windup = 0.48
+recovery = 0.45
+
+[resource]
+script = ExtResource("4_fqdgk")
+id = &"arme.epee_longue"
+display_name = &"ARME_EPEE_LONGUE"
+category = ExtResource("2_r5tij")
+model = ExtResource("3_brdd4")
+weight = 1.4
+attacks = Array[ExtResource("1_m84md")]([SubResource("Resource_ud3a4"), SubResource("Resource_qa4wa"), SubResource("Resource_5ae44"), SubResource("Resource_14ko8")])

@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/attack_step.gd" id="1_vx3co"]
+[ext_resource type="Resource" path="res://data/categories/categorie.masse.tres" id="2_p0r0h"]
+[ext_resource type="PackedScene" path="res://assets/weapons/arme_masse_armes.glb" id="3_lq8bf"]
+[ext_resource type="Script" path="res://scripts/rpg/weapon_data.gd" id="4_orbi0"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="5_q6okq"]
+
+[sub_resource type="Resource" id="Resource_3xpi2"]
+script = ExtResource("1_vx3co")
+windup = 0.78
+strike = 0.14
+recovery = 0.6325
+stamina = 37.5
+damage = 32.199999999999996
+
+[sub_resource type="Resource" id="Resource_l8y18"]
+script = ExtResource("1_vx3co")
+slot = 1
+windup = 0.576
+recovery = 0.5175
+stamina = 30.0
+damage = 23.0
+
+[sub_resource type="Resource" id="Resource_jkuoo"]
+script = ExtResource("1_vx3co")
+slot = 2
+windup = 0.54
+recovery = 0.5175
+stamina = 30.0
+damage = 27.599999999999998
+reach = 0.7
+arc_deg = 45.0
+
+[sub_resource type="Resource" id="Resource_r1la1"]
+script = ExtResource("1_vx3co")
+slot = 3
+windup = 0.576
+recovery = 0.5175
+stamina = 30.0
+damage = 23.0
+
+[resource]
+script = ExtResource("4_orbi0")
+id = &"arme.masse_armes"
+display_name = &"ARME_MASSE_ARMES"
+category = ExtResource("2_p0r0h")
+model = ExtResource("3_lq8bf")
+weight = 2.5
+damage_mix = {
+1: 1.0
+}
+attacks = Array[ExtResource("1_vx3co")]([SubResource("Resource_3xpi2"), SubResource("Resource_l8y18"), SubResource("Resource_jkuoo"), SubResource("Resource_r1la1")])
+combo_order = Array[int]([1, 0, 3, 2])

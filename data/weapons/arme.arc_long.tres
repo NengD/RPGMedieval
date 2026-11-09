@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Resource" path="res://data/ammo/munition.fleche.tres" id="1_2paeu"]
+[ext_resource type="Script" path="res://scripts/rpg/attack_step.gd" id="2_jasaw"]
+[ext_resource type="Resource" path="res://data/categories/categorie.arc.tres" id="3_ujqin"]
+[ext_resource type="PackedScene" path="res://assets/weapons/arme_arc_long.glb" id="4_hscfq"]
+[ext_resource type="Script" path="res://scripts/rpg/weapon_data.gd" id="5_6kikw"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="6_grawh"]
+
+[resource]
+script = ExtResource("5_6kikw")
+id = &"arme.arc_long"
+display_name = &"ARME_ARC_LONG"
+category = ExtResource("3_ujqin")
+model = ExtResource("4_hscfq")
+hands = 2
+weight = 1.0
+damage_mix = {
+2: 1.0
+}
+ammo = ExtResource("1_2paeu")

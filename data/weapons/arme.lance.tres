@@ -1,0 +1,59 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/attack_step.gd" id="1_1ks45"]
+[ext_resource type="Resource" path="res://data/categories/categorie.lance.tres" id="2_eyiem"]
+[ext_resource type="PackedScene" path="res://assets/weapons/arme_lance.glb" id="3_c6i8m"]
+[ext_resource type="Script" path="res://scripts/rpg/weapon_data.gd" id="4_bs1fr"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="5_fj3u8"]
+
+[sub_resource type="Resource" id="Resource_20hw3"]
+script = ExtResource("1_1ks45")
+windup = 0.7150000000000001
+strike = 0.14
+recovery = 0.6050000000000001
+stamina = 33.0
+damage = 28.0
+reach = 0.55
+arc_deg = 88.0
+
+[sub_resource type="Resource" id="Resource_kasia"]
+script = ExtResource("1_1ks45")
+slot = 1
+windup = 0.528
+recovery = 0.49500000000000005
+stamina = 26.400000000000002
+reach = 0.55
+arc_deg = 88.0
+
+[sub_resource type="Resource" id="Resource_kihap"]
+script = ExtResource("1_1ks45")
+slot = 2
+windup = 0.49500000000000005
+recovery = 0.49500000000000005
+stamina = 26.400000000000002
+damage = 24.0
+reach = 1.25
+arc_deg = 36.0
+
+[sub_resource type="Resource" id="Resource_5amr6"]
+script = ExtResource("1_1ks45")
+slot = 3
+windup = 0.528
+recovery = 0.49500000000000005
+stamina = 26.400000000000002
+reach = 0.55
+arc_deg = 88.0
+
+[resource]
+script = ExtResource("4_bs1fr")
+id = &"arme.lance"
+display_name = &"ARME_LANCE"
+category = ExtResource("2_eyiem")
+model = ExtResource("3_c6i8m")
+hands = 2
+weight = 2.2
+damage_mix = {
+2: 1.0
+}
+attacks = Array[ExtResource("1_1ks45")]([SubResource("Resource_20hw3"), SubResource("Resource_kasia"), SubResource("Resource_kihap"), SubResource("Resource_5amr6")])
+combo_order = Array[int]([2, 2, 0, 2])

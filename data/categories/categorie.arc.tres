@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="WeaponCategory" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/weapon_category.gd" id="1_rd706"]
+
+[resource]
+script = ExtResource("1_rd706")
+id = &"categorie.arc"
+display_name = &"CAT_ARC"
+kind = 2
+two_handed = true

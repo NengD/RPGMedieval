@@ -44,6 +44,13 @@ var _attack_full_body := false
 var _weapon_amount := 0.0        # 0 = épée en main, 1 = arc en main (fondu de la locomotion)
 var _bow_release_time := 0.0
 var bow_holder: BoneAttachment3D
+var _melee_node: Node3D          # nœud « Sword » : reçoit le modèle de l'arme de mêlée
+var _shield_node: Node3D
+var _bow_model_holder: Node3D
+var _xbow_model_holder: Node3D
+var _bow_top := Vector3(0.0, 0.52, 0.13)       # bouts de l'arc (repères Nock_Top / Nock_Bottom du modèle)
+var _bow_bottom := Vector3(0.0, -0.52, 0.13)
+var _ammo_length := 0.72
 var xbow_holder: BoneAttachment3D
 var _xbow_node: Node3D
 var _xbow_amount := 0.0
@@ -395,14 +402,103 @@ func _build_attachments() -> void:
 	sword_holder.add_child(sword)
 	sword.rotation_degrees = Vector3(0, 0, -90)   # la lame suit l'axe X de l'os de la main (vers l'avant et le haut)
 	sword.position = Vector3(0.0, 0.08, 0.0)
-	_add_box(sword, Vector3(0.05, 0.85, 0.012), Vector3(0, 0.55, 0), Color(0.8, 0.82, 0.88), 0.9, 0.25)
-	_add_box(sword, Vector3(0.22, 0.035, 0.05), Vector3(0, 0.12, 0), Color(0.75, 0.6, 0.2), 0.7, 0.4)
-	_add_box(sword, Vector3(0.035, 0.2, 0.035), Vector3(0, -0.02, 0), Color(0.35, 0.2, 0.1), 0.0, 0.8)
+	sword.position = GameConfig.MELEE_GRIP_OFFSET
+	_melee_node = sword
 	# Bouclier au bras gauche
 	shield_holder = BoneAttachment3D.new()
 	shield_holder.name = "ShieldHolder"
 	shield_holder.bone_name = "mixamorig_LeftForeArm"
 	skeleton.add_child(shield_holder)
+	_shield_node = Node3D.new()
+	_shield_node.name = "Shield"
+	shield_holder.add_child(_shield_node)
+	_shield_node.rotation_degrees = GameConfig.SHIELD_ROTATION_DEG
+	_shield_node.position = GameConfig.SHIELD_OFFSET
+
+
+# ---------------------------------------------------------------- modèles d'armes
+
+static func _free_children(n: Node) -> void:
+	for c in n.get_children():
+		n.remove_child(c)
+		c.queue_free()
+
+
+static func _instance(scene: PackedScene) -> Node3D:
+	return scene.instantiate() as Node3D if scene != null else null
+
+
+## Met à jour tous les modèles d'après ce que le personnage porte (appelé à chaque changement d'équipement).
+func apply_weapons(eq: EquipmentComponent) -> void:
+	var main := eq.get_weapon(&"main_hand")
+	_free_children(_melee_node)
+	var melee_scene: PackedScene = main.model if main != null else load("res://assets/weapons/arme_epee_longue.glb")
+	var melee := _instance(melee_scene)
+	if melee != null:
+		_melee_node.add_child(melee)
+	_free_children(_shield_node)
+	var off := eq.get_weapon(&"off_hand")
+	var shield := _instance(off.model) if off != null else null
+	if shield != null:
+		_shield_node.add_child(shield)
+	_set_bow_model(eq.get_weapon(&"bow"))
+	_set_xbow_model(eq.get_weapon(&"crossbow"))
+
+
+func _marker(model: Node, marker_name: String) -> Node3D:
+	return model.find_child(marker_name, true, false) as Node3D
+
+
+func _set_bow_model(w: WeaponData) -> void:
+	_free_children(_bow_model_holder)
+	_free_children(_bow_arrow)
+	if w == null:
+		return
+	var model := _instance(w.model)
+	if model != null:
+		_bow_model_holder.add_child(model)
+		var top := _marker(model, "Nock_Top")
+		var bottom := _marker(model, "Nock_Bottom")
+		if top != null and bottom != null:
+			_bow_top = top.position
+			_bow_bottom = bottom.position
+	if w.ammo != null:
+		_ammo_length = w.ammo.length
+		var arrow := _instance(w.ammo.model)
+		if arrow != null:
+			_bow_arrow.add_child(arrow)
+	_bow_nock = Vector3(0.0, 0.0, _bow_top.z)
+
+
+func _set_xbow_model(w: WeaponData) -> void:
+	_free_children(_xbow_model_holder)
+	_free_children(_xbow_bolt)
+	if w == null:
+		return
+	var model := _instance(w.model)
+	if model != null:
+		_xbow_model_holder.add_child(model)
+		var muzzle := _marker(model, "Muzzle")
+		if muzzle != null:
+			_xbow_bolt.position = muzzle.position
+		var nl := _marker(model, "Nock_Left")
+		var nr := _marker(model, "Nock_Right")
+		var rest := _marker(model, "Bolt_Rest")
+		if nl != null and nr != null and rest != null:
+			var cord_mat := StandardMaterial3D.new()
+			cord_mat.albedo_color = Color(0.85, 0.8, 0.65)
+			for end in [nl.position, nr.position]:
+				var mi := MeshInstance3D.new()
+				var bm := BoxMesh.new()
+				bm.size = Vector3(0.006, 0.006, 1.0)
+				bm.material = cord_mat
+				mi.mesh = bm
+				_xbow_model_holder.add_child(mi)
+				_set_segment(mi, end, rest.position)
+	if w.ammo != null:
+		var bolt := _instance(w.ammo.model)
+		if bolt != null:
+			_xbow_bolt.add_child(bolt)
 
 
 func _build_bow_prop() -> void:
@@ -414,10 +510,8 @@ func _build_bow_prop() -> void:
 	bow_prop.name = "Bow"
 	bow_holder.add_child(bow_prop)
 	bow_prop.top_level = true   # placé chaque image à partir des mains (voir _place_props)
-	var wood := Color(0.45, 0.30, 0.15)
-	_add_part(bow_prop, Vector3(0.04, 0.2, 0.04), Vector3(0, 0, 0), Vector3.ZERO, wood)
-	_add_part(bow_prop, Vector3(0.028, 0.5, 0.028), Vector3(0, 0.32, 0.075), Vector3(20, 0, 0), wood)
-	_add_part(bow_prop, Vector3(0.028, 0.5, 0.028), Vector3(0, -0.32, 0.075), Vector3(-20, 0, 0), wood)
+	_bow_model_holder = Node3D.new()
+	bow_prop.add_child(_bow_model_holder)
 	for i in 2:
 		var mi := MeshInstance3D.new()
 		var bm := BoxMesh.new()
@@ -429,8 +523,6 @@ func _build_bow_prop() -> void:
 		bow_prop.add_child(mi)
 		_bow_strings.append(mi)
 	_bow_arrow = Node3D.new()
-	_add_part(_bow_arrow, Vector3(0.018, 0.018, 0.7), Vector3(0, 0, 0.35), Vector3.ZERO, Color(0.55, 0.38, 0.2))
-	_add_part(_bow_arrow, Vector3(0.05, 0.05, 0.1), Vector3.ZERO, Vector3.ZERO, Color(0.7, 0.72, 0.78))
 	bow_prop.add_child(_bow_arrow)
 	_bow_arrow.visible = false
 	bow_holder.visible = false
@@ -446,15 +538,9 @@ func _build_xbow_prop() -> void:
 	xbow_holder.add_child(x)
 	x.top_level = true
 	_xbow_node = x
-	var wood := Color(0.40, 0.27, 0.14)
-	var iron := Color(0.3, 0.3, 0.33)
-	_add_part(x, Vector3(0.06, 0.08, 0.7), Vector3(0, 0, -0.25), Vector3.ZERO, wood)
-	_add_part(x, Vector3(0.04, 0.03, 0.55), Vector3(0, 0.055, -0.3), Vector3.ZERO, iron)
-	_add_part(x, Vector3(0.4, 0.035, 0.04), Vector3(-0.2, 0.02, -0.52), Vector3(0, 12, 0), iron)
-	_add_part(x, Vector3(0.4, 0.035, 0.04), Vector3(0.2, 0.02, -0.52), Vector3(0, -12, 0), iron)
+	_xbow_model_holder = Node3D.new()
+	x.add_child(_xbow_model_holder)
 	_xbow_bolt = Node3D.new()
-	_add_part(_xbow_bolt, Vector3(0.016, 0.016, 0.4), Vector3(0, 0.085, -0.35), Vector3.ZERO, Color(0.55, 0.38, 0.2))
-	_add_part(_xbow_bolt, Vector3(0.04, 0.04, 0.07), Vector3(0, 0.085, -0.57), Vector3.ZERO, Color(0.7, 0.72, 0.78))
 	x.add_child(_xbow_bolt)
 	xbow_holder.visible = false
 
@@ -478,7 +564,7 @@ func _set_segment(mi: MeshInstance3D, a: Vector3, b: Vector3) -> void:
 	if length < 0.001:
 		return
 	var up := Vector3.UP if absf(d.normalized().y) < 0.9 else Vector3.RIGHT
-	mi.transform = Transform3D(Basis.looking_at(d.normalized(), up).scaled(Vector3(1, 1, length)), (a + b) * 0.5)
+	mi.transform = Transform3D(Basis.looking_at(d.normalized(), up) * Basis.from_scale(Vector3(1, 1, length)), (a + b) * 0.5)
 
 
 ## La corde suit la main droite ; la flèche est encochée tant qu'on bande.
@@ -509,19 +595,19 @@ func _update_bow_prop(delta: float, drawing: bool, _tension: float) -> void:
 	_place_props()
 	if not bow_holder.visible:
 		return
-	var rest := Vector3(0.0, 0.0, 0.15)
+	var rest := Vector3(0.0, 0.0, _bow_top.z)
 	var goal := rest
 	if drawing:
 		var right_hand := skeleton.global_transform * skeleton.get_bone_global_pose(skeleton.find_bone("mixamorig_RightHand")).origin
 		goal = bow_prop.to_local(right_hand)
-		goal.z = maxf(goal.z, 0.15)
+		goal.z = maxf(goal.z, _bow_top.z)
 		goal.x = clampf(goal.x, -0.1, 0.1)
 		goal.y = clampf(goal.y, -0.15, 0.15)
 	_bow_nock = _bow_nock.lerp(goal, 1.0 - exp(-(30.0 if drawing else 40.0) * delta))
-	_set_segment(_bow_strings[0], Vector3(0, 0.52, 0.15), _bow_nock)
-	_set_segment(_bow_strings[1], Vector3(0, -0.52, 0.15), _bow_nock)
+	_set_segment(_bow_strings[0], _bow_top, _bow_nock)
+	_set_segment(_bow_strings[1], _bow_bottom, _bow_nock)
 	_bow_arrow.visible = drawing
-	_bow_arrow.position = _bow_nock + Vector3(0, 0, -0.7)
+	_bow_arrow.position = _bow_nock + Vector3(0, 0, -_ammo_length)
 
 
 func _add_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color, metallic: float, roughness: float) -> void:

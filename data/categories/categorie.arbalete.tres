@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="WeaponCategory" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/weapon_category.gd" id="1_hn5ys"]
+
+[resource]
+script = ExtResource("1_hn5ys")
+id = &"categorie.arbalete"
+display_name = &"CAT_ARBALETE"
+kind = 3
+two_handed = true

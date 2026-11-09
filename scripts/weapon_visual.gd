@@ -46,14 +46,25 @@ static func stagger_pose() -> Transform3D:
 
 
 func _ready() -> void:
-	# Lame, garde et poignée (la lame part vers le haut depuis la main)
-	_add_part(Vector3(0.12, 1.1, 0.03), Vector3(0, 0.65, 0), Color(0.78, 0.8, 0.85), 0.9, 0.25)
-	_add_part(Vector3(0.34, 0.05, 0.07), Vector3(0, 0.1, 0), Color(0.75, 0.6, 0.2), 0.7, 0.4)
-	_add_part(Vector3(0.05, 0.25, 0.05), Vector3(0, -0.05, 0), Color(0.35, 0.2, 0.1), 0.0, 0.8)
+	set_weapon_model(null)
 	_displayed = rest_pose()
 	transform = _displayed
 	if combatant:
 		bind(combatant)
+
+
+var _model: Node3D
+
+
+## Affiche le modèle de l'arme (null = épée longue d'origine). Agrandi un peu pour rester lisible à l'écran.
+func set_weapon_model(data: WeaponData) -> void:
+	if _model != null:
+		remove_child(_model)
+		_model.queue_free()
+	var scene: PackedScene = data.model if data != null and data.model != null else load("res://assets/weapons/arme_epee_longue.glb")
+	_model = scene.instantiate() as Node3D
+	_model.scale = Vector3.ONE * GameConfig.FIRST_PERSON_WEAPON_SCALE
+	add_child(_model)
 
 
 func bind(c: Combatant) -> void:

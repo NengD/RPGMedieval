@@ -30,9 +30,18 @@ var equipment := EquipmentComponent.new(stats, self)
 var protection: Dictionary = {}
 ## Type de dégâts du dernier coup reçu (pour la couleur des chiffres flottants).
 var last_damage_type: int = DamageType.Type.TRANCHANT
-## Type de dégâts infligés par nos attaques (l'arme décidera à l'étape 3).
-var attack_damage_type: int = DamageType.Type.TRANCHANT
 var instance_id := ""
+## Arme de mêlée tenue (null = épée longue d'origine, construite avec les valeurs de game_config.gd).
+var weapon: WeaponData
+
+
+func get_weapon() -> WeaponData:
+	return weapon if weapon != null else WeaponData.default_sword()
+
+
+## Le coup du geste `slot` (0 haut, 1 droite, 2 estoc, 3 gauche) avec l'arme tenue.
+func attack_step(slot: int) -> AttackStep:
+	return get_weapon().attack_for(slot)
 
 var max_health: float:
 	get: return stats.get_derived(&"vie_max")
@@ -130,12 +139,14 @@ func request_attack(dir: int = AUTO) -> bool:
 	if dir == AUTO:
 		if _combo_idle > GameConfig.COMBO_RESET_TIME:
 			combo_index = 0
-		dir = GameConfig.COMBO_ORDER[combo_index % GameConfig.COMBO_ORDER.size()]
-		combo_index = (combo_index + 1) % GameConfig.COMBO_ORDER.size()
+		var order: Array[int] = get_weapon().combo_order
+		dir = order[combo_index % order.size()]
+		combo_index = (combo_index + 1) % order.size()
 	attack_dir = dir
 	_strike_done = false
-	spend_stamina(GameConfig.ATTACK_STAMINA[dir])
-	var windup: float = GameConfig.ATTACK_WINDUP[dir]
+	var step := attack_step(dir)
+	spend_stamina(step.stamina)
+	var windup: float = step.windup
 	_enter(State.WINDUP, windup / speed_scale)
 	attack_started.emit(dir)
 	return true
@@ -188,7 +199,7 @@ func receive_hit(attacker: Combatant, dir: int, damage_in: Variant) -> int:
 			attacker.stagger(GameConfig.PARRY_STAGGER, true)
 			hit_resolved.emit(Result.PARRIED, dir, 0.0, attacker)
 			return Result.PARRIED
-		var cost := damage * GameConfig.BLOCK_STAMINA_FACTOR
+		var cost := damage * GameConfig.BLOCK_STAMINA_FACTOR * equipment.guard_cost_factor()
 		if stamina > cost:
 			spend_stamina(cost)
 			hit_resolved.emit(Result.BLOCKED, dir, 0.0, attacker)
@@ -228,7 +239,7 @@ func receive_projectile(attacker: Combatant, damage_in: Variant, dir: Vector3, h
 		if guard_time <= GameConfig.PERFECT_PARRY_WINDOW:
 			hit_resolved.emit(Result.PARRIED, -1, 0.0, attacker)
 			return Result.PARRIED
-		var cost := damage * GameConfig.BLOCK_STAMINA_FACTOR * GameConfig.PROJECTILE_BLOCK_FACTOR
+		var cost := damage * GameConfig.BLOCK_STAMINA_FACTOR * GameConfig.PROJECTILE_BLOCK_FACTOR * equipment.guard_cost_factor()
 		if stamina > cost:
 			spend_stamina(cost)
 			hit_resolved.emit(Result.BLOCKED, -1, 0.0, attacker)
@@ -266,12 +277,12 @@ func _physics_process(delta: float) -> void:
 	match state:
 		State.WINDUP:
 			if state_time >= state_duration:
-				var strike: float = GameConfig.ATTACK_STRIKE[attack_dir]
+				var strike: float = attack_step(attack_dir).strike
 				_enter(State.STRIKE, strike / speed_scale)
 		State.STRIKE:
 			_strike_check()
 			if state_time >= state_duration:
-				var recovery: float = GameConfig.ATTACK_RECOVERY[attack_dir]
+				var recovery: float = attack_step(attack_dir).recovery
 				_enter(State.RECOVERY, recovery / speed_scale)
 		State.RECOVERY, State.STAGGER:
 			if state_time >= state_duration:
@@ -302,15 +313,17 @@ func _strike_check() -> void:
 		var to := c.body.global_position - body.global_position
 		to.y = 0.0
 		var dist := to.length()
-		var reach: float = GameConfig.MELEE_RANGE + GameConfig.ATTACK_REACH[attack_dir]
-		var arc: float = GameConfig.ATTACK_ARC_DEG[attack_dir]
+		var reach: float = GameConfig.MELEE_RANGE + attack_step(attack_dir).reach
+		var arc: float = attack_step(attack_dir).arc_deg
 		if dist > reach + c.radius:
 			continue
 		if dist > 0.01 and rad_to_deg(fwd.angle_to(to)) > arc * 0.5:
 			continue
 		_strike_done = true
-		var dmg: float = GameConfig.ATTACK_DAMAGE[attack_dir] * damage_scale
-		var result := c.receive_hit(self, attack_dir, DamagePacket.of(dmg, attack_damage_type))
+		var dmg: float = attack_step(attack_dir).damage * damage_scale
+		var packet := DamagePacket.mixed(dmg, get_weapon().damage_mix)
+		packet.source_id = str(get_weapon().id)
+		var result := c.receive_hit(self, attack_dir, packet)
 		strike_result.emit(result, c)
 		return
 

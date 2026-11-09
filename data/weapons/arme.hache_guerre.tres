@@ -1,0 +1,55 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/attack_step.gd" id="1_nxipl"]
+[ext_resource type="Resource" path="res://data/categories/categorie.hache.tres" id="2_onr37"]
+[ext_resource type="PackedScene" path="res://assets/weapons/arme_hache_guerre.glb" id="3_o01vj"]
+[ext_resource type="Script" path="res://scripts/rpg/weapon_data.gd" id="4_t2023"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="5_gh442"]
+
+[sub_resource type="Resource" id="Resource_vkect"]
+script = ExtResource("1_nxipl")
+windup = 0.7474999999999999
+strike = 0.14
+recovery = 0.6050000000000001
+stamina = 34.5
+damage = 33.6
+
+[sub_resource type="Resource" id="Resource_3lcb0"]
+script = ExtResource("1_nxipl")
+slot = 1
+windup = 0.5519999999999999
+recovery = 0.49500000000000005
+stamina = 27.599999999999998
+damage = 24.0
+
+[sub_resource type="Resource" id="Resource_xgx4w"]
+script = ExtResource("1_nxipl")
+slot = 2
+windup = 0.5175
+recovery = 0.49500000000000005
+stamina = 27.599999999999998
+damage = 28.799999999999997
+reach = 0.7
+arc_deg = 45.0
+
+[sub_resource type="Resource" id="Resource_iurdb"]
+script = ExtResource("1_nxipl")
+slot = 3
+windup = 0.5519999999999999
+recovery = 0.49500000000000005
+stamina = 27.599999999999998
+damage = 24.0
+
+[resource]
+script = ExtResource("4_t2023")
+id = &"arme.hache_guerre"
+display_name = &"ARME_HACHE_GUERRE"
+category = ExtResource("2_onr37")
+model = ExtResource("3_o01vj")
+weight = 2.0
+damage_mix = {
+0: 0.8,
+1: 0.2
+}
+attacks = Array[ExtResource("1_nxipl")]([SubResource("Resource_vkect"), SubResource("Resource_3lcb0"), SubResource("Resource_xgx4w"), SubResource("Resource_iurdb")])
+combo_order = Array[int]([0, 1, 3, 0])

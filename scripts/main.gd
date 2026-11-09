@@ -61,6 +61,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event.is_action_pressed(&"reset_combat"):
 		reset_combat()
+	elif event.is_action_pressed(&"next_melee"):
+		var w := player.cycle_melee()
+		if w != null:
+			hud.show_message(tr("MSG_WEAPON") % tr(w.display_name), Color(1, 0.9, 0.5), 1.2)
+	elif event.is_action_pressed(&"toggle_shield"):
+		var res := player.toggle_shield()
+		hud.show_message(tr("MSG_SHIELD_ON") if res == 1 else (tr("MSG_SHIELD_OFF") if res == 0 else tr("MSG_SHIELD_BLOCKED")), Color(1, 0.9, 0.5), 1.2)
 	elif event.is_action_pressed(&"quick_save"):
 		quick_save()
 	elif event.is_action_pressed(&"quick_load"):

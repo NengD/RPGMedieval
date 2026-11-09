@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Resource" path="res://data/ammo/munition.carreau.tres" id="1_kbt1d"]
+[ext_resource type="Script" path="res://scripts/rpg/attack_step.gd" id="2_f2w0c"]
+[ext_resource type="Resource" path="res://data/categories/categorie.arbalete.tres" id="3_7lwvw"]
+[ext_resource type="PackedScene" path="res://assets/weapons/arme_arbalete.glb" id="4_0wala"]
+[ext_resource type="Script" path="res://scripts/rpg/weapon_data.gd" id="5_sgxlt"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="6_c4yow"]
+
+[resource]
+script = ExtResource("5_sgxlt")
+id = &"arme.arbalete"
+display_name = &"ARME_ARBALETE"
+category = ExtResource("3_7lwvw")
+model = ExtResource("4_0wala")
+hands = 2
+weight = 3.5
+damage_mix = {
+2: 1.0
+}
+ammo = ExtResource("1_kbt1d")

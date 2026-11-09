@@ -39,11 +39,13 @@ static func clear_all(tree: SceneTree) -> void:
 func _ready() -> void:
 	add_to_group(&"arrows")
 	# La pointe est à l'origine ; la hampe part vers l'arrière (+Z). Vol vers -Z.
+	var ammo := Registry.get_data(&"munition.carreau" if is_bolt else &"munition.fleche") as AmmoData
+	if ammo != null and ammo.model != null:
+		add_child(ammo.model.instantiate())
+		return
 	var length := 0.42 if is_bolt else 0.7
 	_add_box(Vector3(0.025, 0.025, length) if is_bolt else Vector3(0.018, 0.018, length), Vector3(0, 0, length * 0.5), Color(0.55, 0.38, 0.2))
 	_add_box(Vector3(0.06, 0.06, 0.12), Vector3(0, 0, 0.0), Color(0.7, 0.72, 0.78))
-	_add_box(Vector3(0.1, 0.01, 0.12), Vector3(0, 0, length - 0.06), Color(0.8, 0.2, 0.2))
-	_add_box(Vector3(0.01, 0.1, 0.12), Vector3(0, 0, length - 0.06), Color(0.8, 0.2, 0.2))
 
 
 func _add_box(size: Vector3, pos: Vector3, color: Color) -> void:

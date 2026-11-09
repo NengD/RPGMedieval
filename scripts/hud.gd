@@ -19,7 +19,7 @@ const _STATE_NAMES := ["STATE_IDLE", "STATE_WINDUP", "STATE_STRIKE", "STATE_RECO
 func _ready() -> void:
 	_help = _make_label()
 	_help.position = Vector2(16, 12)
-	_help.text = "\n".join([tr("HELP_TITLE"), tr("HELP_MOVE"), tr("HELP_WEAPON"), tr("HELP_SWORD"), tr("HELP_RANGED"), tr("HELP_KEYS"), tr("HELP_SAVE")])
+	_help.text = "\n".join([tr("HELP_TITLE"), tr("HELP_MOVE"), tr("HELP_WEAPON"), tr("HELP_SWORD"), tr("HELP_RANGED"), tr("HELP_KEYS"), tr("HELP_SAVE"), tr("HELP_WEAPONS")])
 	add_child(_help)
 
 	_status = _make_label()
@@ -103,7 +103,7 @@ func _process(_delta: float) -> void:
 		tr("HUD_LINE_STATE") % [tr(_STATE_NAMES[c.state]), guard_text, tr("HUD_DODGING") if player.is_dodging else ""],
 		tr("HUD_LINE_DUMMY") % (tr("HUD_YES") if dummy.practice else tr("HUD_NO")),
 		tr("HUD_LINE_DIFFICULTY") % [tr(GameConfig.DIFFICULTY_NAMES[enemy.difficulty]), tr(Enemy.MODE_NAMES[enemy.mode]) if enemy.ai_enabled else tr("HUD_AI_OFF")],
-		tr("HUD_LINE_WEAPON") % [tr(GameConfig.WEAPON_NAMES[player.weapon_kind]), target_score],
+		tr("HUD_LINE_WEAPON") % [tr(player.current_weapon_name_key()), target_score],
 	]
 	_status.text = "\n".join(lines)
 	_status.position.y = _help.position.y + _help.get_minimum_size().y + 14.0   # toujours sous l'aide, quel que soit son nombre de lignes

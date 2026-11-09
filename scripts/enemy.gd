@@ -69,6 +69,10 @@ func _ready() -> void:
 	combatant.radius = GameConfig.ENEMY_RADIUS
 	add_child(combatant)
 	model.bind(combatant)
+	var sword := Registry.get_data(&"arme.epee_longue") as WeaponData
+	if sword != null:
+		combatant.equipment.equip_weapon(sword)
+	model.apply_weapons(combatant.equipment)
 	combatant.damaged.connect(_on_damaged)
 	combatant.hit_resolved.connect(_on_hit_resolved)
 	combatant.died.connect(_on_died)
@@ -185,7 +189,7 @@ func _update_defense(delta: float, dist: float) -> void:
 	var c := combatant
 	var pc := target.combatant
 	var relevant: bool = pc.is_attacking() and not pc.dead \
-		and dist <= GameConfig.MELEE_RANGE + GameConfig.ATTACK_REACH[pc.attack_dir] + GameConfig.PLAYER_RADIUS + 0.3
+		and dist <= GameConfig.MELEE_RANGE + pc.attack_step(pc.attack_dir).reach + GameConfig.PLAYER_RADIUS + 0.3
 	if relevant and not c.is_attacking():
 		if not _seen_threat:
 			_seen_threat = true

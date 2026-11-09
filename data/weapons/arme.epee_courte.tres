@@ -1,0 +1,60 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/attack_step.gd" id="1_jxjtv"]
+[ext_resource type="Resource" path="res://data/categories/categorie.epee_une_main.tres" id="2_6qu3b"]
+[ext_resource type="PackedScene" path="res://assets/weapons/arme_epee_courte.glb" id="3_tnfxh"]
+[ext_resource type="Script" path="res://scripts/rpg/weapon_data.gd" id="4_8diuv"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="5_bbcm2"]
+
+[sub_resource type="Resource" id="Resource_u43gj"]
+script = ExtResource("1_jxjtv")
+windup = 0.5525
+strike = 0.12600000000000003
+recovery = 0.4675
+damage = 23.8
+reach = -0.15
+
+[sub_resource type="Resource" id="Resource_mnc65"]
+script = ExtResource("1_jxjtv")
+slot = 1
+windup = 0.408
+strike = 0.108
+recovery = 0.3825
+stamina = 19.200000000000003
+damage = 17.0
+reach = -0.15
+
+[sub_resource type="Resource" id="Resource_6fye5"]
+script = ExtResource("1_jxjtv")
+slot = 2
+windup = 0.3825
+strike = 0.108
+recovery = 0.3825
+stamina = 19.200000000000003
+damage = 20.4
+reach = 0.5499999999999999
+arc_deg = 45.0
+
+[sub_resource type="Resource" id="Resource_efhkk"]
+script = ExtResource("1_jxjtv")
+slot = 3
+windup = 0.408
+strike = 0.108
+recovery = 0.3825
+stamina = 19.200000000000003
+damage = 17.0
+reach = -0.15
+
+[resource]
+script = ExtResource("4_8diuv")
+id = &"arme.epee_courte"
+display_name = &"ARME_EPEE_COURTE"
+category = ExtResource("2_6qu3b")
+model = ExtResource("3_tnfxh")
+weight = 0.9
+damage_mix = {
+0: 0.85,
+2: 0.15
+}
+attacks = Array[ExtResource("1_jxjtv")]([SubResource("Resource_u43gj"), SubResource("Resource_mnc65"), SubResource("Resource_6fye5"), SubResource("Resource_efhkk")])
+combo_order = Array[int]([1, 3, 2, 0])

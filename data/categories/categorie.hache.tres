@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="WeaponCategory" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/weapon_category.gd" id="1_pfu30"]
+
+[resource]
+script = ExtResource("1_pfu30")
+id = &"categorie.hache"
+display_name = &"CAT_HACHE"

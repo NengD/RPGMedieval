@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/attack_step.gd" id="1_dm4n7"]
+[ext_resource type="Resource" path="res://data/categories/categorie.bouclier.tres" id="2_e4xvo"]
+[ext_resource type="PackedScene" path="res://assets/weapons/arme_ecu.glb" id="3_aunpm"]
+[ext_resource type="Script" path="res://scripts/rpg/weapon_data.gd" id="4_i6rlj"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="5_fqgtr"]
+
+[resource]
+script = ExtResource("4_i6rlj")
+id = &"arme.ecu"
+display_name = &"ARME_ECU"
+category = ExtResource("2_e4xvo")
+model = ExtResource("3_aunpm")
+weight = 3.0
+guard_cost_factor = 0.7
+stat_requirements = {
+&"force": 11
+}

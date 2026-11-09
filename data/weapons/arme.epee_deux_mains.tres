@@ -1,0 +1,58 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/attack_step.gd" id="1_ea27d"]
+[ext_resource type="Resource" path="res://data/categories/categorie.deux_mains.tres" id="2_q0xrg"]
+[ext_resource type="PackedScene" path="res://assets/weapons/arme_epee_deux_mains.glb" id="3_xub3w"]
+[ext_resource type="Script" path="res://scripts/rpg/weapon_data.gd" id="4_s1ijw"]
+[ext_resource type="Script" path="res://scripts/rpg/stat_modifier.gd" id="5_i52ag"]
+
+[sub_resource type="Resource" id="Resource_7bjvn"]
+script = ExtResource("1_ea27d")
+windup = 0.8775000000000001
+strike = 0.15400000000000003
+recovery = 0.7150000000000001
+stamina = 45.0
+damage = 42.0
+reach = 0.25
+
+[sub_resource type="Resource" id="Resource_y5e55"]
+script = ExtResource("1_ea27d")
+slot = 1
+windup = 0.648
+strike = 0.132
+recovery = 0.5850000000000001
+stamina = 36.0
+damage = 30.0
+reach = 0.25
+
+[sub_resource type="Resource" id="Resource_chvvl"]
+script = ExtResource("1_ea27d")
+slot = 2
+windup = 0.6075
+strike = 0.132
+recovery = 0.5850000000000001
+stamina = 36.0
+damage = 36.0
+reach = 0.95
+arc_deg = 45.0
+
+[sub_resource type="Resource" id="Resource_hjbbj"]
+script = ExtResource("1_ea27d")
+slot = 3
+windup = 0.648
+strike = 0.132
+recovery = 0.5850000000000001
+stamina = 36.0
+damage = 30.0
+reach = 0.25
+
+[resource]
+script = ExtResource("4_s1ijw")
+id = &"arme.epee_deux_mains"
+display_name = &"ARME_EPEE_DEUX_MAINS"
+category = ExtResource("2_q0xrg")
+model = ExtResource("3_xub3w")
+hands = 2
+weight = 3.2
+attacks = Array[ExtResource("1_ea27d")]([SubResource("Resource_7bjvn"), SubResource("Resource_y5e55"), SubResource("Resource_chvvl"), SubResource("Resource_hjbbj")])
+combo_order = Array[int]([0, 1, 3, 2])

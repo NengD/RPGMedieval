@@ -59,6 +59,7 @@ func _run() -> void:
 	_test_registry()
 	await _test_equipment()
 	await _test_save()
+	await _test_weapons()
 	_test_translation()
 	print("")
 	print("RÉSULTAT RPG : %s (%d échec(s))" % ["SUCCÈS" if failures == 0 else "ÉCHEC", failures])
@@ -394,3 +395,142 @@ func _test_translation() -> void:
 			if TranslationServer.translate(k) == k:
 				all = false
 		_check(all, "liste de noms traduisible (%s…)" % name_const[0])
+
+
+# ---------------------------------------------------------------- armes
+
+func _triangles(node: Node) -> int:
+	var n := 0
+	for mi in node.find_children("*", "MeshInstance3D", true, false):
+		var mesh := (mi as MeshInstance3D).mesh
+		for si in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(si)
+			var idx = arrays[Mesh.ARRAY_INDEX]
+			n += (idx.size() if idx != null else arrays[Mesh.ARRAY_VERTEX].size()) / 3
+	return n
+
+
+func _test_weapons() -> void:
+	print("[Armes]")
+	Registry.scan(true)
+	var ids: Array = []
+	for id in Registry.all_ids():
+		if Registry.get_data(id) is WeaponData:
+			ids.append(id)
+	_check(ids.size() == 9, "9 armes dans les données (6 mêlée, écu, arc, arbalète) : %d" % ids.size())
+	var ok_models := true
+	var ok_faces := true
+	var ok_size := true
+	for id in ids:
+		var w := Registry.get_data(id) as WeaponData
+		var inst := w.model.instantiate() if w.model != null else null
+		if inst == null:
+			ok_models = false
+			continue
+		if _triangles(inst) > 2000:
+			ok_faces = false
+		var path := w.model.resource_path
+		if FileAccess.get_file_as_bytes(path).size() > 1024 * 1024:
+			ok_size = false
+		inst.free()
+	_check(ok_models, "chaque arme a un modèle .glb qui se charge")
+	_check(ok_faces, "chaque modèle fait moins de 2 000 triangles")
+	_check(ok_size, "chaque fichier modèle fait moins de 1 Mo")
+	# repères de prise
+	var checks := {
+		&"arme.epee_deux_mains": ["Grip_L"], &"arme.lance": ["Grip_L"], &"arme.ecu": ["Grip_L"],
+		&"arme.arc_long": ["Nock_Top", "Nock_Bottom", "Arrow_Rest"], &"arme.arbalete": ["Grip_L", "Bolt_Rest", "Muzzle", "Nock_Left", "Nock_Right"],
+	}
+	for id in checks:
+		var inst := (Registry.get_data(id) as WeaponData).model.instantiate()
+		var missing: Array[String] = []
+		for m in checks[id]:
+			if inst.find_child(m, true, false) == null:
+				missing.append(m)
+		_check(missing.is_empty(), "%s : repères présents (%s)" % [id, ", ".join(checks[id])])
+		inst.free()
+	for id in [&"munition.fleche", &"munition.carreau"]:
+		var am := Registry.get_data(id) as AmmoData
+		_check(am != null and am.model != null and am.model.instantiate().find_child("Nock", true, false) != null, "%s : modèle avec repère Nock" % id)
+
+	# équivalence : le fichier de l'épée longue = les valeurs de game_config.gd
+	var sword := Registry.get_data(&"arme.epee_longue") as WeaponData
+	var ref := WeaponData.from_config()
+	var same := sword.attacks.size() == 4
+	for i in 4:
+		var a := sword.attacks[i]
+		var b := ref.attacks[i]
+		same = same and is_equal_approx(a.windup, b.windup) and is_equal_approx(a.strike, b.strike) and is_equal_approx(a.recovery, b.recovery) 			and is_equal_approx(a.stamina, b.stamina) and is_equal_approx(a.damage, b.damage) and is_equal_approx(a.reach, b.reach) and is_equal_approx(a.arc_deg, b.arc_deg)
+	_check(same and sword.combo_order == ref.combo_order, "épée longue (fichier de données) = valeurs de game_config.gd")
+
+	# le combat avec chaque arme utilise ses propres chiffres
+	var a := _make(0, Vector3.ZERO, 0.0)
+	var b := _make(1, Vector3(0, 0, -1.8), PI)
+	await physics_frame
+	for id in ids:
+		var w := Registry.get_data(id) as WeaponData
+		if w.kind() != WeaponCategory.Kind.MELEE:
+			continue
+		a.reset()
+		b.reset()
+		a.equipment.equip_weapon(w)
+		var order: Array[int] = w.combo_order
+		var stam0 := a.stamina
+		a.request_attack()
+		var step := w.attack_for(order[0])
+		_check(a.attack_dir == order[0] and is_equal_approx(stam0 - a.stamina, step.stamina), "%s : 1er coup du combo = geste %d, coût %.1f" % [id, order[0], step.stamina])
+		var hp0 := b.health
+		b.receive_hit(a, a.attack_dir, DamagePacket.mixed(step.damage, w.damage_mix))
+		_check(hp0 - b.health > 0.0 and is_equal_approx(hp0 - b.health, step.damage), "%s : %.1f dégâts" % [id, step.damage])
+		a.cancel_recovery()
+	var mace := Registry.get_data(&"arme.masse_armes") as WeaponData
+	var axe := Registry.get_data(&"arme.hache_guerre") as WeaponData
+	var spear := Registry.get_data(&"arme.lance") as WeaponData
+	var great := Registry.get_data(&"arme.epee_deux_mains") as WeaponData
+	var short_sword := Registry.get_data(&"arme.epee_courte") as WeaponData
+	_check(DamagePacket.mixed(10.0, mace.damage_mix).dominant_type() == T.CONTONDANT, "masse : dégâts contondants")
+	_check(DamagePacket.mixed(10.0, spear.damage_mix).dominant_type() == T.PERFORANT, "lance : dégâts perforants")
+	_check(spear.attack_for(1).reach > sword.attack_for(1).reach + 0.4, "lance : plus de portée que l'épée")
+	_check(great.attack_for(0).damage > sword.attack_for(0).damage and great.attack_for(0).windup > sword.attack_for(0).windup, "deux mains : frappe plus fort mais plus lentement")
+	_check(short_sword.attack_for(0).windup < sword.attack_for(0).windup and short_sword.attack_for(0).stamina < sword.attack_for(0).stamina, "épée courte : plus rapide et moins fatigante")
+	_check(axe.damage_mix.has(T.CONTONDANT) and axe.damage_mix.has(T.TRANCHANT), "hache : tranchant et contondant mêlés")
+
+	# deux mains / bouclier
+	var shield := Registry.get_data(&"arme.ecu") as WeaponData
+	a.reset()
+	a.equipment.equip_weapon(sword)
+	_check(a.equipment.equip_weapon(shield), "épée une main + écu : possible")
+	_check(a.equipment.equip_weapon(great) and a.equipment.get_weapon(&"off_hand") == null, "équiper une arme à deux mains retire l'écu")
+	_check(not a.equipment.equip_weapon(shield), "écu refusé avec une arme à deux mains")
+	a.equipment.equip_weapon(sword)
+	_check(a.equipment.equip_weapon(shield), "écu de nouveau possible avec l'épée")
+	# l'écu réduit le coût des parades
+	a.reset()
+	b.reset()
+	a.equipment.stats.base[&"force"] = 12.0
+	a.equipment.stats.changed.emit()
+	a.set_guard(true)
+	await _frames(70)
+	var s0 := a.stamina
+	a.receive_hit(b, 1, 20.0)
+	_check(is_equal_approx(s0 - a.stamina, 20.0 * GameConfig.BLOCK_STAMINA_FACTOR * shield.guard_cost_factor), "avec l'écu : parer coûte %.0f %% de moins" % ((1.0 - shield.guard_cost_factor) * 100.0))
+	# exigences de force
+	a.equipment.stats.base[&"force"] = 10.0
+	a.equipment.unequip_weapon(&"off_hand")
+	var speed_before := a.stats.get_derived(&"vitesse_attaque")
+	a.equipment.equip_weapon(shield)
+	_check(a.stats.get_derived(&"vitesse_attaque") < speed_before, "force insuffisante pour l'écu : attaques ralenties")
+	a.equipment.unequip_weapon(&"off_hand")
+	_check(is_equal_approx(a.stats.get_derived(&"vitesse_attaque"), speed_before), "écu retiré : vitesse normale")
+	# poids porté
+	a.equipment.equip_weapon(shield)
+	_check(is_equal_approx(a.stats.carried_weight, sword.weight + shield.weight), "poids des armes dans la charge portée")
+	# sauvegarde des armes
+	var state := a.equipment.capture_state()
+	var c2 := _make(0, Vector3.ZERO, 0.0)
+	c2.equipment.restore_state(state)
+	_check(c2.equipment.get_weapon(&"main_hand") == sword and c2.equipment.get_weapon(&"off_hand") == shield and c2.weapon == sword, "armes restaurées par la sauvegarde")
+	a.body.queue_free()
+	b.body.queue_free()
+	c2.body.queue_free()
+	await physics_frame

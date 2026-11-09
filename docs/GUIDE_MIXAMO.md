@@ -64,3 +64,26 @@ dans les 4 directions, télécharge ces animations Mixamo seules (Without Skin /
 
 > Mise à jour : le « Pro Melee Axe Pack » (No Character) a été téléchargé et fournit finalement les attaques propres
 > (fichiers `assets/anims/axe_*.fbx`). Les 4 téléchargements ci-dessus ne sont plus nécessaires.
+
+
+## Lot 3 — armes (étape 3 du chantier réalisme + RPG)
+
+Toutes les catégories d'armes jouent pour l'instant les animations de l'épée. Pour qu'elles aient les leurs, voici ce qu'il faut chercher
+dans Mixamo. **Je n'ai pas pu confirmer les noms exacts des packs** (ma recherche web n'a renvoyé que des packs payants d'autres boutiques) :
+cherche donc par **nom d'animation** dans la barre de recherche et dis-moi ce qui existe.
+
+Réglages de téléchargement, toujours les mêmes : Format `FBX Binary (.fbx)` · 30 fps · **Skin = Without Skin** (« No Character » si c'est un pack) ·
+Keyframe Reduction `none` · **In Place** coché pour les déplacements et les attaques. Fichiers dans `assets/anims/`, sans les renommer.
+
+| Catégorie | Déjà couvert ? | À chercher dans Mixamo |
+|---|---|---|
+| Épée une main | oui (Pro Sword and Shield Pack) | — |
+| Bouclier (parade) | en partie : le Pro Sword and Shield Pack contient `shield block` / `sword and shield block` (non encore branchées) | rien à télécharger |
+| Hache | oui (Pro Melee Axe Pack) | — |
+| Masse | utilise les attaques de la hache (même geste) | rien à télécharger |
+| Arc | oui (Pro Longbow Pack) | — |
+| Arbalète | oui (Pro Rifle Pack) | `rifle firing`, `rifle reload` si tu veux un geste de tir / rechargement |
+| Épée à deux mains | non | `great sword idle`, `great sword walk`, `great sword run`, `great sword slash`, `great sword block`, `great sword impact` (ou `two handed sword …`) |
+| Lance | non | `spear idle`, `spear walk`, `spear run`, `spear stab`, `spear attack`, `spear block` (ou « pike ») |
+
+Dès que tu as téléchargé un lot, dis-moi lequel : j'ajoute ses clips à `tools/bake_animations.gd` (en m'appuyant sur `WeaponCategory.anim_set`) et je les branche.

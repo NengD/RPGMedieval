@@ -18,6 +18,9 @@ const MAX_PROTECTION := 0.9
 var stats: Stats
 var combatant: Combatant
 var items: Dictionary = {}   # "slot:couche" -> ArmorData
+## Armes tenues : emplacement -> WeaponData. Emplacements : main_hand (mêlée), off_hand (bouclier), bow, crossbow.
+var weapons: Dictionary = {}
+const REQUIREMENT_PENALTY := 0.03   # ralentissement des attaques par point d'attribut manquant
 
 
 func _init(p_stats: Stats = null, p_combatant: Combatant = null) -> void:
@@ -59,7 +62,92 @@ func total_weight() -> float:
 	var w := 0.0
 	for p in pieces():
 		w += p.weight
+	for slot in weapons:
+		w += (weapons[slot] as WeaponData).weight
 	return w
+
+
+# ------------------------------------------------------------------ armes
+
+static func slot_for(w: WeaponData) -> StringName:
+	match w.kind():
+		WeaponCategory.Kind.SHIELD: return &"off_hand"
+		WeaponCategory.Kind.BOW: return &"bow"
+		WeaponCategory.Kind.CROSSBOW: return &"crossbow"
+	return &"main_hand"
+
+
+func get_weapon(slot: StringName) -> WeaponData:
+	return weapons.get(slot)
+
+
+## Équipe une arme. Retourne false si c'est impossible (bouclier avec une arme à deux mains).
+func equip_weapon(w: WeaponData) -> bool:
+	var slot := slot_for(w)
+	if slot == &"off_hand" and weapons.has(&"main_hand") and (weapons[&"main_hand"] as WeaponData).is_two_handed():
+		return false
+	var old: WeaponData = weapons.get(slot)
+	if old != null:
+		_remove_weapon_modifiers(old)
+	weapons[slot] = w
+	if slot == &"main_hand":
+		if w.is_two_handed() and weapons.has(&"off_hand"):
+			_remove_weapon_modifiers(weapons[&"off_hand"])
+			weapons.erase(&"off_hand")
+		if combatant != null:
+			combatant.weapon = w
+			combatant.combo_index = 0
+	_apply_weapon_modifiers(w)
+	_after_weapon_change()
+	return true
+
+
+func unequip_weapon(slot: StringName) -> void:
+	var old: WeaponData = weapons.get(slot)
+	if old == null:
+		return
+	_remove_weapon_modifiers(old)
+	weapons.erase(slot)
+	if slot == &"main_hand" and combatant != null:
+		combatant.weapon = null
+	_after_weapon_change()
+
+
+## Part du coût d'endurance conservée en parant (bouclier = moins d'endurance).
+func guard_cost_factor() -> float:
+	var off: WeaponData = weapons.get(&"off_hand")
+	return off.guard_cost_factor if off != null else 1.0
+
+
+func missing_requirement_points(w: WeaponData) -> float:
+	var missing := 0.0
+	if stats == null:
+		return 0.0
+	for attr in w.stat_requirements:
+		missing += maxf(0.0, float(w.stat_requirements[attr]) - stats.get_attribute(StringName(attr)))
+	return missing
+
+
+func _apply_weapon_modifiers(w: WeaponData) -> void:
+	if stats == null:
+		return
+	var source := "equipement:%s" % w.id
+	for m in w.stat_bonuses:
+		stats.add_modifier(StatModifier.make(m.stat, m.flat, m.percent, source, m.duration))
+	var missing := missing_requirement_points(w)
+	if missing > 0.0:
+		stats.add_modifier(StatModifier.make(&"vitesse_attaque", 0.0, -REQUIREMENT_PENALTY * missing, source))
+
+
+func _remove_weapon_modifiers(w: WeaponData) -> void:
+	if stats != null:
+		stats.remove_by_source("equipement:%s" % w.id)
+
+
+func _after_weapon_change() -> void:
+	if stats != null:
+		stats.carried_weight = total_weight()
+	changed.emit()
 
 
 ## Protection moyenne du corps par type de dégâts : { Type -> 0..MAX_PROTECTION }.
@@ -114,7 +202,10 @@ func capture_state() -> Dictionary:
 	var ids: Array = []
 	for p in pieces():
 		ids.append(str(p.id))
-	return {"armure": ids}
+	var weapon_ids := {}
+	for slot in weapons:
+		weapon_ids[str(slot)] = str((weapons[slot] as WeaponData).id)
+	return {"armure": ids, "armes": weapon_ids}
 
 
 func restore_state(d: Dictionary) -> void:
@@ -126,3 +217,12 @@ func restore_state(d: Dictionary) -> void:
 			equip(piece)
 		else:
 			push_warning("Pièce d'équipement inconnue à la restauration : %s" % id)
+	for slot in weapons.keys():
+		unequip_weapon(slot)
+	var saved: Dictionary = d.get("armes", {})
+	for slot in saved:
+		var w := Registry.get_data(StringName(saved[slot])) as WeaponData
+		if w != null:
+			equip_weapon(w)
+		else:
+			push_warning("Arme inconnue à la restauration : %s" % saved[slot])

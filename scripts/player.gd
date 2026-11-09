@@ -98,6 +98,12 @@ func _ready() -> void:
 	add_child(_ranged_pivot)
 	ranged_visual = RangedVisual.new()
 	_ranged_pivot.add_child(ranged_visual)
+	for wid in [&"arme.epee_longue", &"arme.arc_long", &"arme.arbalete"]:
+		var wd := Registry.get_data(wid) as WeaponData
+		if wd != null:
+			combatant.equipment.equip_weapon(wd)
+	combatant.equipment.changed.connect(_refresh_weapon_visuals)
+	_refresh_weapon_visuals()
 
 	facing_yaw = spawn_yaw
 	rotation.y = facing_yaw
@@ -500,3 +506,60 @@ func restore_state(d: Dictionary) -> void:
 	bow_tension = 0.0
 	is_aiming = false
 	model.reset()
+
+
+# ---------------------------------------------------------------- armes tenues
+
+func _refresh_weapon_visuals() -> void:
+	var eq := combatant.equipment
+	model.apply_weapons(eq)
+	weapon.set_weapon_model(eq.get_weapon(&"main_hand"))
+	ranged_visual.set_weapons(eq.get_weapon(&"bow"), eq.get_weapon(&"crossbow"))
+
+
+## Liste des armes de mêlée disponibles (données), triées.
+static func melee_weapon_ids() -> Array:
+	var ids: Array = []
+	for id in Registry.all_ids():
+		var w := Registry.get_data(id) as WeaponData
+		if w != null and w.kind() == WeaponCategory.Kind.MELEE:
+			ids.append(id)
+	ids.sort()
+	return ids
+
+
+## Passe à l'arme de mêlée suivante (touche G). Retourne la nouvelle arme (ou null si impossible).
+func cycle_melee() -> WeaponData:
+	if combatant.dead or combatant.state != Combatant.State.IDLE or is_dodging:
+		return null
+	var ids := melee_weapon_ids()
+	if ids.is_empty():
+		return null
+	var cur := combatant.equipment.get_weapon(&"main_hand")
+	var i := ids.find(cur.id) if cur != null else -1
+	var next := Registry.get_data(ids[(i + 1) % ids.size()]) as WeaponData
+	combatant.equipment.equip_weapon(next)
+	return next
+
+
+## Équipe / retire l'écu (touche H). Retourne 1 = équipé, 0 = retiré, -1 = impossible (arme à deux mains).
+func toggle_shield() -> int:
+	var eq := combatant.equipment
+	if eq.get_weapon(&"off_hand") != null:
+		eq.unequip_weapon(&"off_hand")
+		return 0
+	var shield := Registry.get_data(&"arme.ecu") as WeaponData
+	if shield == null or not eq.equip_weapon(shield):
+		return -1
+	return 1
+
+
+## Clé de traduction du nom de l'arme tenue en ce moment.
+func current_weapon_name_key() -> StringName:
+	var slot := &"main_hand"
+	if weapon_kind == Weapon.BOW:
+		slot = &"bow"
+	elif weapon_kind == Weapon.CROSSBOW:
+		slot = &"crossbow"
+	var w := combatant.equipment.get_weapon(slot)
+	return w.display_name if w != null else StringName(GameConfig.WEAPON_NAMES[weapon_kind])
