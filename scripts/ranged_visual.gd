@@ -1,6 +1,6 @@
 class_name RangedVisual
 extends Node3D
-## Arc et arbalète en formes simples, animés par code (corde tendue, flèche encochée, rechargement).
+## Arc et arbalète vus en 1re personne (modèles Blender, corde et flèche animées par code). En 3e personne, ce sont les modèles tenus par HeroModel.
 ## Repère : épaule du héros, -Z devant, +X à droite. kind : 1 = arc, 2 = arbalète.
 
 var _bow: Node3D

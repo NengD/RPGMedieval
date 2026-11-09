@@ -64,6 +64,7 @@ func _run() -> void:
 	await _test_outfits()
 	await _test_arena()
 	await _test_polish()
+	await _test_hud()
 	_test_translation()
 	print("")
 	print("RÉSULTAT RPG : %s (%d échec(s))" % ["SUCCÈS" if failures == 0 else "ÉCHEC", failures])
@@ -914,5 +915,48 @@ func _test_polish() -> void:
 	p.reset_to(Vector3(0, 0.05, 9), 0.0)
 	await _frames(30)
 	_check(not m.is_ragdoll() and m.tree.active and not c.dead, "remise à zéro : plus de ragdoll, animations réactivées")
+	main.queue_free()
+	await physics_frame
+
+
+# ---------------------------------------------------------------- interface sobre
+
+func _action_event(action: StringName) -> InputEventAction:
+	var ev := InputEventAction.new()
+	ev.action = action
+	ev.pressed = true
+	return ev
+
+
+func _test_hud() -> void:
+	print("[Interface]")
+	Registry.clear_instances()
+	var main = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await _frames(5)
+	var hud: Hud = main.hud
+	_check(not hud.help_visible() and not hud.debug_visible(), "aide et infos de débogage masquées par défaut")
+	_check(hud._hint != null and hud._hint.visible and hud._hint.text.contains("F6"), "un petit rappel de la touche d'aide reste dans un coin")
+	root.push_input(_action_event(&"toggle_help"))
+	await _frames(2)
+	_check(hud.help_visible() and not hud.debug_visible(), "F6 affiche l'aide")
+	root.push_input(_action_event(&"toggle_debug"))
+	await _frames(2)
+	_check(hud.help_visible() and hud.debug_visible(), "F7 affiche les infos de débogage, séparément")
+	root.push_input(_action_event(&"toggle_help"))
+	root.push_input(_action_event(&"toggle_debug"))
+	await _frames(2)
+	_check(not hud.help_visible() and not hud.debug_visible(), "les mêmes touches les masquent")
+	var keys_free := true
+	for action in [&"toggle_help", &"toggle_debug"]:
+		for ev in InputMap.action_get_events(action):
+			if ev is InputEventKey:
+				for other in InputMap.get_actions():
+					if other != action and InputMap.action_has_event(other, ev):
+						keys_free = false
+	_check(keys_free, "F6 et F7 ne sont utilisées par aucune autre action")
+	for panel in [hud._help_panel, hud._debug_panel]:
+		_check(panel.mouse_filter == Control.MOUSE_FILTER_IGNORE, "le panneau ne bloque jamais la souris")
+	_check(hud._status.text.contains("%") and hud._status.text.contains("kg"), "le panneau de débogage contient protection et poids")
 	main.queue_free()
 	await physics_frame

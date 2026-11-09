@@ -1,6 +1,7 @@
 class_name Hud
 extends CanvasLayer
-## Interface : aide des touches, état du héros, messages de combat, barres, direction.
+## Interface. En jeu : vie, endurance, réticule, ennemi (nom et barres) et messages de combat.
+## Masqués par défaut : l'aide des touches (F6) et le panneau d'infos de débogage (F7 : vitesse, état, protection, poids, score).
 
 var player: Player
 var dummy: TrainingDummy
@@ -9,6 +10,9 @@ var target_score := 0
 
 var _help: Label
 var _status: Label
+var _help_panel: PanelContainer
+var _debug_panel: PanelContainer
+var _hint: Label
 var _message: Label
 var _crosshair: ColorRect
 var _canvas: HudCanvas
@@ -18,13 +22,31 @@ const _STATE_NAMES := ["STATE_IDLE", "STATE_WINDUP", "STATE_STRIKE", "STATE_RECO
 
 func _ready() -> void:
 	_help = _make_label()
-	_help.position = Vector2(16, 12)
-	_help.text = "\n".join([tr("HELP_TITLE"), tr("HELP_MOVE"), tr("HELP_WEAPON"), tr("HELP_SWORD"), tr("HELP_RANGED"), tr("HELP_KEYS"), tr("HELP_SAVE"), tr("HELP_WEAPONS"), tr("HELP_OUTFIT"), tr("HELP_GRAPHICS")])
-	add_child(_help)
+	_help.text = "\n".join([tr("HELP_TITLE"), tr("HELP_MOVE"), tr("HELP_WEAPON"), tr("HELP_SWORD"), tr("HELP_RANGED"), tr("HELP_KEYS"), tr("HELP_SAVE"), tr("HELP_WEAPONS"), tr("HELP_OUTFIT"), tr("HELP_GRAPHICS"), tr("HELP_PANELS")])
+	_help_panel = _make_panel(_help)
+	_help_panel.visible = false
 
 	_status = _make_label()
-	_status.position = Vector2(16, 175)
-	add_child(_status)
+	_debug_panel = _make_panel(_status)
+	_debug_panel.visible = false
+	dummy.show_total(false)
+
+	# Petit rappel discret dans un coin
+	_hint = _make_label()
+	_hint.add_theme_font_size_override("font_size", 12)
+	_hint.add_theme_constant_override("outline_size", 4)
+	_hint.modulate = Color(1, 1, 1, 0.5)
+	_hint.text = tr("HUD_HINT")
+	_hint.anchor_left = 1.0
+	_hint.anchor_right = 1.0
+	_hint.anchor_top = 1.0
+	_hint.anchor_bottom = 1.0
+	_hint.offset_left = -330.0
+	_hint.offset_top = -26.0
+	_hint.offset_right = -12.0
+	_hint.offset_bottom = -6.0
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	add_child(_hint)
 
 	_canvas = HudCanvas.new()
 	add_child(_canvas)
@@ -54,6 +76,40 @@ func _ready() -> void:
 	player.notice.connect(func(text: String): show_message(tr(text), Color(0.9, 0.9, 0.9), 1.0))
 	player.combatant.projectile_result.connect(_on_player_shot_result)
 	enemy.combatant.died.connect(func(): show_message(tr("MSG_ENEMY_DEFEATED"), Color(0.5, 1.0, 0.5), 2.0))
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"toggle_help"):
+		_help_panel.visible = not _help_panel.visible
+	elif event.is_action_pressed(&"toggle_debug"):
+		_debug_panel.visible = not _debug_panel.visible
+		dummy.show_total(_debug_panel.visible)
+
+
+func help_visible() -> bool:
+	return _help_panel.visible
+
+
+func debug_visible() -> bool:
+	return _debug_panel.visible
+
+
+## Panneau sombre translucide autour d'un texte (il ne bloque jamais la souris).
+func _make_panel(content: Label) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.45)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	panel.add_theme_stylebox_override("panel", style)
+	panel.position = Vector2(12, 10)
+	panel.add_child(content)
+	add_child(panel)
+	return panel
 
 
 func show_message(text: String, color: Color, duration := 0.9) -> void:
@@ -107,7 +163,8 @@ func _process(_delta: float) -> void:
 		_protection_line(c),
 	]
 	_status.text = "\n".join(lines)
-	_status.position.y = _help.position.y + _help.get_minimum_size().y + 14.0   # toujours sous l'aide, quel que soit son nombre de lignes
+	# le panneau d'infos se place sous l'aide si elle est affichée
+	_debug_panel.position.y = 10.0 if not _help_panel.visible else 10.0 + _help_panel.size.y + 8.0
 
 	_canvas.weapon_kind = player.weapon_kind
 	_canvas.drawing = player.drawing

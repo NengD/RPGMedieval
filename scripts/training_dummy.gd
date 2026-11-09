@@ -165,3 +165,8 @@ func capture_state() -> Dictionary:
 
 func restore_state(d: Dictionary) -> void:
 	CharacterSave.restore(self, combatant, d)
+
+
+## Le total de dégâts au-dessus du mannequin est une info de débogage : visible seulement avec le panneau F7.
+func show_total(on: bool) -> void:
+	_total_label.visible = on
