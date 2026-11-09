@@ -72,6 +72,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.show_message(tr("MSG_OUTFIT") % tr(player.cycle_outfit()), Color(1, 0.9, 0.5), 1.4)
 	elif event.is_action_pressed(&"next_tabard_color"):
 		player.cycle_tabard_color()
+	elif event.is_action_pressed(&"next_quality"):
+		var lv := QualitySettings.next()
+		QualitySettings.apply(lv, arena.environment, arena.sun, get_viewport())
+		hud.show_message(tr("MSG_QUALITY") % tr(QualitySettings.NAMES[lv]), Color(1, 0.9, 0.5), 1.4)
 	elif event.is_action_pressed(&"quick_save"):
 		quick_save()
 	elif event.is_action_pressed(&"quick_load"):

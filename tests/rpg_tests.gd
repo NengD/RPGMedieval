@@ -62,6 +62,7 @@ func _run() -> void:
 	await _test_weapons()
 	await _test_arm_ik()
 	await _test_outfits()
+	await _test_arena()
 	_test_translation()
 	print("")
 	print("RÉSULTAT RPG : %s (%d échec(s))" % ["SUCCÈS" if failures == 0 else "ÉCHEC", failures])
@@ -717,3 +718,67 @@ func _first_tint(m: HeroModel) -> Color:
 		if mat is StandardMaterial3D:
 			return mat.albedo_color
 	return Color(0, 0, 0)
+
+# ---------------------------------------------------------------- arène, matériaux, lumière, qualité
+
+func _test_arena() -> void:
+	print("[Arène, matériaux et lumière]")
+	Registry.clear_instances()
+	var main = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await _frames(5)
+	var arena: Arena = main.arena
+	var names_needed := ["Sol", "MurNord", "MurSud", "MurEst", "MurOuest", "Plateforme", "Rampe", "Caisse1", "Caisse2", "Caisse3", "Tonneau1", "Ratelier", "Poteau1", "Poteau2"]
+	var missing: Array[String] = []
+	for n in names_needed:
+		var body := arena.get_node_or_null(n) as StaticBody3D
+		if body == null or body.collision_layer != GameConfig.LAYER_WORLD or body.find_children("*", "CollisionShape3D", false, false).is_empty():
+			missing.append(n)
+	_check(missing.is_empty(), "l'arène garde ses collisions (monde) et ajoute les accessoires" + ("" if missing.is_empty() else " — manquants : " + ", ".join(missing)))
+	var piliers := 0
+	for c in arena.get_children():
+		if c is StaticBody3D and not c.find_children("*", "CollisionShape3D", false, false).is_empty() and (c.find_children("*", "CollisionShape3D", false, false)[0] as CollisionShape3D).shape is CylinderShape3D and (c as Node3D).position.y > 2.0:
+			piliers += 1
+	_check(piliers == 4, "les 4 piliers sont toujours là")
+	var floor_mi := arena.get_node("Sol").get_child(0) as MeshInstance3D
+	var floor_mat := floor_mi.mesh.surface_get_material(0) as StandardMaterial3D
+	_check(floor_mat != null and floor_mat.albedo_texture != null and floor_mat.normal_texture != null and floor_mat.roughness_texture != null and floor_mat.uv1_world_triplanar, "sol : matériau PBR (couleur, normale, rugosité) en projection triplanaire")
+	var wall_mat := (arena.get_node("MurNord").get_child(0) as MeshInstance3D).mesh.surface_get_material(0) as StandardMaterial3D
+	_check(wall_mat != null and wall_mat.albedo_texture != null, "murs : matériau PBR de pierre")
+	var barrel := arena.get_node("Tonneau1")
+	var wood_ok := false
+	for mi in barrel.find_children("*", "MeshInstance3D", true, false):
+		var mat := (mi as MeshInstance3D).get_surface_override_material(0)
+		if mat is StandardMaterial3D and (mat as StandardMaterial3D).albedo_texture != null:
+			wood_ok = true
+	_check(wood_ok, "tonneau : bois PBR appliqué sur le modèle")
+	_check(arena.cover_objects.size() >= 7, "obstacles pour se mettre à couvert : %d (piliers et caisses ; les tonneaux et poteaux sont trop bas ou trop fins)" % arena.cover_objects.size())
+	# lumière
+	var env := arena.environment
+	_check(env.background_mode == Environment.BG_SKY and env.sky.sky_material is PanoramaSkyMaterial and (env.sky.sky_material as PanoramaSkyMaterial).panorama != null, "ciel HDRI (panorama)")
+	_check(env.tonemap_mode == Environment.TONE_MAPPER_FILMIC, "tonemapping filmique")
+	_check(arena.sun.shadow_enabled and arena.sun.light_angular_distance >= 0.0, "ombres du soleil activées")
+	# qualité
+	var original := QualitySettings.level
+	QualitySettings.apply(QualitySettings.Level.LOW, env, arena.sun, root)
+	_check(not env.ssao_enabled and not env.fog_enabled, "qualité Bas : pas d'occlusion ambiante ni de brouillard")
+	QualitySettings.apply(QualitySettings.Level.MEDIUM, env, arena.sun, root)
+	_check(env.ssao_enabled and env.fog_enabled and not env.glow_enabled, "qualité Moyen : occlusion ambiante et brouillard léger")
+	QualitySettings.apply(QualitySettings.Level.HIGH, env, arena.sun, root)
+	_check(env.ssao_enabled and env.fog_enabled and env.glow_enabled and arena.sun.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS, "qualité Élevé : occlusion, brouillard, lueur, ombres à 4 cascades")
+	var shadow_low: float = QualitySettings.PROFILES[QualitySettings.Level.LOW]["shadow_distance"]
+	var shadow_high: float = QualitySettings.PROFILES[QualitySettings.Level.HIGH]["shadow_distance"]
+	_check(shadow_high > shadow_low and QualitySettings.PROFILES.size() == 3, "trois niveaux de qualité, de plus en plus détaillés")
+	for key in QualitySettings.NAMES:
+		_check(TranslationServer.translate(key) != key, "nom de qualité traduit : %s" % key)
+	QualitySettings.apply(original, env, arena.sun, root)
+	# fichiers et crédits
+	var credits := FileAccess.get_file_as_string("res://CREDITS.md")
+	var all_files := true
+	for f in ["sky/ciel_nuageux_1k.hdr", "textures/pave/diff.jpg", "textures/pierre/diff.jpg", "textures/bois/diff.jpg", "props/caisse.glb", "props/tonneau.glb", "props/ratelier.glb", "props/poteau_entrainement.glb"]:
+		if not FileAccess.file_exists("res://assets/" + f):
+			all_files = false
+	_check(all_files, "toutes les textures, le ciel et les accessoires sont présents")
+	_check(credits.contains("polyhaven.com/a/cobblestone_floor_01") and credits.contains("polyhaven.com/a/rustic_stone_wall") and credits.contains("polyhaven.com/a/rough_wood") and credits.contains("kloofendal_48d_partly_cloudy_puresky"), "chaque ressource Poly Haven est créditée dans CREDITS.md")
+	main.queue_free()
+	await physics_frame

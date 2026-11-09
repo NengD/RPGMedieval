@@ -91,8 +91,8 @@ MATS = {
     "lin": lambda: mat("teinte_lin", (0.80, 0.76, 0.64), 0.0, 0.95),
     "gambison": lambda: mat("teinte_gambison", (0.66, 0.58, 0.44), 0.0, 0.95),
     "cuir": lambda: mat("cuir", (0.22, 0.13, 0.07), 0.0, 0.85),
-    "mailles": lambda: mat("mailles", (0.30, 0.31, 0.35), 0.9, 0.6),
-    "acier": lambda: mat("acier_plaques", (0.42, 0.44, 0.49), 0.9, 0.5),
+    "mailles": lambda: mat("mailles", (0.30, 0.31, 0.35), 0.75, 0.65),
+    "acier": lambda: mat("acier_plaques", (0.42, 0.44, 0.49), 0.72, 0.55),
     "tabard": lambda: mat("teinte_tabard", (0.85, 0.85, 0.85), 0.0, 0.9),
 }
 

@@ -18,7 +18,7 @@ savoir si le combat est amusant. Toutes les valeurs de réglage sont dans `scrip
 ## Architecture (scripts/)
 - `game_config.gd` — TOUS les réglages (const). `input_setup.gd` — autoload, actions clavier/manette (touches physiques → ZQSD ok en AZERTY).
 - `main.gd` — assemble arène, héros, mannequin, HUD ; R = réinitialiser.
-- `arena.gd` — sol, murs, piliers, plateforme+rampe, lumière (tout en code, shader damier).
+- `arena.gd` — sol, murs, piliers, plateforme+rampe, accessoires Blender (assets/props), ciel HDRI, lumière ; matériaux PBR Poly Haven en triplanaire monde (assets/textures). `quality_settings.gd` — qualité Bas/Moyen/Élevé (F10). Voir docs/ARENE_ET_LUMIERE.md. Les obstacles bas (< 1,2 m) ou fins ne doivent PAS être des abris pour l'ennemi (le test « il se cache vraiment » échoue sinon).
 - `player.gd` — CharacterBody3D : marche/course/saut/pas de côté. `camera_rig.gd` — 3e/1re personne (SpringArm3D), touche V.
 - `combatant.gd` — cerveau du combat (états, parade, endurance, vie), réutilisé par le héros, le mannequin et l'ennemi (étape 3).
 - `weapon_visual.gd` — modèle de l'arme (1re personne), poses par code selon l'état. `training_dummy.gd` — mannequin (T = agressif).
@@ -32,7 +32,7 @@ savoir si le combat est amusant. Toutes les valeurs de réglage sont dans `scrip
 - Couches physiques : 1 monde, 2 joueur, 3 ennemis.
 
 ## Contrôles
-F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le combat · ZQSD/stick G déplacer · souris/stick D regarder · Maj courir · Espace sauter · C pas de côté · V changer de vue · Tab/molette changer d'arme (épée, arc, arbalète) · clic gauche (RB) attaquer (clics répétés = combo)/bander/tirer · clic droit (LB) parer ou annuler la corde · Retour arrière retire les flèches · T mannequin agressif · R reset · F5 sauvegarde rapide · F9 chargement rapide · Échap libère la souris.
+F1/F2/F3 difficulté de l'ennemi (D-pad haut = suivante) · R recommencer le combat · ZQSD/stick G déplacer · souris/stick D regarder · Maj courir · Espace sauter · C pas de côté · V changer de vue · Tab/molette changer d'arme (épée, arc, arbalète) · clic gauche (RB) attaquer (clics répétés = combo)/bander/tirer · clic droit (LB) parer ou annuler la corde · Retour arrière retire les flèches · T mannequin agressif · R reset · F10 qualité graphique · K tenue · L couleur du tabard · G arme de mêlée · H écu · F5 sauvegarde rapide · F9 chargement rapide · Échap libère la souris.
 
 ## Avancement
 - [x] Étape 1 — Base : arène, héros, caméra 3e/1re personne, mannequin
