@@ -47,6 +47,7 @@ const STICK_SENSITIVITY := 3.2       # radians par seconde, stick à fond
 const INVERT_Y := false
 const TPS_DISTANCE := 3.6            # distance caméra - héros (3e personne)
 const TPS_SHOULDER := 0.55           # décalage de la caméra par-dessus l'épaule (3e personne)
+const TPS_AIM_SHOULDER_FACTOR := 0.3   # en visée à l'arc / arbalète : décalage d'épaule multiplié par ça (1 = comme hors visée, 0 = caméra derrière la tête)
 const TPS_PITCH_MIN_DEG := -60.0
 const TPS_PITCH_MAX_DEG := 35.0
 const FPS_PITCH_LIMIT_DEG := 85.0

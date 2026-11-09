@@ -66,7 +66,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(_delta: float) -> void:
 	var eye := target.global_position + Vector3(0.0, GameConfig.EYE_HEIGHT, 0.0)
 	var right := Vector3(cos(yaw), 0.0, -sin(yaw))
-	var want := GameConfig.TPS_SHOULDER * lerpf(1.0, 1.45, _aim())   # en visée, la caméra passe plus par-dessus l'épaule
+	var want := GameConfig.TPS_SHOULDER * lerpf(1.0, GameConfig.TPS_AIM_SHOULDER_FACTOR, _aim())   # en visée, la caméra se recentre derrière le héros (on voit l'arme et la main qui la tient)
 	var query := PhysicsRayQueryParameters3D.create(eye, eye + right * (want + GameConfig.CAMERA_WALL_MARGIN + 0.1), GameConfig.LAYER_WORLD)
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if hit:
