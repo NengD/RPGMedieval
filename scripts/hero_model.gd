@@ -14,7 +14,7 @@ const LIBRARY := "res://assets/anims/hero_library.res"
 const ATTACK_ANIMS := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left"]
 const HIT_ANIMS := [&"hit_1", &"hit_2", &"hit_3"]
 const FULL_STATES := [&"dodge_l", &"dodge_r", &"dodge_b", &"jump", &"death", &"attack_up", &"attack_right", &"attack_estoc", &"attack_left"]
-const UPPER_STATES := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left", &"guard", &"hit_1", &"hit_2", &"hit_3", &"bow_draw", &"bow_release"]
+const UPPER_STATES := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left", &"guard", &"hit_1", &"hit_2", &"hit_3", &"bow_draw", &"bow_release", &"xbow_aim"]
 
 var skeleton: Skeleton3D
 var anim_player: AnimationPlayer
@@ -44,6 +44,9 @@ var _attack_full_body := false
 var _weapon_amount := 0.0        # 0 = épée en main, 1 = arc en main (fondu de la locomotion)
 var _bow_release_time := 0.0
 var bow_holder: BoneAttachment3D
+var xbow_holder: BoneAttachment3D
+var _xbow_amount := 0.0
+var _xbow_bolt: Node3D
 var bow_prop: Node3D
 var _bow_strings: Array = []
 var _bow_arrow: Node3D
@@ -68,6 +71,7 @@ func _ready() -> void:
 	_build_attachments()
 	_build_ik()
 	_build_bow_prop()
+	_build_xbow_prop()
 
 
 func bind(c: Combatant) -> void:
@@ -125,6 +129,11 @@ func show_sword(on: bool) -> void:
 
 func show_bow(on: bool) -> void:
 	bow_holder.visible = on
+
+
+func show_crossbow(on: bool, loaded: bool) -> void:
+	xbow_holder.visible = on
+	_xbow_bolt.visible = loaded
 
 
 ## Le tir part : l'archer relâche la corde (animation de recul).
@@ -195,6 +204,26 @@ func _build_tree() -> void:
 	bt.connect_node(&"WeaponBlend", 0, &"LocoTS")
 	bt.connect_node(&"WeaponBlend", 1, &"LocoBowTS")
 
+	# Locomotion arbalète (pack fusil)
+	var loco_x := AnimationNodeBlendSpace2D.new()
+	loco_x.min_space = Vector2(-2.5, -2.5)
+	loco_x.max_space = Vector2(2.5, 2.5)
+	loco_x.add_blend_point(_anim_node(&"xbow_idle"), Vector2(0, 0))
+	loco_x.add_blend_point(_anim_node(&"xbow_walk_f"), Vector2(0, 1))
+	loco_x.add_blend_point(_anim_node(&"xbow_run_f"), Vector2(0, run_k))
+	loco_x.add_blend_point(_anim_node(&"xbow_walk_b"), Vector2(0, -1))
+	loco_x.add_blend_point(_anim_node(&"xbow_run_b"), Vector2(0, -run_k))
+	loco_x.add_blend_point(_anim_node(&"xbow_walk_r"), Vector2(1, 0))
+	loco_x.add_blend_point(_anim_node(&"xbow_run_r"), Vector2(run_k, 0))
+	loco_x.add_blend_point(_anim_node(&"xbow_walk_l"), Vector2(-1, 0))
+	loco_x.add_blend_point(_anim_node(&"xbow_run_l"), Vector2(-run_k, 0))
+	bt.add_node(&"LocoX", loco_x, Vector2(0, -400))
+	bt.add_node(&"LocoXTS", AnimationNodeTimeScale.new(), Vector2(200, -400))
+	bt.connect_node(&"LocoXTS", 0, &"LocoX")
+	bt.add_node(&"WeaponBlend2", AnimationNodeBlend2.new(), Vector2(500, -200))
+	bt.connect_node(&"WeaponBlend2", 0, &"WeaponBlend")
+	bt.connect_node(&"WeaponBlend2", 1, &"LocoXTS")
+
 	# Haut du corps : choix de l'animation, vitesse (0 = on la pilote à la main), saut dans le temps
 	var upper := _transition(UPPER_STATES, 0.0)
 	bt.add_node(&"Upper", upper, Vector2(0, 300))
@@ -212,7 +241,7 @@ func _build_tree() -> void:
 	for bone_path in _upper_body_paths():
 		upper_blend.set_filter_path(bone_path, true)
 	bt.add_node(&"UpperBlend", upper_blend, Vector2(600, 100))
-	bt.connect_node(&"UpperBlend", 0, &"WeaponBlend")
+	bt.connect_node(&"UpperBlend", 0, &"WeaponBlend2")
 	bt.connect_node(&"UpperBlend", 1, &"UpperSeek")
 
 	# Corps entier : esquive, saut, mort
@@ -407,6 +436,29 @@ func _build_bow_prop() -> void:
 	bow_holder.visible = false
 
 
+func _build_xbow_prop() -> void:
+	xbow_holder = BoneAttachment3D.new()
+	xbow_holder.name = "CrossbowHolder"
+	xbow_holder.bone_name = "mixamorig_RightHand"
+	skeleton.add_child(xbow_holder)
+	var x := Node3D.new()
+	x.name = "Crossbow"
+	xbow_holder.add_child(x)
+	x.rotation = GameConfig.XBOW_HAND_ROTATION
+	x.position = GameConfig.XBOW_HAND_OFFSET
+	var wood := Color(0.40, 0.27, 0.14)
+	var iron := Color(0.3, 0.3, 0.33)
+	_add_part(x, Vector3(0.06, 0.08, 0.7), Vector3(0, 0, -0.25), Vector3.ZERO, wood)
+	_add_part(x, Vector3(0.04, 0.03, 0.55), Vector3(0, 0.055, -0.3), Vector3.ZERO, iron)
+	_add_part(x, Vector3(0.4, 0.035, 0.04), Vector3(-0.2, 0.02, -0.52), Vector3(0, 12, 0), iron)
+	_add_part(x, Vector3(0.4, 0.035, 0.04), Vector3(0.2, 0.02, -0.52), Vector3(0, -12, 0), iron)
+	_xbow_bolt = Node3D.new()
+	_add_part(_xbow_bolt, Vector3(0.016, 0.016, 0.4), Vector3(0, 0.085, -0.35), Vector3.ZERO, Color(0.55, 0.38, 0.2))
+	_add_part(_xbow_bolt, Vector3(0.04, 0.04, 0.07), Vector3(0, 0.085, -0.57), Vector3.ZERO, Color(0.7, 0.72, 0.78))
+	x.add_child(_xbow_bolt)
+	xbow_holder.visible = false
+
+
 func _add_part(parent: Node3D, size: Vector3, pos: Vector3, euler_deg: Vector3, color: Color) -> void:
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
@@ -502,7 +554,7 @@ func _set_full(mode: StringName, time_scale: float) -> void:
 # ---------------------------------------------------------------- chaque image
 
 ## velocity : vitesse du monde ; body_basis : orientation du corps ; dodge_dir : direction du pas de côté.
-func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, is_dodging: bool, dodge_dir: Vector3, weapon_kind := 0, bow_tension := 0.0, bow_drawing := false) -> void:
+func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, is_dodging: bool, dodge_dir: Vector3, weapon_kind := 0, bow_tension := 0.0, bow_drawing := false, ranged_aiming := false) -> void:
 	if combatant == null or tree == null:
 		return
 	var c := combatant
@@ -513,6 +565,10 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 	tree.set("parameters/LocoTS/scale", clampf(horizontal / 2.0, 1.0, 1.9))
 	tree.set("parameters/LocoBow/blend_position", Vector2(local.x, -local.z) / GameConfig.WALK_SPEED)
 	tree.set("parameters/LocoBowTS/scale", clampf(horizontal / 1.5, 1.0, 2.2))
+	tree.set("parameters/LocoX/blend_position", Vector2(local.x, -local.z) / GameConfig.WALK_SPEED)
+	tree.set("parameters/LocoXTS/scale", clampf(horizontal / 1.5, 1.0, 2.2))
+	_xbow_amount = move_toward(_xbow_amount, 1.0 if weapon_kind == 2 else 0.0, delta * 8.0)
+	tree.set("parameters/WeaponBlend2/blend_amount", _xbow_amount)
 	_weapon_amount = move_toward(_weapon_amount, 1.0 if weapon_kind == 1 else 0.0, delta * 8.0)
 	tree.set("parameters/WeaponBlend/blend_amount", _weapon_amount)
 	_bow_release_time = maxf(0.0, _bow_release_time - delta)
@@ -542,6 +598,10 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 						_set_upper(&"bow_draw")
 					var draw_len := _library.get_animation(&"bow_draw").length
 					tree.set("parameters/UpperSeek/seek_request", clampf(bow_tension, 0.0, 1.0) * draw_len * 0.995)
+				elif weapon_kind == 2 and ranged_aiming:
+					upper_target = 1.0   # arbalète épaulée
+					if _upper_mode != &"xbow_aim":
+						_set_upper(&"xbow_aim")
 				elif _bow_release_time > 0.0:
 					upper_target = 1.0   # relâchement de la corde
 	_upper_amount = move_toward(_upper_amount, upper_target, delta * 14.0)

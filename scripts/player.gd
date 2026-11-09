@@ -159,8 +159,9 @@ func _process(_delta: float) -> void:
 	model.show_sword(weapon_kind == Weapon.SWORD)
 	weapon.visible = weapon_kind == Weapon.SWORD and not third_person
 	model.show_bow(third_person and weapon_kind == Weapon.BOW)
-	ranged_visual.visible = not (third_person and weapon_kind == Weapon.BOW)   # en 3e personne l'arc est celui du chevalier
-	model.drive(_delta, velocity, global_basis, is_on_floor(), is_dodging, _dodge_dir, weapon_kind, bow_tension, drawing)
+	model.show_crossbow(third_person and weapon_kind == Weapon.CROSSBOW, crossbow_reload <= 0.0)
+	ranged_visual.visible = not (third_person and weapon_kind != Weapon.SWORD)   # en 3e personne l'arc est celui du chevalier
+	model.drive(_delta, velocity, global_basis, is_on_floor(), is_dodging, _dodge_dir, weapon_kind, bow_tension, drawing, is_aiming)
 	_ranged_pivot.rotation.x = rig.pitch
 	ranged_visual.refresh(weapon_kind, bow_tension if drawing else 0.0, drawing, crossbow_reload, rig.first_person)
 

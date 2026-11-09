@@ -252,3 +252,7 @@ const IK_GUARD_BLEND := 8.0    # vitesse à laquelle le bras passe de l'animatio
 # (mesurés avec tools/bow_hand_axes.gd à pleine tension : l'arc est alors vertical, la corde vers l'archer).
 const BOW_HAND_ROTATION := Vector3(1.258, -0.749, 1.110)   # radians
 const BOW_HAND_OFFSET := Vector3(0.0, 0.08, 0.0)
+
+# Arbalète tenue en main (3e personne) : orientation dans la main droite (tools/xbow_hand_axes.gd : l'avant de l'arme va vers la main gauche)
+const XBOW_HAND_ROTATION := Vector3(1.053, 2.569, 1.060)   # radians
+const XBOW_HAND_OFFSET := Vector3(0.0, 0.0, 0.0)

@@ -48,6 +48,17 @@ const MAP := {
 	&"bow_draw": ["bow_standing_draw_arrow", true, false, false],
 	&"bow_aim": ["bow_standing_aim_overdraw", true, true, false],
 	&"bow_release": ["bow_standing_aim_recoil", true, false, false],
+	# --- Arbalète (Pro Rifle Pack) : locomotion épaulée + posture de visée
+	&"xbow_idle": ["rifle_idle", true, true, false],
+	&"xbow_aim": ["rifle_idle_aiming", true, true, false],
+	&"xbow_walk_f": ["rifle_walk_forward", true, true, false],
+	&"xbow_walk_b": ["rifle_walk_backward", true, true, false],
+	&"xbow_walk_r": ["rifle_walk_right", true, true, false],
+	&"xbow_walk_l": ["rifle_walk_left", true, true, false],
+	&"xbow_run_f": ["rifle_run_forward", true, true, false],
+	&"xbow_run_b": ["rifle_run_backward", true, true, false],
+	&"xbow_run_r": ["rifle_run_right", true, true, false],
+	&"xbow_run_l": ["rifle_run_left", true, true, false],
 }
 
 
