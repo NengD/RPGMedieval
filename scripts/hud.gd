@@ -106,6 +106,7 @@ func _process(_delta: float) -> void:
 		tr("HUD_LINE_WEAPON") % [tr(GameConfig.WEAPON_NAMES[player.weapon_kind]), target_score],
 	]
 	_status.text = "\n".join(lines)
+	_status.position.y = _help.position.y + _help.get_minimum_size().y + 14.0   # toujours sous l'aide, quel que soit son nombre de lignes
 
 	_canvas.weapon_kind = player.weapon_kind
 	_canvas.drawing = player.drawing
