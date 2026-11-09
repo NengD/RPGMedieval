@@ -268,10 +268,16 @@ const AIM_YAW_BOW := -0.12          # rotation du corps en visée à l'arc (rad)
 const AIM_YAW_XBOW := -0.53         # idem arbalète
 const BOW_ARM_REACH := 0.43         # le bras de l'arc est tendu droit devant l'épaule gauche (m)
 const BOW_ARM_SIDE := 0.10          # et un peu vers le centre (m)
-const XBOW_GRIP_R_FWD := 0.26       # main arrière de l'arbalète : devant l'épaule droite (m)
-const XBOW_GRIP_R_DOWN := 0.17      # sous le niveau de l'épaule (m)
+const XBOW_GRIP_R_FWD := 0.30       # main arrière de l'arbalète : devant l'épaule droite (m)
+const XBOW_GRIP_R_DOWN := 0.08      # sous le niveau de l'épaule (m)
 const XBOW_GRIP_R_SIDE := -0.07     # vers le centre (négatif) (m)
 # --- Écu : posé devant l'avant-bras gauche, face vers l'avant ---
 const SHIELD_GUARD_HAND := Vector3(-0.20, 1.28, -0.42)   # où l'avant-bras gauche amène l'écu en parade (repère du personnage)
 const SHIELD_FORWARD := 0.10        # l'écu est décalé devant l'avant-bras (m)
 const SHIELD_SIDE := 0.08           # et vers l'extérieur (m)
+# --- Caméra en visée : du côté de l'arme, pour voir l'arme et le réticule alignés ---
+const AIM_CAMERA_SIDE_BOW := -0.30    # arc : par-dessus l'épaule GAUCHE (négatif = gauche), le bras de l'arc est de ce côté (m)
+const AIM_CAMERA_SIDE_XBOW := 0.30    # arbalète : par-dessus l'épaule droite (m)
+# --- Parade sans écu : le bras libre reste bas devant le ventre (sinon l'animation lève le bras comme pour tenir un écu) ---
+const FREE_GUARD_HAND := Vector3(-0.22, 1.02, -0.30)
+const AIM_CAMERA_RAISE := 0.0        # en visée à l'arc / arbalète la caméra monte un peu : on voit le dessus de l'arme et les mains (m)

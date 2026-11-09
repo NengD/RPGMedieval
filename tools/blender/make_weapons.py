@@ -380,6 +380,12 @@ def build_crossbow(root):
     part(root, "arbalete_poignee", bm, wood_d())
     marker(root, "Grip_R", (0, 0, 0))
     marker(root, "Grip_L", (0, 0.30, 0.0))
+    # Agrandie de 30 % : vue de derrière, une arbalète à l'échelle réelle n'est qu'un trait fin
+    sc = 1.3
+    for ob in list(root.children):
+        if ob.type == "MESH":
+            ob.data.transform(Matrix.Scale(sc, 4))
+        ob.location = ob.location * sc
 
 
 # ---- projectiles : pointe à l'origine, hampe vers -Y

@@ -43,6 +43,9 @@ var ik_target_l: Node3D
 var ik_pole_l: Node3D
 var _ikl_amount := 0.0
 var _grip_mode := 0              # 0 rien, 1 arc en main, 2 arbalète
+var aim_point := Vector3.ZERO     # point visé par le réticule (monde), fourni par le Player
+var aim_point_valid := false
+var _aim_dir := Vector3.FORWARD   # direction de l'arme : de la prise vers le point visé
 var _grip_r := Vector3.ZERO      # où doivent être les mains (monde)
 var _grip_l := Vector3.ZERO
 var _ik_pos := Vector3.ZERO      # position lissée de la main (repère du personnage)
@@ -426,11 +429,15 @@ func _update_ik(delta: float, attacking: bool) -> void:
 			ik_pole.global_position = global_transform * GameConfig.IK_POLE
 			hand_aim.target_direction_world = global_transform.basis * _ik_blade
 	# bras gauche
-	var left_on := bow_on or xbow_on or shield_guard
+	var free_guard: bool = guarding           # parade sans écu : le bras libre reste bas
+	var left_on := bow_on or xbow_on or shield_guard or free_guard
 	_ikl_amount = move_toward(_ikl_amount, 1.0 if left_on else 0.0, delta * 10.0)
 	ik_l.influence = _ikl_amount
 	if left_on:
-		if shield_guard:
+		if free_guard:
+			ik_target_l.global_position = global_transform * GameConfig.FREE_GUARD_HAND
+			ik_pole_l.global_position = global_transform * Vector3(-0.9, 0.9, 0.3)
+		elif shield_guard:
 			ik_target_l.global_position = global_transform * GameConfig.SHIELD_GUARD_HAND
 			ik_pole_l.global_position = global_transform * Vector3(-0.9, 1.0, 0.3)
 		else:
@@ -639,7 +646,7 @@ func _place_props() -> void:
 	if bow_holder.visible:
 		if _bow_in_hand:
 			# Arc : la main gauche (placée par cinématique inverse) tient la poignée, bras tendu vers l'avant
-			bow_prop.global_transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), _grip_l)
+			bow_prop.global_transform = Transform3D(Basis.looking_at(_aim_dir, Vector3.UP), _grip_l)
 		else:
 			# Arc porté dans le dos (en diagonale) : il ne traverse plus le corps quand on ne vise pas
 			var long_axis := (right * GameConfig.BOW_BACK_TILT + Vector3.UP).normalized()
@@ -649,7 +656,7 @@ func _place_props() -> void:
 			bow_prop.global_transform = Transform3D(Basis(x_axis, long_axis, z_axis), spine - fwd * GameConfig.BOW_BACK_DEPTH + right * GameConfig.BOW_BACK_SIDE)
 	if xbow_holder.visible:
 		# Arbalète : poignée arrière (Grip_R) dans la main droite, avant du fût (Grip_L) dans la gauche (cinématique inverse des deux bras)
-		_xbow_node.global_transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), _grip_r)
+		_xbow_node.global_transform = Transform3D(Basis.looking_at(_aim_dir, Vector3.UP), _grip_r)
 
 
 ## Points où doivent se trouver les mains, d'après les épaules et la direction visée (indépendant de l'animation).
@@ -660,11 +667,21 @@ func _compute_grips() -> void:
 	var right := global_transform.basis.x.normalized()
 	var sh_r := _hand_world("mixamorig_RightArm")
 	var sh_l := _hand_world("mixamorig_LeftArm")
+	_aim_dir = fwd
 	if _grip_mode == 2:
 		_grip_r = sh_r + fwd * GameConfig.XBOW_GRIP_R_FWD + Vector3.UP * -GameConfig.XBOW_GRIP_R_DOWN + right * GameConfig.XBOW_GRIP_R_SIDE
-		_grip_l = _grip_r + fwd * _xbow_grip
+		_aim_dir = _dir_to_aim(_grip_r, fwd)
+		_grip_l = _grip_r + _aim_dir * _xbow_grip
 	elif _grip_mode == 1:
 		_grip_l = sh_l + right * GameConfig.BOW_ARM_SIDE + fwd * GameConfig.BOW_ARM_REACH
+		_aim_dir = _dir_to_aim(_grip_l, fwd)
+
+
+## L'arme pointe vers le point visé par le réticule (sinon droit devant).
+func _dir_to_aim(from: Vector3, fallback: Vector3) -> Vector3:
+	if aim_point_valid and from.distance_to(aim_point) > 2.0:
+		return (aim_point - from).normalized()
+	return fallback
 
 
 ## Les postures d'arc et de fusil sont de profil : on tourne le corps du personnage (visuel seulement, le

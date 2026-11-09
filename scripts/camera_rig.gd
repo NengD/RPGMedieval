@@ -14,6 +14,8 @@ var camera: Camera3D
 var _pivot: Node3D
 var _arm: SpringArm3D
 var _follow_pos := Vector3.ZERO
+## Décalage latéral voulu en visée (m, négatif = gauche) ; NAN = comportement normal (TPS_AIM_SHOULDER_FACTOR).
+var aim_side := NAN
 var _shoulder := 0.0
 var _shoulder_goal := 0.0
 
@@ -66,12 +68,16 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(_delta: float) -> void:
 	var eye := target.global_position + Vector3(0.0, GameConfig.EYE_HEIGHT, 0.0)
 	var right := Vector3(cos(yaw), 0.0, -sin(yaw))
-	var want := GameConfig.TPS_SHOULDER * lerpf(1.0, GameConfig.TPS_AIM_SHOULDER_FACTOR, _aim())   # en visée, la caméra se recentre derrière le héros (on voit l'arme et la main qui la tient)
-	var query := PhysicsRayQueryParameters3D.create(eye, eye + right * (want + GameConfig.CAMERA_WALL_MARGIN + 0.1), GameConfig.LAYER_WORLD)
+	var side_goal := GameConfig.TPS_SHOULDER * lerpf(1.0, GameConfig.TPS_AIM_SHOULDER_FACTOR, _aim())   # en visée, la caméra se recentre derrière le héros
+	if not is_nan(aim_side):
+		side_goal = lerpf(GameConfig.TPS_SHOULDER, aim_side, _aim())   # ou passe du côté de l'arme
+	var sgn := -1.0 if side_goal < 0.0 else 1.0
+	var want := absf(side_goal)
+	var query := PhysicsRayQueryParameters3D.create(eye, eye + right * sgn * (want + GameConfig.CAMERA_WALL_MARGIN + 0.1), GameConfig.LAYER_WORLD)
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if hit:
 		want = maxf(0.0, eye.distance_to(hit.position) - GameConfig.CAMERA_WALL_MARGIN - 0.1)
-	_shoulder_goal = want
+	_shoulder_goal = sgn * want
 
 
 func _process(delta: float) -> void:
@@ -99,7 +105,7 @@ func _process(delta: float) -> void:
 	global_position = _follow_pos
 	rotation.y = yaw
 	_shoulder = lerpf(_shoulder, _shoulder_goal * k, 1.0 - exp(-14.0 * delta))
-	_pivot.position = Vector3(_shoulder, GameConfig.EYE_HEIGHT, 0.0)
+	_pivot.position = Vector3(_shoulder, GameConfig.EYE_HEIGHT + (GameConfig.AIM_CAMERA_RAISE * _aim() if not is_nan(aim_side) else 0.0), 0.0)
 	_pivot.rotation.x = pitch
 	var aim := _aim()
 	_arm.spring_length = lerpf(GameConfig.TPS_DISTANCE, GameConfig.TPS_AIM_DISTANCE, aim) * k

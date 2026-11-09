@@ -300,11 +300,20 @@ func _update_aim_state(delta: float) -> void:
 	is_aiming = weapon_kind != Weapon.SWORD and not combatant.dead and not is_dodging and Input.is_action_pressed(&"guard")
 	aim_blend = move_toward(aim_blend, 1.0 if is_aiming else 0.0, delta / GameConfig.AIM_BLEND_TIME)
 	aim_distance = -1.0
+	model.aim_point_valid = false
+	rig.aim_side = NAN
+	if weapon_kind == Weapon.BOW:
+		rig.aim_side = GameConfig.AIM_CAMERA_SIDE_BOW
+	elif weapon_kind == Weapon.CROSSBOW:
+		rig.aim_side = GameConfig.AIM_CAMERA_SIDE_XBOW
 	if weapon_kind != Weapon.SWORD:
 		var cam := rig.camera
 		var from := cam.global_position
 		var query := PhysicsRayQueryParameters3D.create(from, from - cam.global_transform.basis.z * 150.0, GameConfig.LAYER_WORLD | GameConfig.LAYER_ENEMY)
 		var hit := get_world_3d().direct_space_state.intersect_ray(query)
+		var target: Vector3 = hit.position if hit else from - cam.global_transform.basis.z * 150.0
+		model.aim_point = target
+		model.aim_point_valid = not rig.first_person
 		if hit:
 			aim_distance = _muzzle_position().distance_to(hit.position)
 
