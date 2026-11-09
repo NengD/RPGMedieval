@@ -291,7 +291,7 @@ func _update_ik(delta: float, attacking: bool) -> void:
 	var directed: bool = attacking and (combatant.attack_dir == Combatant.Dir.UP or combatant.attack_dir == Combatant.Dir.DOWN)
 	var guarding: bool = not attacking and not _dead and combatant.is_guarding()
 	var active := directed or guarding
-	_ik_amount = move_toward(_ik_amount, 1.0 if active else 0.0, delta * 12.0)
+	_ik_amount = move_toward(_ik_amount, 1.0 if active else 0.0, delta * (12.0 if directed else GameConfig.IK_GUARD_BLEND))
 	ik.influence = _ik_amount
 	hand_aim.influence = _ik_amount
 	if _ik_pos == Vector3.ZERO:

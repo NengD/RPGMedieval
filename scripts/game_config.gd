@@ -243,6 +243,7 @@ const IK_REST_BLADE := Vector3(0.0, 0.8, -0.6)       # direction de la lame au r
 
 # Parade : la main et la lame prennent une pose par direction (comme en 1re personne).
 # Ordre : 0 haut, 1 droite, 2 bas, 3 gauche. Repère du personnage : +X = sa droite, +Y = haut, -Z = devant.
-const IK_GUARD_HAND  := [Vector3(0.20, 1.85, -0.40), Vector3(0.55, 1.15, -0.45), Vector3(0.15, 0.80, -0.45), Vector3(-0.15, 1.15, -0.55)]
-const IK_GUARD_BLADE := [Vector3(-1.0, 0.10, 0.0), Vector3(0.0, 1.0, -0.20), Vector3(-1.0, -0.20, 0.0), Vector3(0.0, 1.0, -0.20)]
-const IK_GUARD_SPEED := 16.0   # vitesse à laquelle la main rejoint la pose de garde (plus haut = plus vif)
+const IK_GUARD_HAND  := [Vector3(0.22, 1.88, -0.38), Vector3(0.52, 1.38, -0.50), Vector3(0.28, 0.98, -0.52), Vector3(-0.08, 1.38, -0.58)]
+const IK_GUARD_BLADE := [Vector3(-1.0, 0.10, 0.0), Vector3(-0.12, 1.0, -0.25), Vector3(-0.75, -0.65, -0.15), Vector3(0.12, 1.0, -0.25)]
+const IK_GUARD_SPEED := 10.0    # vitesse à laquelle la main rejoint la pose de garde (plus bas = geste plus doux, plus haut = plus vif)
+const IK_GUARD_BLEND := 8.0    # vitesse à laquelle le bras passe de l'animation à la pose de garde
