@@ -10,6 +10,8 @@ var first_person := false
 ## 0 = vue 1re personne, 1 = vue 3e personne (pendant la transition : entre les deux)
 var blend := 1.0
 var camera: Camera3D
+var _shake := 0.0
+var _shake_time := 0.0
 
 var _pivot: Node3D
 var _arm: SpringArm3D
@@ -35,6 +37,7 @@ func _ready() -> void:
 	camera.near = 0.05
 	_arm.add_child(camera)
 	camera.current = true
+	add_to_group(&"camera_rig")
 	snap_to_target()
 
 
@@ -80,7 +83,18 @@ func _physics_process(_delta: float) -> void:
 	_shoulder_goal = sgn * want
 
 
+## Ajoute du tremblement (0..~1,5). Il s'éteint tout seul ; seul le décalage de la caméra bouge (la visée n'est pas touchée).
+func add_shake(amount: float) -> void:
+	_shake = minf(_shake + amount, 1.6)
+
+
 func _process(delta: float) -> void:
+	_shake = maxf(0.0, _shake - GameConfig.SHAKE_DECAY * delta * _shake - 0.15 * delta)
+	_shake_time += delta * 60.0
+	if camera != null:
+		var off := Vector2(sin(_shake_time * 1.7), cos(_shake_time * 2.3)) * _shake * GameConfig.SHAKE_MAX_OFFSET if _shake > 0.001 else Vector2.ZERO
+		camera.h_offset = off.x   # décalage du cadre seulement : la position réelle de la caméra (bras de ressort, murs) n'est pas touchée
+		camera.v_offset = off.y
 	# Stick droit (avec courbe pour viser finement près du centre)
 	var look := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	look *= look.length()

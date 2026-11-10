@@ -65,6 +65,11 @@ var _bow_bottom := Vector3(0.0, -0.52, 0.13)
 var _ammo_length := 0.72
 var _armor_holder: Node3D
 var foot_ik: FootIK
+var trail: WeaponTrail
+var _tip_marker: Node3D
+var _step_dist := 0.0
+var _orig_clips: Dictionary = {}   # nom -> clip Mixamo d'origine (remplacé par Quaternius selon la catégorie d'arme)
+var _ual_set_active := false
 var grip_r: FingerGripModifier
 var grip_l: FingerGripModifier
 var ragdoll_sim: PhysicalBoneSimulator3D
@@ -127,23 +132,37 @@ func _ready() -> void:
 
 
 ## Vitesses de déplacement d'origine des animations (mesurées au bake) : sert à caler la cadence sur la vitesse réelle.
-## Remplace les clips d'attaque et de coup reçu par les animations Quaternius transférées (mêmes noms : le graphe d'animation ne change pas).
-func _merge_ual() -> void:
-	if not GameConfig.USE_UAL_ANIMS or not ResourceLoader.exists(UAL_LIBRARY):
+const UAL_MAP := {
+	&"attack_right": &"ual_slash_a", &"attack_left": &"ual_slash_b", &"attack_up": &"ual_sword_attack",
+	&"hit_1": &"ual_hit_chest", &"hit_2": &"ual_hit_head", &"hit_3": &"ual_hit_knockback",
+	&"hit_front_light": &"ual_hit_chest", &"hit_head": &"ual_hit_head", &"hit_gut": &"ual_hit_knockback",
+}
+## Catégories d'armes qui gardent les gestes Mixamo d'origine (hache : frappe large ; lance : estoc) ; les autres jouent les gestes d'escrime Quaternius.
+const MIXAMO_ATTACK_CATEGORIES := [&"categorie.hache", &"categorie.masse", &"categorie.lance"]
+
+
+## Choisit le jeu de clips : Quaternius (épée, épée à deux mains, écu) ou Mixamo d'origine (hache, masse, lance). Mêmes noms : le graphe ne change pas.
+func _set_clip_set(use_ual: bool) -> void:
+	if not ResourceLoader.exists(UAL_LIBRARY):
+		return
+	use_ual = use_ual and GameConfig.USE_UAL_ANIMS
+	if use_ual == _ual_set_active and not _orig_clips.is_empty():
 		return
 	var ual: AnimationLibrary = load(UAL_LIBRARY)
-	var map := {
-		&"attack_right": &"ual_slash_a", &"attack_left": &"ual_slash_b", &"attack_up": &"ual_sword_attack",
-		&"hit_1": &"ual_hit_chest", &"hit_2": &"ual_hit_head", &"hit_3": &"ual_hit_knockback",
-		&"hit_front_light": &"ual_hit_chest", &"hit_head": &"ual_hit_head", &"hit_gut": &"ual_hit_knockback",
-	}
-	for game_name in map:
-		var src := ual.get_animation(map[game_name])
+	for game_name in UAL_MAP:
+		if not _orig_clips.has(game_name) and _library.has_animation(game_name):
+			_orig_clips[game_name] = _library.get_animation(game_name).duplicate()
+		var src: Animation = ual.get_animation(UAL_MAP[game_name]) if use_ual else (_orig_clips.get(game_name) as Animation)
 		if src == null:
 			continue
 		if _library.has_animation(game_name):
 			_library.remove_animation(game_name)
 		_library.add_animation(game_name, src.duplicate())
+	_ual_set_active = use_ual
+
+
+func _merge_ual() -> void:
+	_set_clip_set(true)
 
 
 func _compute_refs() -> void:
@@ -571,6 +590,36 @@ func _ik_blade_direction(c: Combatant) -> Vector3:
 			return contact.slerp(GameConfig.IK_REST_BLADE.normalized(), ease(p, 0.6))
 
 
+## Traînée de la lame : pendant la préparation tardive et le coup.
+func _update_trail(delta: float, attacking: bool) -> void:
+	if trail == null:
+		trail = WeaponTrail.new()
+		trail.name = "WeaponTrail"
+		add_child(trail)
+	var active := false
+	if attacking and not _dead and _tip_marker != null and is_instance_valid(_tip_marker):
+		var c := combatant
+		active = c.state == Combatant.State.STRIKE or (c.state == Combatant.State.WINDUP and c.state_time > c.state_duration * 0.6)
+	if _tip_marker != null and is_instance_valid(_tip_marker):
+		trail.update(delta, active, _melee_node.global_position + (_tip_marker.global_position - _melee_node.global_position) * 0.55, _tip_marker.global_position)
+
+
+## Pas sonores selon l'armure portée : plates (cliquetis), mailles (froissement), cuir ou pavés nus.
+func _update_footsteps(delta: float, speed: float, grounded: bool) -> void:
+	if _dead or not grounded or speed < 0.6:
+		_step_dist = GameConfig.FOOTSTEP_STRIDE * 0.7   # le premier pas part vite
+		return
+	_step_dist += speed * delta
+	if _step_dist < GameConfig.FOOTSTEP_STRIDE:
+		return
+	_step_dist = 0.0
+	var cut := float(combatant.protection.get(DamageType.Type.TRANCHANT, 0.0))
+	var snd := "pas_plaques" if cut >= 0.6 else ("pas_mailles" if cut >= 0.3 else ("pas_cuir" if combatant.equipment.get_piece(ArmorData.Slot.PIEDS, ArmorData.Layer.VETEMENT) != null else "pas_pave"))
+	Fx.sound(snd, global_position + Vector3(0, 0.1, 0), -6.0 if speed < 3.0 else -3.0)
+	if speed > 3.2:
+		Fx.burst(get_tree().current_scene, "poussiere", global_position + Vector3(0, 0.05, 0))
+
+
 ## Les doigts se ferment sur ce qu'on tient : épée (main droite), poignée de l'arc, de l'arbalète, d'une arme à deux mains, écu.
 func _update_fingers(delta: float) -> void:
 	if grip_r == null:
@@ -586,7 +635,7 @@ func _update_fingers(delta: float) -> void:
 ## Petit pas en avant visuel pendant l'attaque (le corps réel ne bouge pas : la portée du coup est inchangée).
 func _update_lunge(attacking: bool) -> void:
 	var lunge := 0.0
-	if attacking and GameConfig.ATTACK_LUNGE > 0.0:
+	if attacking and GameConfig.ATTACK_LUNGE > 0.0 and not (_ual_set_active and combatant.attack_dir != Combatant.Dir.DOWN):
 		var c := combatant
 		var p := clampf(c.state_time / maxf(c.state_duration, 0.001), 0.0, 1.0)
 		match c.state:
@@ -601,7 +650,7 @@ func _update_lunge(attacking: bool) -> void:
 
 func _update_ik(delta: float, attacking: bool) -> void:
 	var has_shield := _shield_node.get_child_count() > 0
-	var directed: bool = attacking and (combatant.attack_dir == Combatant.Dir.DOWN or (combatant.attack_dir == Combatant.Dir.UP and not GameConfig.USE_UAL_ANIMS))
+	var directed: bool = attacking and (combatant.attack_dir == Combatant.Dir.DOWN or (combatant.attack_dir == Combatant.Dir.UP and not _ual_set_active))
 	var guarding_now: bool = not attacking and not _dead and combatant.is_guarding()
 	var guarding: bool = guarding_now and not has_shield          # sans écu : l'épée fait la parade
 	var shield_guard: bool = guarding_now and has_shield          # avec écu : c'est l'écu qui pare, l'épée reste basse
@@ -719,6 +768,8 @@ func apply_armor(eq: EquipmentComponent) -> void:
 func apply_weapons(eq: EquipmentComponent) -> void:
 	var main := eq.get_weapon(&"main_hand")
 	_main_weapon = main
+	var cat_id: StringName = main.category.id if main != null and main.category != null else &""
+	_set_clip_set(not MIXAMO_ATTACK_CATEGORIES.has(cat_id))
 	_grip_l_marker = null
 	_free_children(_melee_node)
 	var melee_scene: PackedScene = main.model if main != null else load("res://assets/weapons/arme_epee_longue.glb")
@@ -727,6 +778,7 @@ func apply_weapons(eq: EquipmentComponent) -> void:
 		if main != null:
 			melee.rotation_degrees = main.held_rotation_deg
 		_melee_node.add_child(melee)
+		_tip_marker = _marker(melee, "Tip")
 		if main != null and main.is_two_handed():
 			_grip_l_marker = _marker(melee, "Grip_L")
 	_free_children(_shield_node)
@@ -1130,6 +1182,8 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 		foot_ik.update(delta, on_floor and not is_dodging and not _dead and not _ragdoll_on)
 	_update_look(delta)
 	_update_fingers(delta)
+	_update_trail(delta, attacking)
+	_update_footsteps(delta, horizontal, on_floor and not is_dodging)
 	_update_lunge(attacking and not _dead)
 	if _dead:
 		full_target = 1.0
@@ -1150,6 +1204,8 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 
 
 func _start_dodge(body_basis: Basis, dodge_dir: Vector3) -> void:
+	Fx.burst(get_tree().current_scene, "poussiere", global_position + Vector3(0, 0.05, 0), -dodge_dir)
+	Fx.sound("elan", global_position + Vector3(0, 1.0, 0), -8.0)
 	var local := body_basis.inverse() * dodge_dir
 	var mode := &"dodge_b"
 	if absf(local.x) >= absf(local.z):

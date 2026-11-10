@@ -13,14 +13,14 @@ const SOURCES := {
 # source -> [nom dans le jeu, en place ?, boucle ?]
 const PICK := {
 	"ual1": {
-		"Sword_Attack": ["ual_sword_attack", true, false], "Sword_Idle": ["ual_sword_idle", true, true],
+		"Sword_Attack": ["ual_sword_attack", "detrend", false], "Sword_Idle": ["ual_sword_idle", true, true],
 		"Hit_Chest": ["ual_hit_chest", true, false], "Hit_Head": ["ual_hit_head", true, false], "Death01": ["ual_death", false, false],
 		"Roll": ["ual_roll", true, false], "Walk": ["ual_walk", true, true], "Jog_Fwd": ["ual_jog", true, true], "Sprint": ["ual_sprint", true, true],
 	},
 	"ual2": {
-		"Sword_Block": ["ual_sword_block", true, false], "Sword_Regular_A": ["ual_slash_a", true, false], "Sword_Regular_A_Rec": ["ual_slash_a_rec", true, false],
-		"Sword_Regular_B": ["ual_slash_b", true, false], "Sword_Regular_B_Rec": ["ual_slash_b_rec", true, false], "Sword_Regular_Combo": ["ual_combo", true, false], "Idle_Shield": ["ual_shield_idle", true, true], "Idle_Shield_Break": ["ual_shield_break", true, false],
-		"Shield_OneShot": ["ual_shield_bash", true, false], "Melee_Hook": ["ual_hook", true, false], "Hit_Knockback": ["ual_hit_knockback", true, false],
+		"Sword_Block": ["ual_sword_block", "detrend", false], "Sword_Regular_A": ["ual_slash_a", "detrend", false], "Sword_Regular_A_Rec": ["ual_slash_a_rec", "detrend", false],
+		"Sword_Regular_B": ["ual_slash_b", "detrend", false], "Sword_Regular_B_Rec": ["ual_slash_b_rec", "detrend", false], "Sword_Regular_Combo": ["ual_combo", "detrend", false], "Idle_Shield": ["ual_shield_idle", true, true], "Idle_Shield_Break": ["ual_shield_break", "detrend", false],
+		"Shield_OneShot": ["ual_shield_bash", "detrend", false], "Melee_Hook": ["ual_hook", "detrend", false], "Hit_Knockback": ["ual_hit_knockback", "detrend", false],
 		"Sword_Dash_RM": ["ual_sword_dash", true, false],
 	},
 }
@@ -113,6 +113,7 @@ func _run() -> void:
 			out.track_set_path(pos_track, NodePath("Skeleton3D:mixamorig_Hips"))
 			ap.play(src_name)
 			var first_hips := Vector3.ZERO
+			var pending_detrend: Array[Vector3] = []
 			var hand_idx := ssk.find_bone(map["RightHand"])
 			var hand_pts: Array[Vector3] = []
 			for f in frames:
@@ -145,9 +146,23 @@ func _run() -> void:
 				var pos := tsk.get_bone_rest(hips_tgt).origin + (hp - rp) * scale
 				if f == 0:
 					first_hips = pos
-				if spec[1]:
+				if str(spec[1]) == "true":
 					pos = Vector3(first_hips.x, pos.y, first_hips.z)   # sur place
-				out.position_track_insert_key(pos_track, time, pos)
+				elif str(spec[1]) == "detrend":
+					# on garde l'excursion du geste (fente, appui) mais on retire la dérive de départ à arrivée : le corps revient à sa place
+					pending_detrend.append(pos)
+				if str(spec[1]) != "detrend":
+					out.position_track_insert_key(pos_track, time, pos)
+			if str(spec[1]) == "detrend":
+				var n := pending_detrend.size()
+				var d0: Vector3 = pending_detrend[0]
+				var drift: Vector3 = pending_detrend[n - 1] - d0
+				for fi in n:
+					var tt := float(fi) / maxf(n - 1, 1)
+					var pp: Vector3 = pending_detrend[fi]
+					pp.x = d0.x + (pp.x - d0.x) - drift.x * tt
+					pp.z = d0.z + (pp.z - d0.z) - drift.z * tt
+					out.position_track_insert_key(pos_track, minf(fi / FPS, sanim.length), pp)
 			ap.stop()
 			# instants du geste (comme tools/bake_animations.gd) : début, coup = main la plus rapide, fin
 			var speeds: Array[float] = []

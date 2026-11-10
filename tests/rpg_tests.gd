@@ -65,6 +65,7 @@ func _run() -> void:
 	await _test_arena()
 	await _test_polish()
 	await _test_hud()
+	await _test_feel()
 	_test_translation()
 	print("")
 	print("RÉSULTAT RPG : %s (%d échec(s))" % ["SUCCÈS" if failures == 0 else "ÉCHEC", failures])
@@ -882,6 +883,10 @@ func _test_polish() -> void:
 	e.global_position = Vector3(30, 0, 30)
 	p.combatant.reset()
 	p.combatant.stamina = 100.0
+	p.combatant.equipment.equip_weapon(Registry.get_data(&"arme.hache_guerre"))   # gestes Mixamo : c'est le décalage visuel ATTACK_LUNGE qui fait le pas (les gestes Quaternius font le leur)
+	await _frames(5)
+	p.combatant.reset()
+	p.combatant.stamina = 100.0
 	var body_before: Vector3 = p.global_position
 	var reach_before := c.attack_step(1).reach
 	p.try_attack()
@@ -893,6 +898,8 @@ func _test_polish() -> void:
 	_check(Vector2(p.global_position.x - body_before.x, p.global_position.z - body_before.z).length() < 0.01 and is_equal_approx(c.attack_step(1).reach, reach_before), "le corps réel et la portée du coup ne changent pas")
 	await _frames(120)
 	_check(absf(m.model_root.position.z) < 0.01, "retour en position après l'attaque")
+	p.combatant.equipment.equip_weapon(Registry.get_data(&"arme.epee_longue"))
+	await _frames(5)
 	# --- pieds au sol : les orteils ne s'enfoncent pas
 	e.global_position = Vector3(30, 0, 30)
 	await _frames(60)
@@ -907,13 +914,26 @@ func _test_polish() -> void:
 	var react_speed := float(m.tree.get("parameters/UpperTS/scale"))
 	_check(react_speed >= 1.0 and react_speed <= GameConfig.HIT_REACT_MAX_SPEED, "réaction de coup reçu accélérée pour tenir dans l'étourdissement (x%.1f)" % react_speed)
 	c.reset()
+	# --- jeux de gestes par catégorie d'arme
+	p.combatant.equipment.equip_weapon(Registry.get_data(&"arme.hache_guerre"))
+	await _frames(5)
+	var axe_len := m._library.get_animation(&"attack_right").length
+	p.combatant.equipment.equip_weapon(Registry.get_data(&"arme.epee_longue"))
+	await _frames(5)
+	var sword_len := m._library.get_animation(&"attack_right").length
+	_check(m._ual_set_active and absf(sword_len - axe_len) > 0.2, "épée : gestes d'escrime Quaternius (%.2f s) ; hache : gestes Mixamo d'origine (%.2f s)" % [sword_len, axe_len])
+	p.combatant.equipment.equip_weapon(Registry.get_data(&"arme.lance"))
+	await _frames(5)
+	_check(not m._ual_set_active, "lance : estoc Mixamo d'origine")
+	p.combatant.equipment.equip_weapon(Registry.get_data(&"arme.epee_longue"))
+	await _frames(5)
 	# --- main fermée sur l'épée
 	await _frames(30)
 	_check(m.grip_r != null and m.grip_r.curl > 0.99 and m.grip_r.influence > 0.0, "la main droite se ferme sur la poignée de l'épée")
 	m._dead = false
 	# --- regard
 	e.global_position = p.global_position + Vector3(0, 0, -5)
-	await _frames(40)
+	await _frames(80)
 	_check(m._look_amount > 0.8 and m._look_head.influence > 0.5, "la tête suit l'adversaire proche (%.0f %%)" % (m._look_amount * 100.0))
 	e.global_position = p.global_position + Vector3(0, 0, -40)
 	await _frames(120)
@@ -984,5 +1004,119 @@ func _test_hud() -> void:
 	for panel in [hud._help_panel, hud._debug_panel]:
 		_check(panel.mouse_filter == Control.MOUSE_FILTER_IGNORE, "le panneau ne bloque jamais la souris")
 	_check(hud._status.text.contains("%") and hud._status.text.contains("kg"), "le panneau de débogage contient protection et poids")
+	main.queue_free()
+	await physics_frame
+
+
+# ---------------------------------------------------------------- game feel et sons
+
+func _test_feel() -> void:
+	print("[Sensations de jeu et sons]")
+	var cfg_path := "user://reglages.cfg"
+	var cfg_backup := FileAccess.get_file_as_string(cfg_path) if FileAccess.file_exists(cfg_path) else ""   # le test ne doit pas écraser les réglages du joueur
+	var had_cfg := FileAccess.file_exists(cfg_path)
+	var names := ["acier", "parade", "parade_parfaite", "mailles", "bois", "chair", "elan", "pas_pave", "pas_plaques", "pas_mailles", "pas_cuir", "arc", "arbalete", "fleche_plantee", "effort", "cri"]
+	var all_ok := true
+	var short := 0
+	for n in names:
+		for i in 3:
+			var path := "res://assets/sounds/%s_%d.wav" % [n, i + 1]
+			var st := load(path) as AudioStreamWAV if ResourceLoader.exists(path) else null
+			if st == null:
+				all_ok = false
+			elif st.get_length() < 0.05:
+				short += 1
+	_check(all_ok and short == 0, "16 sons x 3 variantes présents (épée, parade, parade parfaite, mailles, bois, chair, pas, arc, arbalète, flèche, voix)")
+	_check(ResourceLoader.exists("res://assets/sounds/vent_1.wav") and ResourceLoader.exists("res://assets/sounds/drone_1.wav"), "ambiance (vent) et musique (nappe) en boucle")
+	var sfx := root.get_node_or_null("Sfx")
+	_check(sfx != null and AudioServer.get_bus_index("Musique") >= 0 and AudioServer.get_bus_index("Effets") >= 0 and AudioServer.get_bus_index("Ambiance") >= 0, "bus audio Musique / Effets / Ambiance")
+	sfx.set_volume("Effets", 0.5)
+	var db_half := AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Effets"))
+	sfx.set_volume("Effets", 1.0)
+	sfx.set_volume("Musique", 0.0)
+	_check(db_half < AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Effets")) and AudioServer.is_bus_mute(AudioServer.get_bus_index("Musique")), "les curseurs de volume agissent (moitié = plus bas, zéro = muet)")
+	sfx.set_volume("Musique", 0.6)
+	# variations aléatoires : plusieurs variantes, hauteur variable
+	_check(sfx.variants("acier").size() == 3 and sfx.variants("pas_plaques").size() == 3, "trois variantes par son (pas de répétition identique)")
+	# effets de combat
+	Registry.clear_instances()
+	var main = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await _frames(5)
+	var p: Player = main.player
+	var rig: CameraRig = p.rig
+	Fx.shake_enabled = true
+	rig.add_shake(1.0)
+	await _frames(3)
+	_check(absf(rig.camera.h_offset) + absf(rig.camera.v_offset) > 0.0, "le tremblement décale le cadre de la caméra")
+	await _frames(240)
+	_check(absf(rig.camera.h_offset) + absf(rig.camera.v_offset) < 0.001, "le tremblement s'éteint tout seul")
+	Fx.shake_enabled = false
+	rig.add_shake(0.0)
+	Fx.shake(1.0)
+	await _frames(2)
+	_check(rig._shake < 0.05, "tremblement désactivable (option F8)")
+	Fx.shake_enabled = true
+	var before: int = main.get_child_count()
+	Fx.burst(main, "etincelles", Vector3(0, 1, 0))
+	Fx.burst(main, "eclats", Vector3(0, 1, 0))
+	Fx.burst(main, "poussiere", Vector3(0, 0.1, 0))
+	_check(main.get_child_count() == before + 3, "étincelles, éclats de bois et poussière créés")
+	await _frames(3)
+	# sons d'impact : une parade et un coup font jouer un lecteur
+	var players_before := sfx.get_child_count()
+	var victim: Combatant = main.enemy.combatant
+	main.enemy.ai_enabled = false
+	victim.reset()
+	victim.receive_hit(p.combatant, 1, 10.0)
+	await _frames(2)
+	_check(sfx.get_child_count() > players_before, "un coup reçu joue un son d'impact (selon l'armure)")
+	var surf_plate := Fx._surface_of(p.combatant)
+	var surf_none := ""
+	p.combatant.equipment.clear_armor()
+	surf_none = Fx._surface_of(p.combatant)
+	p.combatant.equipment.equip_outfit(Registry.get_data(&"tenue.chevalier_plates"))
+	_check(surf_plate == "acier" and surf_none == "chair", "le son dépend de l'armure : plates = acier, sans tenue = chair")
+	# traînée
+	var trail := p.model.trail
+	_check(trail != null, "traînée d'arme présente")
+	trail.update(0.016, true, Vector3(0, 1, 0), Vector3(0, 1, 1))
+	trail.update(0.016, true, Vector3(0.1, 1, 0), Vector3(0.1, 1, 1))
+	_check(trail._pts.size() == 2 and trail.mesh.get_surface_count() == 1, "la traînée dessine un ruban")
+	await _frames(60)
+	trail.update(0.3, false, Vector3.ZERO, Vector3.ZERO)
+	_check(trail._pts.is_empty(), "la traînée s'efface")
+	# pas selon l'armure
+	var n_players := sfx.get_child_count()
+	p.model._step_dist = GameConfig.FOOTSTEP_STRIDE
+	p.model._update_footsteps(0.1, 2.0, true)
+	_check(sfx.get_child_count() > n_players, "un pas sonore est joué en marchant (cliquetis des plaques)")
+	# menu d'options
+	var opts: OptionsMenu = main.options
+	_check(opts != null and not opts.is_open(), "menu d'options fermé au départ")
+	var captured_before := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	opts.toggle()
+	_check(opts.is_open() and Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "F8 ouvre les options et libère la souris")
+	(opts._panel.find_child("Slider_Effets", true, false) as HSlider).value = 0.4
+	_check(is_equal_approx(sfx.volumes["Effets"], 0.4), "le curseur Effets règle le volume")
+	var shake_box := opts._panel.find_child("Check_Shake", true, false) as CheckBox
+	shake_box.button_pressed = true
+	shake_box.button_pressed = false
+	_check(not Fx.shake_enabled, "la case Tremblement coupe le tremblement")
+	opts.toggle()
+	_check(not opts.is_open() and opts._was_captured == captured_before and (not captured_before or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED), "fermer les options rend la souris dans l'état où elle était")
+	sfx.set_volume("Effets", 1.0)
+	Fx.shake_enabled = true
+	Fx.hit_stop_enabled = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	if had_cfg:
+		var f := FileAccess.open(cfg_path, FileAccess.WRITE)
+		f.store_string(cfg_backup)
+		f.close()
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(cfg_path))
+	Fx.load_settings()
+	var credits := FileAccess.get_file_as_string("res://CREDITS.md")
+	_check(credits.contains("make_sounds.py"), "les sons générés sont notés dans CREDITS.md")
 	main.queue_free()
 	await physics_frame

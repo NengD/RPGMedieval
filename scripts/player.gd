@@ -242,6 +242,7 @@ func release_draw() -> Arrow:
 ## Tire une flèche avec une tension donnée (0..1).
 func fire_bow(tension: float) -> Arrow:
 	model.play_bow_release()
+	Fx.sound("arc", global_position + Vector3(0, 1.4, 0))
 	_release_cooldown = GameConfig.BOW_RELEASE_COOLDOWN
 	combatant.spend_stamina(GameConfig.BOW_STAMINA_COST * tension)
 	var speed := lerpf(GameConfig.BOW_SPEED_MIN, GameConfig.BOW_SPEED_MAX, tension)
@@ -259,6 +260,7 @@ func fire_crossbow() -> bool:
 		notice.emit(&"NOTICE_XBOW_RELOAD")
 		return false
 	combatant.spend_stamina(GameConfig.CROSSBOW_STAMINA_COST)
+	Fx.sound("arbalete", global_position + Vector3(0, 1.4, 0))
 	_shoot(GameConfig.CROSSBOW_SPEED, GameConfig.CROSSBOW_GRAVITY, GameConfig.CROSSBOW_DAMAGE, GameConfig.CROSSBOW_SPREAD_DEG, true)
 	crossbow_reload = GameConfig.CROSSBOW_RELOAD_TIME
 	return true

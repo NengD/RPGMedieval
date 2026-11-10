@@ -34,6 +34,7 @@ static func register_actions() -> void:
 	_add(&"next_quality", [_key(KEY_F10)])
 	_add(&"toggle_help", [_key(KEY_F6), _btn(JOY_BUTTON_BACK)])
 	_add(&"toggle_debug", [_key(KEY_F7)])
+	_add(&"toggle_options", [_key(KEY_F8)])
 	_add(&"quick_save", [_key(KEY_F5)])
 	_add(&"quick_load", [_key(KEY_F9)])
 	_add(&"toggle_ai", [_key(KEY_F4), _btn(JOY_BUTTON_DPAD_DOWN)])

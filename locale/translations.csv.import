@@ -6,10 +6,10 @@ uid="uid://cyv202cpeeclr"
 
 [deps]
 
-files=["res://locale/translations.fr.translation"]
+files=["res://locale/translations.fr.translation", "res://locale/translations.en.translation"]
 
 source_file="res://locale/translations.csv"
-dest_files=["res://locale/translations.fr.translation"]
+dest_files=["res://locale/translations.fr.translation", "res://locale/translations.en.translation"]
 
 [params]
 

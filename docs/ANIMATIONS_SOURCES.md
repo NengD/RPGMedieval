@@ -24,3 +24,10 @@ Plutôt que d'inventer des poses, on part de vrais mouvements (capture / animati
 (Mis à jour : les coups et coups reçus ci-dessus sont branchés ; voir `docs/apercu_coups_en_jeu.png`.)
 Les 21 animations transférées sont dans la bibliothèque `ual_library.res` mais **pas encore branchées dans le jeu** : elles attendent ta validation (vidéos dans `docs/anims/`).
 Contrôles qualité (pieds plantés, centre de gravité, courbes lissées, mouvement secondaire) : pas encore faits.
+
+## Contrôle qualité (`tools/anim_qc.gd`)
+Mesures sur NOTRE squelette : glissement d'un pied posé à plat (< 3,5 cm du sol), distance bassin / milieu des pieds (centre de gravité), à-coups de la main (variation d'accélération). Résultat : tous les clips utilisés en jeu (coups, parade, coups reçus, marche, course) sont dans les seuils. Hors seuils, mais **non utilisés** : `ual_combo` (centre de gravité, acrobaties), `ual_sword_dash`, `ual_hit_knockback` et `ual_death` (déplacements de tout le corps). Le « mouvement secondaire » (épaules, bassin, tête en léger décalage) n'est pas mesuré automatiquement : il vient des clips d'origine.
+Les clips de coup gardent l'excursion du geste (fente, appui) mais perdent la dérive de départ à arrivée (`"detrend"` dans `retarget_ual.gd`), donc le corps revient à sa place.
+
+## Jeux de gestes par catégorie d'arme
+Épée une main, épée à deux mains, écu : gestes Quaternius. Hache, masse, lance : gestes Mixamo d'origine (frappe large, estoc) avec le petit pas visuel `ATTACK_LUNGE` (`HeroModel.MIXAMO_ATTACK_CATEGORIES`). Créer des gestes dédiés (masse, lance, deux mains) image par image dans Blender n'est pas fait.

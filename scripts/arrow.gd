@@ -129,6 +129,8 @@ func _on_hit(hit: Dictionary) -> void:
 
 func _stick(pos: Vector3, parent: Node3D) -> void:
 	flying = false
+	Fx.sound("fleche_plantee", pos)
+	Fx.burst(get_tree().current_scene, "eclats", pos, -velocity.normalized())
 	global_position = pos
 	if parent:
 		reparent(parent, true)

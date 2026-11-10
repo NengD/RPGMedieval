@@ -5,6 +5,7 @@ var player: Player
 var dummy: TrainingDummy
 var enemy: Enemy
 var hud: Hud
+var options: OptionsMenu
 var arena: Arena
 var targets: Array = []
 var target_score := 0
@@ -45,6 +46,11 @@ func _ready() -> void:
 
 	_build_targets()
 
+	Fx.load_settings()
+	if Fx.sfx() != null:
+		Fx.sfx().start_ambience()
+	options = OptionsMenu.new()
+	add_child(options)
 	hud = Hud.new()
 	hud.player = player
 	hud.dummy = dummy

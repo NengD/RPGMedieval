@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 [autoload]
 
 InputSetup="*res://scripts/input_setup.gd"
+Sfx="*res://scripts/sfx.gd"
 
 [display]
 

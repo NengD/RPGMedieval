@@ -305,3 +305,17 @@ const FOOT_TILT_AMOUNT := 1.0          # inclinaison des chevilles selon la pent
 const HIT_REACT_MIN_SPEED := 1.0       # une réaction de coup reçu est accélérée pour tenir dans l'étourdissement (jamais ralentie)
 const HIT_REACT_MAX_SPEED := 4.0
 const USE_UAL_ANIMS := true            # coups, coups reçus : vraies animations Quaternius (CC0) transférées sur le squelette (assets/anims/ual_library.res) ; false = clips Mixamo d'avant
+
+# === Sensations de jeu et sons (étape 10) ===
+const HIT_STOP_HIT := 0.07             # arrêt sur image quand un coup touche (s, temps réel)
+const HIT_STOP_BLOCK := 0.045          # quand un coup est paré
+const HIT_STOP_SCALE := 0.05           # vitesse du jeu pendant l'arrêt sur image
+const SLOWMO_PERFECT_PARRY_TIME := 0.5 # ralenti après une parade parfaite (s, temps réel)
+const SLOWMO_PERFECT_PARRY_SCALE := 0.3
+const SHAKE_STRENGTH := 1.0            # force du tremblement de caméra (x) ; se coupe aussi dans le menu d'options (F8)
+const SHAKE_DECAY := 6.0               # vitesse à laquelle le tremblement s'éteint
+const SHAKE_MAX_OFFSET := 0.035        # décalage maximal de la caméra (m)
+const PARTICLES_ENABLED := true        # étincelles, éclats de bois, poussière
+const TRAIL_ENABLED := true            # traînée discrète de l'arme pendant les coups
+const TRAIL_LIFETIME := 0.18           # durée de vie de la traînée (s)
+const FOOTSTEP_STRIDE := 1.25          # distance entre deux pas sonores en marchant (m)

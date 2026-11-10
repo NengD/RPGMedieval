@@ -22,25 +22,25 @@ Prototype de COMBAT UNIQUEMENT dans une arène de test (pas de monde / quêtes /
 - Lancer le jeu : ouvrir le projet dans l'éditeur Godot puis F5.
 
 ## Contrôles (aide en jeu : F6)
-ZQSD / stick G déplacer · souris / stick D regarder · Maj courir · Espace sauter · C pas de côté · V changer de vue · Tab / molette arme (épée, arc, arbalète) · clic gauche attaquer (clics répétés = combo) / bander / tirer · clic droit parer ou viser · G arme de mêlée suivante · H écu · K tenue · L couleur du tabard · F1/F2/F3 difficulté · F4 IA ennemie · R recommencer · T mannequin agressif · Retour arrière retire les flèches · F5 / F9 sauvegarde / chargement rapides · F10 qualité graphique · F6 aide · F7 infos de débogage · Échap libère la souris.
+ZQSD / stick G déplacer · souris / stick D regarder · Maj courir · Espace sauter · C pas de côté · V changer de vue · Tab / molette arme (épée, arc, arbalète) · clic gauche attaquer (clics répétés = combo) / bander / tirer · clic droit parer ou viser · G arme de mêlée suivante · H écu · K tenue · L couleur du tabard · F1/F2/F3 difficulté · F4 IA ennemie · R recommencer · T mannequin agressif · Retour arrière retire les flèches · F5 / F9 sauvegarde / chargement rapides · F10 qualité graphique · F8 options (volumes, tremblement) · F6 aide · F7 infos de débogage · Échap libère la souris.
 
 ## Architecture (dossiers)
 - `scripts/` : `game_config.gd` (TOUS les réglages), `main.gd` (assemble la scène), `arena.gd` + `quality_settings.gd`, `player.gd` + `camera_rig.gd`, `enemy.gd` (IA), `training_dummy.gd`, `combatant.gd` (cerveau du combat : états, parade, endurance, vie ; partagé par héros, ennemi, mannequin), `hero_model.gd` (personnage animé : AnimationTree, IK, armures, armes), `weapon_visual.gd` / `ranged_visual.gd` (armes en 1re personne), `arrow.gd`, `archery_target.gd`, `hud.gd` + `hud_canvas.gd` (interface), `input_setup.gd` (actions clavier / manette), `floating_text.gd`, `hand_aim_modifier.gd`.
 - `scripts/rpg/` : stats, types de dégâts, armures, armes, équipement, registre d'identifiants, sauvegarde (voir `docs/FONDATIONS_RPG.md`).
-- `scripts/character/` : `rig_mesh.gd` (pièces rattachées au squelette par nom d'os), `foot_ik.gd`, `ragdoll.gd`.
+- `scripts/fx.gd` (impacts : sons, étincelles, arrêt sur image, tremblement), `sfx.gd` (autoload : sons et bus audio), `options_menu.gd`, `weapon_trail.gd`. `scripts/character/` : `rig_mesh.gd` (pièces rattachées au squelette par nom d'os), `foot_ik.gd`, `ragdoll.gd`.
 - `data/` : fichiers `.tres` (matières, armures, tenues, armes, catégories, munitions, formules de stats). `assets/` : `base/` (squelette + corps), `armor/`, `weapons/`, `props/`, `textures/`, `sky/`, `anims/` (FBX Mixamo + `hero_library.res`). `tools/` : scripts de fabrication (`bake_animations.gd`, `make_data.gd`, `make_base_rig.gd`, `blender/*.py`) et de mesure. `tests/` : tests et scripts de capture. `docs/` : documentation.
 - Couches physiques : 1 monde, 2 joueur, 3 ennemis.
 
 ## Documentation (docs/)
 - `DETAILS_TECHNIQUES.md` — combat, IA, visée, animations, IK, pièges Godot, méthode de test « comme un joueur ».
 - `ARCHITECTURE.md` — architecture du chantier réalisme + RPG ; `FONDATIONS_RPG.md` — stats, dégâts, identifiants, sauvegarde, traduction.
-- `AJOUTER_UNE_ARME.md`, `AJOUTER_UNE_PIECE.md`, `ARENE_ET_LUMIERE.md`, `ANIMATIONS_NATURELLES.md`, `GUIDE_MIXAMO.md` (historique des packs Mixamo utilisés).
+- `AJOUTER_UNE_ARME.md`, `AJOUTER_UNE_PIECE.md`, `ARENE_ET_LUMIERE.md`, `ANIMATIONS_NATURELLES.md`, `ANIMATIONS_SOURCES.md`, `GAME_FEEL_ET_SONS.md`, `REALISME_CHEVALIER.md`, `GUIDE_MIXAMO.md` (historique des packs Mixamo utilisés).
 
 ## Avancement
 Chantier « réalisme + RPG » (étapes numérotées dans la conversation du propriétaire) :
 - [x] 0 Sauvegarde GitHub (https://github.com/NengD/RPGMedieval, branche `main`) · [x] 1 Diagnostic et architecture · [x] 2 Fondations RPG · [x] 3 Armes extensibles (11 modèles Blender) · [x] 4 Personnage modulaire (Mannequin + 17 pièces + 3 tenues) · [x] 5 Arène PBR, ciel HDRI, qualité F10 · [x] 6 Animations plus naturelles (cadence, pieds, regard, réactions, ragdoll).
 - [x] 7 Remise en ordre : ce fichier allégé, aide masquée (F6), panneau de débogage séparé (F7), HUD sobre.
 - [x] 8 Réalisme visuel du chevalier : matériaux PBR (`scripts/character/armor_materials.gd` : acier rayé, mailles, cuir, tissus Poly Haven), tête humaine modelée (`armure.tete_homme`, cheveux courts, `armure.barbe`), épée longue ≈ 1,1 m. Voir docs/REALISME_CHEVALIER.md.
-- [ ] 9 Animations créées dans Blender (corriger les limites de `ANIMATIONS_NATURELLES.md`, retravailler les clips Mixamo, créer attaques et parades par catégorie d'arme).
-- [ ] 10 Game feel et sons (arrêt sur image, tremblement, étincelles, ralenti, sons CC0 ou générés, bus audio, menu d'options). C'est l'ancienne « étape 6 — Game feel, sons » du plan d'origine.
+- [x] 9 Animations : limites corrigées (chevilles, réactions, ragdoll), vraies animations Quaternius (CC0) transférées sur le squelette (`tools/retarget_ual.gd`, `ual_library.res`, option `USE_UAL_ANIMS`) pour l'épée / l'épée à deux mains, gestes Mixamo pour hache / masse / lance, contrôle qualité `tools/anim_qc.gd`, mains fermées (`FingerGripModifier`). Voir docs/ANIMATIONS_SOURCES.md. Pas fait : retouche dans Blender et animations créées de zéro (masse, lance, deux mains dédiées).
+- [x] 10 Game feel et sons : arrêt sur image, tremblement (désactivable), étincelles / éclats / poussière, traînée d'arme, ralenti sur parade parfaite, 16 sons générés (`tools/make_sounds.py`), bus Musique / Effets / Ambiance, menu d'options F8. Voir docs/GAME_FEEL_ET_SONS.md.
 Historique du prototype d'origine : combat à 4 directions puis combo (direction retirée), IA, arc / arbalète, animations Mixamo (chevalier Paladin, remplacé par le Mannequin modulaire à l'étape 4).

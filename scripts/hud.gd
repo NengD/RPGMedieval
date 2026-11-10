@@ -22,7 +22,7 @@ const _STATE_NAMES := ["STATE_IDLE", "STATE_WINDUP", "STATE_STRIKE", "STATE_RECO
 
 func _ready() -> void:
 	_help = _make_label()
-	_help.text = "\n".join([tr("HELP_TITLE"), tr("HELP_MOVE"), tr("HELP_WEAPON"), tr("HELP_SWORD"), tr("HELP_RANGED"), tr("HELP_KEYS"), tr("HELP_SAVE"), tr("HELP_WEAPONS"), tr("HELP_OUTFIT"), tr("HELP_GRAPHICS"), tr("HELP_PANELS")])
+	_help.text = "\n".join([tr("HELP_TITLE"), tr("HELP_MOVE"), tr("HELP_WEAPON"), tr("HELP_SWORD"), tr("HELP_RANGED"), tr("HELP_KEYS"), tr("HELP_SAVE"), tr("HELP_WEAPONS"), tr("HELP_OUTFIT"), tr("HELP_GRAPHICS"), tr("HELP_OPTIONS"), tr("HELP_PANELS")])
 	_help_panel = _make_panel(_help)
 	_help_panel.visible = false
 

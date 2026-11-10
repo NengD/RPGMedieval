@@ -87,6 +87,12 @@ var _queue_time := 0.0
 
 func _ready() -> void:
 	add_to_group(&"combatants")
+	hit_resolved.connect(func(r: int, d: int, amt: float, by: Combatant): Fx.on_hit_resolved(r, d, amt, by, self))
+	attack_started.connect(func(_d: int):
+		if body != null and is_instance_valid(body) and body.is_inside_tree():
+			Fx.sound("elan", body.global_position + Vector3(0, 1.2, 0), -4.0)
+			if randf() < 0.45:
+				Fx.sound("effort", body.global_position + Vector3(0, 1.6, 0), -5.0))
 	if body:
 		body.set_meta(&"combatant", self)   # permet aux flèches de retrouver le combattant touché
 
