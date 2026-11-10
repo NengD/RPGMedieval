@@ -64,6 +64,8 @@ var _bow_bottom := Vector3(0.0, -0.52, 0.13)
 var _ammo_length := 0.72
 var _armor_holder: Node3D
 var foot_ik: FootIK
+var grip_r: FingerGripModifier
+var grip_l: FingerGripModifier
 var ragdoll_sim: PhysicalBoneSimulator3D
 var _ragdoll_on := false
 var _refs: Dictionary = {}          # jeu d'animations -> [vitesse de marche, vitesse de course] d'origine (m/s)
@@ -170,6 +172,14 @@ func _build_polish() -> void:
 	add_child(_look_target)
 	_look_head = _make_look("mixamorig_Head", 70.0, 40.0)
 	_look_spine = _make_look("mixamorig_Spine2", 35.0, 20.0)
+	grip_r = FingerGripModifier.new()
+	grip_r.name = "GripRight"
+	grip_r.side = "Right"
+	skeleton.add_child(grip_r)
+	grip_l = FingerGripModifier.new()
+	grip_l.name = "GripLeft"
+	grip_l.side = "Left"
+	skeleton.add_child(grip_l)
 	ragdoll_sim = Ragdoll.build(skeleton)
 
 
@@ -538,6 +548,18 @@ func _ik_blade_direction(c: Combatant) -> Vector3:
 			return contact
 		_:
 			return contact.slerp(GameConfig.IK_REST_BLADE.normalized(), ease(p, 0.6))
+
+
+## Les doigts se ferment sur ce qu'on tient : épée (main droite), poignée de l'arc, de l'arbalète, d'une arme à deux mains, écu.
+func _update_fingers(delta: float) -> void:
+	if grip_r == null:
+		return
+	var right_goal := 1.0 if (sword_holder.visible or xbow_holder.visible) and not _dead else 0.0
+	var left_goal := 1.0 if ((bow_holder.visible and _bow_in_hand) or xbow_holder.visible or _grip_l_marker != null or _shield_node.get_child_count() > 0) and not _dead else 0.0
+	grip_r.curl = move_toward(grip_r.curl, right_goal, delta * 8.0)
+	grip_l.curl = move_toward(grip_l.curl, left_goal, delta * 8.0)
+	grip_r.influence = 1.0 if grip_r.curl > 0.001 else 0.0
+	grip_l.influence = 1.0 if grip_l.curl > 0.001 else 0.0
 
 
 ## Petit pas en avant visuel pendant l'attaque (le corps réel ne bouge pas : la portée du coup est inchangée).
@@ -1086,6 +1108,7 @@ func drive(delta: float, velocity: Vector3, body_basis: Basis, on_floor: bool, i
 	if foot_ik != null:
 		foot_ik.update(delta, on_floor and not is_dodging and not _dead and not _ragdoll_on)
 	_update_look(delta)
+	_update_fingers(delta)
 	_update_lunge(attacking and not _dead)
 	if _dead:
 		full_target = 1.0

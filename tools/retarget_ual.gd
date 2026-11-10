@@ -19,8 +19,7 @@ const PICK := {
 	},
 	"ual2": {
 		"Sword_Block": ["ual_sword_block", true, false], "Sword_Regular_A": ["ual_slash_a", true, false], "Sword_Regular_A_Rec": ["ual_slash_a_rec", true, false],
-		"Sword_Regular_B": ["ual_slash_b", true, false], "Sword_Regular_B_Rec": ["ual_slash_b_rec", true, false], "Sword_Regular_C": ["ual_slash_c", true, false],
-		"Sword_Regular_Combo": ["ual_combo", true, false], "Idle_Shield": ["ual_shield_idle", true, true], "Idle_Shield_Break": ["ual_shield_break", true, false],
+		"Sword_Regular_B": ["ual_slash_b", true, false], "Sword_Regular_B_Rec": ["ual_slash_b_rec", true, false], "Sword_Regular_Combo": ["ual_combo", true, false], "Idle_Shield": ["ual_shield_idle", true, true], "Idle_Shield_Break": ["ual_shield_break", true, false],
 		"Shield_OneShot": ["ual_shield_bash", true, false], "Melee_Hook": ["ual_hook", true, false], "Hit_Knockback": ["ual_hit_knockback", true, false],
 		"Sword_Dash_RM": ["ual_sword_dash", true, false],
 	},

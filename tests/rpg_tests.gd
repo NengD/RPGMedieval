@@ -907,6 +907,10 @@ func _test_polish() -> void:
 	var react_speed := float(m.tree.get("parameters/UpperTS/scale"))
 	_check(react_speed >= 1.0 and react_speed <= GameConfig.HIT_REACT_MAX_SPEED, "réaction de coup reçu accélérée pour tenir dans l'étourdissement (x%.1f)" % react_speed)
 	c.reset()
+	# --- main fermée sur l'épée
+	await _frames(30)
+	_check(m.grip_r != null and m.grip_r.curl > 0.99 and m.grip_r.influence > 0.0, "la main droite se ferme sur la poignée de l'épée")
+	m._dead = false
 	# --- regard
 	e.global_position = p.global_position + Vector3(0, 0, -5)
 	await _frames(40)

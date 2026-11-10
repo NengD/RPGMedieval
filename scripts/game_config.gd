@@ -255,7 +255,7 @@ const COMBO_RESET_TIME := 1.1
 const GUARD_POSE := 1
 
 # Armes tenues (modèles .glb) : placement dans la main / sur l'avant-bras (3e personne)
-const MELEE_GRIP_OFFSET := Vector3(0.0, 0.07, 0.0)       # décalage de la prise par rapport au poignet (repère de l'os de la main)
+const MELEE_GRIP_OFFSET := Vector3(0.0, 0.07, -0.035)       # décalage de la prise par rapport au poignet (repère de l'os de la main)
 const FIRST_PERSON_WEAPON_SCALE := 1.2                   # l'arme est un peu agrandie en 1re personne (lisibilité)
 
 # Arc porté dans le dos quand on ne vise pas
