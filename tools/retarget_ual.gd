@@ -113,6 +113,8 @@ func _run() -> void:
 			out.track_set_path(pos_track, NodePath("Skeleton3D:mixamorig_Hips"))
 			ap.play(src_name)
 			var first_hips := Vector3.ZERO
+			var hand_idx := ssk.find_bone(map["RightHand"])
+			var hand_pts: Array[Vector3] = []
 			for f in frames:
 				var time := minf(f / FPS, sanim.length)
 				ap.seek(time, true)
@@ -137,6 +139,8 @@ func _run() -> void:
 					var local: Basis = (global_rot[parent] as Basis).inverse() * gt if parent >= 0 else gt
 					out.rotation_track_insert_key(rot_tracks[i], time, local.get_rotation_quaternion().normalized())
 				var hp := ssk.get_bone_global_pose(hips_src).origin
+				var hpt := ssk.get_bone_global_pose(hand_idx).origin
+				hand_pts.append(hpt - Vector3(hp.x, 0.0, hp.z))
 				var rp := ssk.get_bone_global_rest(hips_src).origin
 				var pos := tsk.get_bone_rest(hips_tgt).origin + (hp - rp) * scale
 				if f == 0:
@@ -145,6 +149,29 @@ func _run() -> void:
 					pos = Vector3(first_hips.x, pos.y, first_hips.z)   # sur place
 				out.position_track_insert_key(pos_track, time, pos)
 			ap.stop()
+			# instants du geste (comme tools/bake_animations.gd) : début, coup = main la plus rapide, fin
+			var speeds: Array[float] = []
+			var best := 0.0
+			var best_i := 1
+			for i in range(1, hand_pts.size()):
+				var sp := (hand_pts[i] - hand_pts[i - 1]).length() * FPS
+				speeds.append(sp)
+				if sp > best:
+					best = sp
+					best_i = i
+			var start_i := 1
+			for i in speeds.size():
+				if speeds[i] > best * 0.12:
+					start_i = i + 1
+					break
+			var end_i := hand_pts.size() - 1
+			for i in range(speeds.size() - 1, -1, -1):
+				if speeds[i] > best * 0.12:
+					end_i = mini(i + 1 + 6, hand_pts.size() - 1)
+					break
+			out.set_meta(&"start_time", start_i / FPS)
+			out.set_meta(&"peak_time", best_i / FPS)
+			out.set_meta(&"end_time", minf(end_i / FPS, sanim.length))
 			lib.add_animation(spec[0], out)
 			print("  ", src_name, " -> ", spec[0], " ", snappedf(sanim.length, 0.01), "s ", frames, " images")
 		src_inst.queue_free()

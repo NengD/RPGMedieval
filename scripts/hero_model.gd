@@ -12,6 +12,7 @@ extends Node3D
 const MODEL := "res://assets/base/base_rig.tscn"          # squelette Mixamo du corps de base (Mannequin)
 const BODY := "res://assets/base/body.glb"                 # corps en régions (tête, torse, bras…)
 const LIBRARY := "res://assets/anims/hero_library.res"
+const UAL_LIBRARY := "res://assets/anims/ual_library.res"
 const ATTACK_ANIMS := [&"attack_up", &"attack_right", &"attack_estoc", &"attack_left"]
 const HIT_ANIMS := [&"hit_1", &"hit_2", &"hit_3"]
 const FULL_STATES := [&"dodge_l", &"dodge_r", &"dodge_b", &"jump", &"death", &"attack_up", &"attack_right", &"attack_estoc", &"attack_left"]
@@ -111,6 +112,7 @@ func _ready() -> void:
 	for n in RigMesh.attach(skeleton, load(BODY), skeleton):
 		_body_nodes[String(n.name).trim_prefix("corps_")] = n
 	_library = load(LIBRARY)
+	_merge_ual()
 	anim_player = AnimationPlayer.new()
 	anim_player.name = "AnimationPlayer"
 	model_root.add_child(anim_player)
@@ -125,6 +127,25 @@ func _ready() -> void:
 
 
 ## Vitesses de déplacement d'origine des animations (mesurées au bake) : sert à caler la cadence sur la vitesse réelle.
+## Remplace les clips d'attaque et de coup reçu par les animations Quaternius transférées (mêmes noms : le graphe d'animation ne change pas).
+func _merge_ual() -> void:
+	if not GameConfig.USE_UAL_ANIMS or not ResourceLoader.exists(UAL_LIBRARY):
+		return
+	var ual: AnimationLibrary = load(UAL_LIBRARY)
+	var map := {
+		&"attack_right": &"ual_slash_a", &"attack_left": &"ual_slash_b", &"attack_up": &"ual_sword_attack",
+		&"hit_1": &"ual_hit_chest", &"hit_2": &"ual_hit_head", &"hit_3": &"ual_hit_knockback",
+		&"hit_front_light": &"ual_hit_chest", &"hit_head": &"ual_hit_head", &"hit_gut": &"ual_hit_knockback",
+	}
+	for game_name in map:
+		var src := ual.get_animation(map[game_name])
+		if src == null:
+			continue
+		if _library.has_animation(game_name):
+			_library.remove_animation(game_name)
+		_library.add_animation(game_name, src.duplicate())
+
+
 func _compute_refs() -> void:
 	var sets := {
 		&"loco": [[&"walk_f", &"walk_b", &"strafe_r", &"strafe_l"], [&"run_f", &"run_b", &"strafe_r_run", &"strafe_l_run"]],
@@ -580,7 +601,7 @@ func _update_lunge(attacking: bool) -> void:
 
 func _update_ik(delta: float, attacking: bool) -> void:
 	var has_shield := _shield_node.get_child_count() > 0
-	var directed: bool = attacking and (combatant.attack_dir == Combatant.Dir.UP or combatant.attack_dir == Combatant.Dir.DOWN)
+	var directed: bool = attacking and (combatant.attack_dir == Combatant.Dir.DOWN or (combatant.attack_dir == Combatant.Dir.UP and not GameConfig.USE_UAL_ANIMS))
 	var guarding_now: bool = not attacking and not _dead and combatant.is_guarding()
 	var guarding: bool = guarding_now and not has_shield          # sans écu : l'épée fait la parade
 	var shield_guard: bool = guarding_now and has_shield          # avec écu : c'est l'écu qui pare, l'épée reste basse

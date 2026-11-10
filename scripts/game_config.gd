@@ -304,3 +304,4 @@ const RAGDOLL_PUSH := 3.0             # vitesse donnée au corps par le coup fat
 const FOOT_TILT_AMOUNT := 1.0          # inclinaison des chevilles selon la pente (0 = pieds à plat)
 const HIT_REACT_MIN_SPEED := 1.0       # une réaction de coup reçu est accélérée pour tenir dans l'étourdissement (jamais ralentie)
 const HIT_REACT_MAX_SPEED := 4.0
+const USE_UAL_ANIMS := true            # coups, coups reçus : vraies animations Quaternius (CC0) transférées sur le squelette (assets/anims/ual_library.res) ; false = clips Mixamo d'avant

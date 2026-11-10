@@ -17,6 +17,10 @@ Plutôt que d'inventer des poses, on part de vrais mouvements (capture / animati
 | Déplacements | `ual_walk`, `ual_jog`, `ual_sprint`, `ual_roll`, `ual_sword_dash`, `ual_sword_idle` | |
 | Manquent | masse, lance, deux mains, hache | à créer ou à retravailler (voir ci-dessous) |
 
+## Branchement dans le jeu (`USE_UAL_ANIMS` dans game_config.gd)
+`HeroModel._merge_ual()` remplace, sous les mêmes noms (le graphe d'animation ne change pas) : `attack_right` ← `ual_slash_a`, `attack_left` ← `ual_slash_b`, `attack_up` ← `ual_sword_attack` (plus d'IK pour ce coup), `hit_1/2/3`, `hit_front_light`, `hit_head`, `hit_gut` ← `ual_hit_chest / hit_head / hit_knockback`. L'estoc, la parade, l'esquive, la marche, l'arc et l'arbalète gardent les clips précédents. Instants du geste (début, coup, fin) mesurés par `tools/retarget_ual.gd`. `USE_UAL_ANIMS = false` rend les clips Mixamo d'avant.
+
 ## État
+(Mis à jour : les coups et coups reçus ci-dessus sont branchés ; voir `docs/apercu_coups_en_jeu.png`.)
 Les 21 animations transférées sont dans la bibliothèque `ual_library.res` mais **pas encore branchées dans le jeu** : elles attendent ta validation (vidéos dans `docs/anims/`).
 Contrôles qualité (pieds plantés, centre de gravité, courbes lissées, mouvement secondaire) : pas encore faits.
