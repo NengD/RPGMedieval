@@ -45,9 +45,12 @@ func _run() -> void:
 	var ap := AnimationPlayer.new()
 	rig.add_child(ap)
 	ap.add_animation_library("", load("res://assets/anims/hero_library.res"))
+	ap.add_animation_library("u", load("res://assets/anims/ual_library.res"))
 	ap.root_node = ap.get_path_to(rig)
-	ap.play(&"idle")
-	ap.seek(0.5, true)
+	var which := OS.get_environment("ANIM")
+	var key := StringName("u/" + which) if which != "" else &"idle"
+	ap.play(key)
+	ap.seek(float(OS.get_environment("T")) if OS.get_environment("T") != "" else 0.5, true)
 	for i in 4: await process_frame
 	var wp := sk.global_transform * sk.get_bone_global_pose(sk.find_bone("mixamorig_RightHand")).origin
 	var cam := Camera3D.new()
@@ -56,5 +59,5 @@ func _run() -> void:
 	cam.fov = 25
 	cam.look_at_from_position(wp + Vector3(0.0, 0.1, 0.55) , wp)
 	for i in 3: await process_frame
-	root.get_texture().get_image().save_png("user://main_%s.png" % (a[0] + "_" + a[1] + "_" + a[2] + ("_" + a[4] + "_" + a[5] + "_" + a[6] + ("_" + a[7] + "_" + a[8] + "_" + a[9] if a.size() >= 10 else "") if a.size() >= 7 else "") if a.size() >= 3 else "defaut"))
+	root.get_texture().get_image().save_png("user://main_" + OS.get_environment("OUT") + "%s.png" % (a[0] + "_" + a[1] + "_" + a[2] + ("_" + a[4] + "_" + a[5] + "_" + a[6] + ("_" + a[7] + "_" + a[8] + "_" + a[9] if a.size() >= 10 else "") if a.size() >= 7 else "") if a.size() >= 3 else "defaut"))
 	quit()

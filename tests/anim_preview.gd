@@ -67,7 +67,12 @@ func _run() -> void:
 	sword_holder.rotation_degrees = Vector3(0, 0, -90)
 	sword_holder.position = GameConfig.MELEE_GRIP_OFFSET
 	sword_holder.add_child((load("res://assets/weapons/arme_epee_longue.glb") as PackedScene).instantiate())
-	var shield_name := "ecu"
+	# mains fermées comme en jeu : droite sur l'épée, gauche sur la poignée (écu / deux mains)
+	for side in ["Right", "Left"]:
+		var grip := FingerGripModifier.new()
+		grip.side = side
+		sk.add_child(grip)
+		grip.curl = 1.0
 	var ap := AnimationPlayer.new()
 	rig.add_child(ap)
 	ap.add_animation_library("", load("res://assets/anims/hero_library.res"))
